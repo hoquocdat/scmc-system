@@ -1,0 +1,14 @@
+.react-select__control {
+    border-color: var(--border-color) !important;
+    box-shadow: var(--shadow);
+    transition: border-color 0.2s ease-in-out;
+}
+
+.react-select__control:hover {
+    border-color: var(--border-color-hover);
+}
+
+.react-select__control--is-focused {
+    border-color: var(--border-color-focused);
+    box-shadow: var(--shadow-focused);
+}

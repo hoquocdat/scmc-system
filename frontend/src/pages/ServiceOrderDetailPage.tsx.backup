@@ -1,0 +1,820 @@
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
+import { useForm, Controller } from 'react-hook-form';
+import ReactSelect from 'react-select';
+import { apiClient } from '../lib/api-client';
+import { toast } from 'sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
+import { useUrlTabs } from '@/hooks/useUrlTabs';
+import { ServiceOrderHeader } from '../components/service-orders/ServiceOrderHeader';
+import { ServiceOrderOverviewTab } from '../components/service-orders/ServiceOrderOverviewTab';
+import { ServiceOrderTimelineTab } from '../components/service-orders/ServiceOrderTimelineTab';
+import { ServiceOrderImagesTab } from '../components/service-orders/ServiceOrderImagesTab';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '../components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from '../components/ui/dialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from '../components/ui/sheet';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
+import { Label } from '../components/ui/label';
+import { Textarea } from '../components/ui/textarea';
+import { ServiceItemsManager } from '../components/service-items/ServiceItemsManager';
+import { ActivityTimeline } from '../components/activity/ActivityTimeline';
+import { PartsUsageManager } from '../components/parts/PartsUsageManager';
+import { CommentsSection } from '../components/comments/CommentsSection';
+import { ImageUpload } from '../components/image/ImageUpload';
+import type { ServiceStatus, UserProfile } from '../types';
+
+// Custom styles for react-select
+const selectStyles = {
+  control: (base: any, state: any) => ({
+    ...base,
+    minHeight: '36px',
+    borderColor: state.isFocused ? 'hsl(var(--ring))' : 'hsl(var(--input))',
+    boxShadow: state.isFocused ? '0 0 0 1px hsl(var(--ring))' : 'none',
+    '&:hover': {
+      borderColor: 'hsl(var(--input))',
+    },
+    backgroundColor: 'transparent',
+  }),
+  menu: (base: any) => ({
+    ...base,
+    zIndex: 100,
+  }),
+  option: (base: any, state: any) => ({
+    ...base,
+    backgroundColor: state.isFocused ? 'hsl(var(--accent))' : 'transparent',
+    color: state.isFocused ? 'hsl(var(--accent-foreground))' : 'inherit',
+    '&:active': {
+      backgroundColor: 'hsl(var(--accent))',
+    },
+  }),
+};
+
+// Custom option component for employees
+const EmployeeOption = (props: any) => {
+  const { data, innerRef, innerProps } = props;
+  return (
+    <div ref={innerRef} {...innerProps} className="px-3 py-2 cursor-pointer hover:bg-accent">
+      <div className="font-medium">{data.label}</div>
+      {data.phone && <div className="text-sm text-muted-foreground">{data.phone}</div>}
+    </div>
+  );
+};
+
+// Custom single value component for employees
+const EmployeeSingleValue = (props: any) => {
+  const { data } = props;
+  return (
+    <div className="flex items-center">
+      <div>
+        <div className="font-medium text-sm">{data.label}</div>
+        {data.phone && <div className="text-xs text-muted-foreground">{data.phone}</div>}
+      </div>
+    </div>
+  );
+};
+
+interface EmployeeFormData {
+  assigned_employee_id?: string;
+}
+
+interface DescriptionFormData {
+  description?: string;
+}
+
+interface StatusFormData {
+  status: ServiceStatus;
+}
+
+export function ServiceOrderDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const { t } = useTranslation();
+  const [order, setOrder] = useState<any>(null);
+  const [employees, setEmployees] = useState<UserProfile[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isStatusDialogOpen, setIsStatusDialogOpen] = useState(false);
+  const [isEmployeeSheetOpen, setIsEmployeeSheetOpen] = useState(false);
+  const [isDescriptionSheetOpen, setIsDescriptionSheetOpen] = useState(false);
+  const [isStatusSheetOpen, setIsStatusSheetOpen] = useState(false);
+
+  const employeeForm = useForm<EmployeeFormData>();
+  const descriptionForm = useForm<DescriptionFormData>();
+  const statusForm = useForm<StatusFormData>();
+
+  useEffect(() => {
+    if (id) {
+      fetchOrderDetail();
+      fetchEmployees();
+    }
+  }, [id]);
+
+  const fetchOrderDetail = async () => {
+    try {
+      setIsLoading(true);
+
+      // Fetch service order
+      const orderData: any = await apiClient.serviceOrders.getOne(id!);
+
+      // Fetch related data
+      const [bikeData, customerData, employeeData] = await Promise.all([
+        orderData.motorcycle_id ? apiClient.bikes.getOne(orderData.motorcycle_id).catch(() => null) : null,
+        orderData.customer_id ? apiClient.customers.getOne(orderData.customer_id).catch(() => null) : null,
+        orderData.assigned_employee_id ? apiClient.users.getOne(orderData.assigned_employee_id).catch(() => null) : null,
+      ]);
+
+      // Fetch owner data if bike exists
+      let ownerData = null;
+      if (bikeData && (bikeData as any).owner_id) {
+        ownerData = await apiClient.customers.getOne((bikeData as any).owner_id).catch(() => null);
+      }
+
+      // Combine data
+      setOrder({
+        ...orderData,
+        bikes: bikeData ? {
+          ...bikeData,
+          bike_owners: ownerData
+        } : null,
+        customers: customerData,
+        assigned_employee: employeeData,
+      });
+    } catch (err: any) {
+      console.error('Error fetching order:', err);
+      toast.error(t('errors.loadingError'));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const fetchEmployees = async () => {
+    try {
+      const response: any = await apiClient.users.getEmployees();
+      setEmployees(response || []);
+    } catch (err: any) {
+      console.error('Error fetching employees:', err);
+    }
+  };
+
+  const updateStatus = async (newStatus: ServiceStatus) => {
+    try {
+      setIsUpdating(true);
+      const payload: any = {
+        status: newStatus,
+      };
+
+      // Set completion date if moving to completed
+      if (newStatus === 'completed' && !order.actual_completion_date) {
+        payload.actual_completion_date = new Date().toISOString();
+      }
+
+      await apiClient.serviceOrders.update(id!, payload);
+
+      toast.success(t('serviceOrders.statusUpdated'));
+      setIsStatusDialogOpen(false);
+      fetchOrderDetail(); // Refresh
+    } catch (err: any) {
+      console.error('Error updating status:', err);
+      toast.error(t('serviceOrders.failedToUpdate') + ': ' + err.message);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleEmployeeSheetOpen = () => {
+    employeeForm.reset({
+      assigned_employee_id: order.assigned_employee_id || '',
+    });
+    setIsEmployeeSheetOpen(true);
+  };
+
+  const handleDescriptionSheetOpen = () => {
+    descriptionForm.reset({
+      description: order.description || '',
+    });
+    setIsDescriptionSheetOpen(true);
+  };
+
+  const handleStatusSheetOpen = () => {
+    statusForm.reset({
+      status: order.status,
+    });
+    setIsStatusSheetOpen(true);
+  };
+
+  const onEmployeeSubmit = async (data: EmployeeFormData) => {
+    try {
+      await apiClient.serviceOrders.update(id!, {
+        assigned_employee_id: data.assigned_employee_id || null,
+      });
+
+      toast.success('Nhân viên phụ trách đã được cập nhật');
+      setIsEmployeeSheetOpen(false);
+      fetchOrderDetail();
+    } catch (err: any) {
+      console.error('Error updating employee:', err);
+      toast.error('Cập nhật thất bại: ' + err.message);
+    }
+  };
+
+  const onDescriptionSubmit = async (data: DescriptionFormData) => {
+    try {
+      await apiClient.serviceOrders.update(id!, {
+        description: data.description,
+      });
+
+      toast.success('Mô tả đã được cập nhật');
+      setIsDescriptionSheetOpen(false);
+      fetchOrderDetail();
+    } catch (err: any) {
+      console.error('Error updating description:', err);
+      toast.error('Cập nhật thất bại: ' + err.message);
+    }
+  };
+
+  const onStatusSubmit = async (data: StatusFormData) => {
+    try {
+      const payload: any = {
+        status: data.status,
+      };
+
+      // Set completion date if moving to completed
+      if (data.status === 'completed' && !order.actual_completion_date) {
+        payload.actual_completion_date = new Date().toISOString();
+      }
+
+      await apiClient.serviceOrders.update(id!, payload);
+
+      toast.success('Trạng thái đã được cập nhật');
+      setIsStatusSheetOpen(false);
+      fetchOrderDetail();
+    } catch (err: any) {
+      console.error('Error updating status:', err);
+      toast.error('Cập nhật thất bại: ' + err.message);
+    }
+  };
+
+
+  const statusWorkflow: ServiceStatus[] = [
+    'pending',
+    'confirmed',
+    'in_progress',
+    'waiting_parts',
+    'quality_check',
+    'completed',
+    'ready_for_pickup',
+    'delivered',
+  ];
+
+  const formatStatusLabel = (status: string) => {
+    return t(`serviceOrders.statuses.${status}`);
+  };
+
+  const handleUploadImage = async (file: string, mimeType: string) => {
+    if (!id) return;
+
+    try {
+      setIsUploading(true);
+      const result: any = await apiClient.serviceOrders.uploadImage(id, file, mimeType);
+
+      // Update local order state with new image URL
+      if (order) {
+        setOrder({ ...order, image_url: result.imageUrl });
+      }
+    } catch (error: any) {
+      console.error('Upload error:', error);
+      throw error; // Re-throw to let ImageUpload component handle the toast
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const handleDeleteImage = async () => {
+    if (!id) return;
+
+    try {
+      setIsUploading(true);
+      await apiClient.serviceOrders.deleteImage(id);
+
+      // Update local order state to remove image URL
+      if (order) {
+        setOrder({ ...order, image_url: undefined });
+      }
+    } catch (error: any) {
+      console.error('Delete error:', error);
+      throw error; // Re-throw to let ImageUpload component handle the toast
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="p-4 sm:p-6 md:p-8">
+        <div className="text-center py-12">{t('common.loading')}</div>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <div className="p-4 sm:p-6 md:p-8">
+        <Card>
+          <CardContent className="py-12">
+            <p className="text-center text-muted-foreground">{t('serviceOrders.orderNotFound')}</p>
+            <div className="text-center mt-4">
+              <Button onClick={() => navigate('/service-orders')}>
+                {t('serviceOrders.backToServiceOrders')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4 sm:p-6 md:p-8 space-y-4 sm:space-y-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <h1 className="text-xl sm:text-2xl font-bold truncate">{t('serviceOrders.orderNumber')}{order.order_number}</h1>
+          </div>
+          <p className="text-sm sm:text-base text-muted-foreground mt-1">
+            {t('serviceOrders.created')} {new Date(order.created_at).toLocaleDateString()}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-start gap-3 sm:gap-4 w-full sm:w-auto">
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-muted-foreground">Trạng Thái:</span>
+            <div className="flex items-center gap-2">
+              <span className={`px-2 py-0.5 rounded text-xs font-medium ${getStatusColor(order.status)}`}>
+                {formatStatusLabel(order.status).toUpperCase()}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleStatusSheetOpen}
+                className="h-6 px-2 text-xs"
+              >
+                Sửa
+              </Button>
+            </div>
+          </div>
+          <div className="flex flex-col">
+            <span className="text-xs font-medium text-muted-foreground mb-1">Ưu Tiên:</span>
+            <Badge variant={order.priority === 'urgent' || order.priority === 'high' ? 'destructive' : 'secondary'} className="text-xs px-2 py-0">
+              {t(`serviceOrders.priorities.${order.priority}`).toUpperCase()}
+            </Badge>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content with Tabs */}
+      <div className="space-y-4 sm:space-y-6">
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 sm:grid-cols-4 md:grid-cols-7 h-auto">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm">{t('serviceOrders.overview')}</TabsTrigger>
+            <TabsTrigger value="tasks" className="text-xs sm:text-sm">{t('serviceOrders.tasks')}</TabsTrigger>
+            <TabsTrigger value="parts" className="text-xs sm:text-sm">{t('serviceOrders.parts')}</TabsTrigger>
+            <TabsTrigger value="images" className="text-xs sm:text-sm">Hình Ảnh</TabsTrigger>
+            <TabsTrigger value="timeline" className="text-xs sm:text-sm hidden sm:block">Thời Gian</TabsTrigger>
+            <TabsTrigger value="comments" className="text-xs sm:text-sm hidden md:block">{t('comments.title')}</TabsTrigger>
+            <TabsTrigger value="activity" className="text-xs sm:text-sm hidden md:block">{t('serviceOrders.activity')}</TabsTrigger>
+          </TabsList>
+
+            {/* Overview Tab */}
+            <TabsContent value="overview" className="space-y-6">
+              {/* Bike & People */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t('serviceOrders.serviceDetails')}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">{t('serviceOrders.bike')}</label>
+                    <p className="text-lg font-semibold">
+                      {order.bikes?.brand} {order.bikes?.model}
+                    </p>
+                    <p className="text-sm text-muted-foreground font-mono">
+                      {order.bikes?.license_plate}
+                      {order.bikes?.year && ` • ${order.bikes.year}`}
+                      {order.bikes?.color && ` • ${order.bikes.color}`}
+                    </p>
+                  </div>
+
+                  <div className="pt-4 border-t">
+                    <label className="text-sm font-medium text-muted-foreground">
+                      {t('serviceOrders.broughtBike')} 🏍️
+                    </label>
+                    <p className="font-semibold mt-1">{order.customers?.full_name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {order.customers?.phone}
+                    </p>
+                  </div>
+
+                  <div className="pt-4 border-t">
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="text-sm font-medium text-muted-foreground">
+                        {t('serviceOrders.assignedEmployee')}
+                      </label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleEmployeeSheetOpen}
+                        className="h-7 text-xs"
+                      >
+                        Chỉnh Sửa
+                      </Button>
+                    </div>
+                    {order.assigned_employee ? (
+                      <EmployeeProfileRow
+                        fullName={order.assigned_employee.full_name}
+                        role={order.assigned_employee.role}
+                      />
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">Chưa phân công</p>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Customer Demand & Description */}
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t('serviceOrders.serviceInformation')}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {order.customer_demand && (
+                    <div>
+                      <label className="text-sm font-medium text-muted-foreground">
+                        Yêu Cầu Khách Hàng
+                      </label>
+                      <p className="mt-1 p-3 bg-slate-50 rounded border">
+                        {order.customer_demand}
+                      </p>
+                    </div>
+                  )}
+
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="text-sm font-medium text-muted-foreground">
+                        {t('serviceOrders.serviceDescription')}
+                      </label>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleDescriptionSheetOpen}
+                        className="h-7 text-xs"
+                      >
+                        Chỉnh Sửa
+                      </Button>
+                    </div>
+                    {order.description ? (
+                      <p className="mt-1 p-3 bg-slate-50 rounded border">
+                        {order.description}
+                      </p>
+                    ) : (
+                      <p className="mt-1 p-3 bg-slate-50 rounded border text-muted-foreground italic">
+                        Chưa có mô tả
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4">
+                    {order.mileage_in && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">
+                          {t('serviceOrders.mileageIn')}
+                        </label>
+                        <p className="text-lg font-semibold">
+                          {order.mileage_in.toLocaleString()} km
+                        </p>
+                      </div>
+                    )}
+
+                    {order.estimated_cost && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">
+                          {t('serviceOrders.estimatedCost')}
+                        </label>
+                        <p className="text-lg font-semibold">
+                          ${order.estimated_cost.toFixed(2)}
+                        </p>
+                      </div>
+                    )}
+
+                    {order.estimated_completion_date && (
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">
+                          {t('serviceOrders.estimatedCompletion')}
+                        </label>
+                        <p className="text-lg font-semibold">
+                          {new Date(order.estimated_completion_date).toLocaleDateString()}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Tasks Tab */}
+            <TabsContent value="tasks">
+              <ServiceItemsManager serviceOrderId={order.id} />
+            </TabsContent>
+
+            {/* Parts Tab */}
+            <TabsContent value="parts">
+              <PartsUsageManager serviceOrderId={order.id} />
+            </TabsContent>
+
+            {/* Images Tab */}
+            <TabsContent value="images">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t('images.title')}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ImageUpload
+                    currentImageUrl={order.image_url}
+                    onUpload={handleUploadImage}
+                    onDelete={order.image_url ? handleDeleteImage : undefined}
+                    isUploading={isUploading}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Timeline Tab */}
+            <TabsContent value="timeline">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t('serviceOrders.timeline')}</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">{t('serviceOrders.created')}</p>
+                    <p className="font-medium">
+                      {new Date(order.created_at).toLocaleString()}
+                    </p>
+                  </div>
+                  {order.drop_off_date && (
+                    <div>
+                      <p className="text-muted-foreground">{t('serviceOrders.droppedOff')}</p>
+                      <p className="font-medium">
+                        {new Date(order.drop_off_date).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+                  {order.actual_completion_date && (
+                    <div>
+                      <p className="text-muted-foreground">{t('serviceOrders.completed')}</p>
+                      <p className="font-medium">
+                        {new Date(order.actual_completion_date).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+                  {order.pickup_date && (
+                    <div>
+                      <p className="text-muted-foreground">{t('serviceOrders.pickedUp')}</p>
+                      <p className="font-medium">
+                        {new Date(order.pickup_date).toLocaleString()}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Comments Tab */}
+            <TabsContent value="comments">
+              <CommentsSection serviceOrderId={order.id} />
+            </TabsContent>
+
+            {/* Activity Tab */}
+            <TabsContent value="activity">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t('serviceOrders.activityLog')}</CardTitle>
+                  <CardDescription>
+                    {t('serviceOrders.activityDescription')}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ActivityTimeline entityType="service_order" entityId={order.id} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Status Update Dialog */}
+        <Dialog open={isStatusDialogOpen} onOpenChange={setIsStatusDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{t('serviceOrders.updateStatus')}</DialogTitle>
+              <DialogDescription>
+                {t('serviceOrders.changeStatus')}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="status-select">{t('serviceOrders.changeStatus')}</Label>
+                <Select
+                  value={order.status}
+                  onValueChange={(value: ServiceStatus) => updateStatus(value)}
+                  disabled={isUpdating}
+                >
+                  <SelectTrigger id="status-select">
+                    <SelectValue placeholder={t('serviceOrders.selectStatus')} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusWorkflow.map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {formatStatusLabel(status)}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="cancelled" className="text-red-600">
+                      {t('serviceOrders.statuses.cancelled')}
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="pt-2 border-t">
+                <p className="text-sm text-muted-foreground mb-2">{t('serviceOrders.currentStatus')}</p>
+                <Badge className={getStatusColor(order.status)}>
+                  {formatStatusLabel(order.status)}
+                </Badge>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Employee Assignment Sheet */}
+        <Sheet open={isEmployeeSheetOpen} onOpenChange={setIsEmployeeSheetOpen}>
+          <SheetContent side="right">
+            <SheetHeader>
+              <SheetTitle>Phân Công Nhân Viên</SheetTitle>
+            </SheetHeader>
+            <form onSubmit={employeeForm.handleSubmit(onEmployeeSubmit)} className="space-y-4 mt-6 px-4">
+              <div className="space-y-2">
+                <Label>Chọn Nhân Viên</Label>
+                <Controller
+                  name="assigned_employee_id"
+                  control={employeeForm.control}
+                  render={({ field }) => {
+                    const employeeOptions = employees.map(employee => ({
+                      value: employee.id,
+                      label: employee.full_name,
+                      phone: employee.phone,
+                    }));
+                    return (
+                      <ReactSelect
+                        {...field}
+                        options={employeeOptions}
+                        value={employeeOptions.find(option => option.value === field.value) || null}
+                        onChange={(option) => field.onChange(option?.value || '')}
+                        placeholder="Chọn nhân viên..."
+                        isClearable
+                        styles={selectStyles}
+                        components={{
+                          Option: EmployeeOption,
+                          SingleValue: EmployeeSingleValue,
+                        }}
+                        noOptionsMessage={() => 'Không tìm thấy nhân viên'}
+                      />
+                    );
+                  }}
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 pb-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsEmployeeSheetOpen(false)}
+                >
+                  Hủy
+                </Button>
+                <Button type="submit" disabled={employeeForm.formState.isSubmitting}>
+                  {employeeForm.formState.isSubmitting ? 'Đang cập nhật...' : 'Cập Nhật'}
+                </Button>
+              </div>
+            </form>
+          </SheetContent>
+        </Sheet>
+
+        {/* Description Edit Sheet */}
+        <Sheet open={isDescriptionSheetOpen} onOpenChange={setIsDescriptionSheetOpen}>
+          <SheetContent side="right">
+            <SheetHeader>
+              <SheetTitle>Chỉnh Sửa Mô Tả</SheetTitle>
+            </SheetHeader>
+            <form onSubmit={descriptionForm.handleSubmit(onDescriptionSubmit)} className="space-y-4 mt-6 px-4">
+              <div className="space-y-2">
+                <Label htmlFor="description">Mô Tả Dịch Vụ</Label>
+                <Textarea
+                  id="description"
+                  {...descriptionForm.register('description')}
+                  placeholder="Mô tả công việc cần thực hiện"
+                  className="min-h-[200px]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 pb-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsDescriptionSheetOpen(false)}
+                >
+                  Hủy
+                </Button>
+                <Button type="submit" disabled={descriptionForm.formState.isSubmitting}>
+                  {descriptionForm.formState.isSubmitting ? 'Đang cập nhật...' : 'Cập Nhật'}
+                </Button>
+              </div>
+            </form>
+          </SheetContent>
+        </Sheet>
+
+        {/* Status Edit Sheet */}
+        <Sheet open={isStatusSheetOpen} onOpenChange={setIsStatusSheetOpen}>
+          <SheetContent side="right">
+            <SheetHeader>
+              <SheetTitle>Cập Nhật Trạng Thái</SheetTitle>
+            </SheetHeader>
+            <form onSubmit={statusForm.handleSubmit(onStatusSubmit)} className="space-y-4 mt-6 px-4">
+              <div className="space-y-2">
+                <Label htmlFor="status">Trạng Thái</Label>
+                <select
+                  id="status"
+                  {...statusForm.register('status', { required: 'Vui lòng chọn trạng thái' })}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  {statusWorkflow.map((status) => (
+                    <option key={status} value={status}>
+                      {formatStatusLabel(status)}
+                    </option>
+                  ))}
+                  <option value="cancelled">
+                    {t('serviceOrders.statuses.cancelled')}
+                  </option>
+                </select>
+                {statusForm.formState.errors.status && (
+                  <p className="text-sm text-red-600">{statusForm.formState.errors.status.message}</p>
+                )}
+              </div>
+
+              <div className="pt-2 border-t">
+                <p className="text-sm text-muted-foreground mb-2">Trạng thái hiện tại:</p>
+                <Badge className={getStatusColor(order.status)}>
+                  {formatStatusLabel(order.status)}
+                </Badge>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 pb-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setIsStatusSheetOpen(false)}
+                >
+                  Hủy
+                </Button>
+                <Button type="submit" disabled={statusForm.formState.isSubmitting}>
+                  {statusForm.formState.isSubmitting ? 'Đang cập nhật...' : 'Cập Nhật'}
+                </Button>
+              </div>
+            </form>
+          </SheetContent>
+        </Sheet>
+    </div>
+  );
+}

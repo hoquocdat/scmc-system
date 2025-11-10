@@ -1,0 +1,391 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  schemas  = ["public"]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model activity_logs {
+  id            String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  user_id       String?        @db.Uuid
+  entity_type   String         @db.VarChar(50)
+  entity_id     String         @db.Uuid
+  action        String         @db.VarChar(50)
+  old_values    Json?
+  new_values    Json?
+  ip_address    String?        @db.Inet
+  user_agent    String?
+  created_at    DateTime?      @default(now()) @db.Timestamptz(6)
+  user_profiles user_profiles? @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+
+  @@index([entity_type, entity_id], map: "idx_activity_logs_entity")
+  @@index([user_id], map: "idx_activity_logs_user")
+  @@schema("public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model bikes {
+  id             String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  brand          String           @db.VarChar(100)
+  model          String           @db.VarChar(100)
+  year           Int?
+  license_plate  String           @db.VarChar(20)
+  vin            String?          @db.VarChar(50)
+  engine_number  String?          @db.VarChar(50)
+  color          String?          @db.VarChar(50)
+  notes          String?
+  created_at     DateTime?        @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?        @default(now()) @db.Timestamptz(6)
+  owner_id       String?          @db.Uuid
+  image_url      String?
+  customers      customers?       @relation(fields: [owner_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  service_orders service_orders[]
+
+  @@index([license_plate], map: "idx_bikes_license")
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model brands {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String
+  country_of_origin String?
+  description       String?
+  is_active         Boolean?  @default(true)
+  created_at        DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime? @default(now()) @db.Timestamptz(6)
+  models            models[]
+  parts             parts[]
+
+  @@index([is_active], map: "idx_brands_is_active")
+  @@index([name], map: "idx_brands_name")
+  @@schema("public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model customers {
+  id             String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  full_name      String           @db.VarChar(255)
+  phone          String           @unique(map: "customers_phone_unique_idx") @db.VarChar(20)
+  email          String?          @db.VarChar(255)
+  id_number      String?          @db.VarChar(50)
+  address        String?
+  notes          String?
+  created_at     DateTime?        @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?        @default(now()) @db.Timestamptz(6)
+  bikes          bikes[]
+  service_orders service_orders[]
+
+  @@schema("public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model models {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brand_id    String    @db.Uuid
+  name        String
+  description String?
+  year_from   Int?
+  year_to     Int?
+  is_active   Boolean?  @default(true)
+  created_at  DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at  DateTime? @default(now()) @db.Timestamptz(6)
+  brands      brands    @relation(fields: [brand_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([brand_id, name])
+  @@index([brand_id], map: "idx_models_brand_id")
+  @@index([is_active], map: "idx_models_is_active")
+  @@index([name], map: "idx_models_name")
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model parts {
+  id                  String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  part_number         String?         @unique @db.VarChar(50)
+  name                String          @db.VarChar(255)
+  description         String?
+  quantity_in_stock   Int?            @default(0)
+  minimum_stock_level Int?            @default(0)
+  unit_cost           Decimal?        @db.Decimal(10, 2)
+  supplier            String?         @db.VarChar(255)
+  created_at          DateTime?       @default(now()) @db.Timestamptz(6)
+  updated_at          DateTime?       @default(now()) @db.Timestamptz(6)
+  supplier_id         String?         @db.Uuid
+  brand_id            String?         @db.Uuid
+  brands              brands?         @relation(fields: [brand_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  suppliers           suppliers?      @relation(fields: [supplier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  service_parts       service_parts[]
+
+  @@index([brand_id], map: "idx_parts_brand_id")
+  @@index([supplier_id], map: "idx_parts_supplier_id")
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model payments {
+  id               String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  service_order_id String         @db.Uuid
+  amount           Decimal        @db.Decimal(10, 2)
+  payment_method   payment_method
+  is_deposit       Boolean?       @default(false)
+  payment_date     DateTime?      @default(now()) @db.Timestamptz(6)
+  received_by      String?        @db.Uuid
+  notes            String?
+  created_at       DateTime?      @default(now()) @db.Timestamptz(6)
+  user_profiles    user_profiles? @relation(fields: [received_by], references: [id], onUpdate: NoAction)
+  service_orders   service_orders @relation(fields: [service_order_id], references: [id], onUpdate: NoAction)
+
+  @@index([service_order_id], map: "idx_payments_order")
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model service_items {
+  id                   String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  service_order_id     String          @db.Uuid
+  name                 String          @db.VarChar(255)
+  description          String?
+  status               service_status? @default(pending)
+  labor_cost           Decimal?        @default(0) @db.Decimal(10, 2)
+  parts_cost           Decimal?        @default(0) @db.Decimal(10, 2)
+  hours_worked         Decimal?        @default(0) @db.Decimal(5, 2)
+  assigned_employee_id String?         @db.Uuid
+  created_at           DateTime?       @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?       @default(now()) @db.Timestamptz(6)
+  service_orders       service_orders  @relation(fields: [service_order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  assigned_employee    user_profiles?  @relation(fields: [assigned_employee_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  service_parts        service_parts[]
+
+  @@index([service_order_id], map: "idx_service_items_order")
+  @@index([assigned_employee_id], map: "idx_service_items_assigned_employee")
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model service_order_comments {
+  id               String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  service_order_id String         @db.Uuid
+  user_id          String         @db.Uuid
+  comment_text     String
+  created_at       DateTime?      @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime?      @default(now()) @db.Timestamptz(6)
+  service_orders   service_orders @relation(fields: [service_order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profiles    user_profiles  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "idx_service_order_comments_created_at")
+  @@index([service_order_id], map: "idx_service_order_comments_service_order_id")
+  @@index([user_id], map: "idx_service_order_comments_user_id")
+  @@schema("public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model service_order_employees {
+  id               String         @id(map: "service_order_technicians_pkey") @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  service_order_id String         @db.Uuid
+  employee_id      String         @db.Uuid
+  assigned_at      DateTime?      @default(now()) @db.Timestamptz(6)
+  is_primary       Boolean?       @default(false)
+  created_at       DateTime?      @default(now()) @db.Timestamptz(6)
+  service_orders   service_orders @relation(fields: [service_order_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "service_order_technicians_service_order_id_fkey")
+  user_profiles    user_profiles  @relation(fields: [employee_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "service_order_technicians_technician_id_fkey")
+
+  @@unique([service_order_id, employee_id], map: "service_order_technicians_service_order_id_technician_id_key")
+  @@index([employee_id], map: "idx_service_order_employees_employee")
+  @@index([service_order_id], map: "idx_service_order_employees_order")
+  @@index([service_order_id, is_primary], map: "idx_service_order_employees_primary")
+  @@schema("public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model service_orders {
+  id                        String                    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  order_number              String                    @unique @db.VarChar(20)
+  motorcycle_id             String                    @db.Uuid
+  customer_id               String                    @db.Uuid
+  assigned_employee_id      String?                   @db.Uuid
+  status                    service_status?           @default(pending)
+  priority                  priority_level?           @default(normal)
+  description               String?
+  customer_demand           String?
+  mileage_in                Int?
+  mileage_out               Int?
+  drop_off_date             DateTime?                 @default(now()) @db.Timestamptz(6)
+  estimated_completion_date DateTime?                 @db.Timestamptz(6)
+  actual_completion_date    DateTime?                 @db.Timestamptz(6)
+  pickup_date               DateTime?                 @db.Timestamptz(6)
+  picked_up_by              String?                   @db.VarChar(255)
+  pickup_id_verified        Boolean?                  @default(false)
+  estimated_cost            Decimal?                  @db.Decimal(10, 2)
+  final_cost                Decimal?                  @db.Decimal(10, 2)
+  created_at                DateTime?                 @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime?                 @default(now()) @db.Timestamptz(6)
+  image_url                 String?
+  payments                  payments[]
+  service_items             service_items[]
+  service_order_comments    service_order_comments[]
+  service_order_employees   service_order_employees[]
+  user_profiles             user_profiles?            @relation(fields: [assigned_employee_id], references: [id], onUpdate: NoAction, map: "service_orders_assigned_technician_id_fkey")
+  bikes                     bikes                     @relation(fields: [motorcycle_id], references: [id], onUpdate: NoAction, map: "service_orders_bike_id_fkey")
+  customers                 customers                 @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
+  service_parts             service_parts[]
+
+  @@index([customer_id], map: "idx_service_orders_customer")
+  @@index([assigned_employee_id], map: "idx_service_orders_employee")
+  @@index([motorcycle_id], map: "idx_service_orders_motorcycle")
+  @@index([order_number], map: "idx_service_orders_order_number")
+  @@index([status], map: "idx_service_orders_status")
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model service_parts {
+  id               String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  service_order_id String         @db.Uuid
+  service_item_id  String?        @db.Uuid
+  part_id          String         @db.Uuid
+  quantity_used    Int
+  unit_cost        Decimal        @db.Decimal(10, 2)
+  total_cost       Decimal?       @db.Decimal(10, 2)
+  created_at       DateTime?      @default(now()) @db.Timestamptz(6)
+  parts            parts          @relation(fields: [part_id], references: [id], onUpdate: NoAction)
+  service_items    service_items? @relation(fields: [service_item_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  service_orders   service_orders @relation(fields: [service_order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([service_order_id], map: "idx_service_parts_order")
+  @@index([part_id], map: "idx_service_parts_part")
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model suppliers {
+  id             String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name           String
+  contact_person String?
+  phone          String?
+  email          String?
+  address        String?
+  notes          String?
+  is_active      Boolean?  @default(true)
+  created_at     DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime? @default(now()) @db.Timestamptz(6)
+  parts          parts[]
+
+  @@index([is_active], map: "idx_suppliers_is_active")
+  @@index([name], map: "idx_suppliers_name")
+  @@schema("public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model user_profiles {
+  id                      String                    @id @db.Uuid
+  role                    user_role
+  full_name               String                    @db.VarChar(255)
+  phone                   String?                   @db.VarChar(20)
+  email                   String?                   @db.VarChar(255)
+  is_active               Boolean?                  @default(true)
+  created_at              DateTime?                 @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime?                 @default(now()) @db.Timestamptz(6)
+  activity_logs           activity_logs[]
+  payments                payments[]
+  service_order_comments  service_order_comments[]
+  service_order_employees service_order_employees[]
+  service_orders          service_orders[]
+  service_items           service_items[]
+  images                  images[]
+
+  @@schema("public")
+}
+
+enum owner_type {
+  individual
+  company
+
+  @@schema("public")
+}
+
+enum payment_method {
+  cash
+  card
+  transfer
+
+  @@schema("public")
+}
+
+enum priority_level {
+  low
+  normal
+  high
+  urgent
+
+  @@schema("public")
+}
+
+enum service_status {
+  pending
+  confirmed
+  in_progress
+  waiting_parts
+  waiting_approval
+  quality_check
+  completed
+  ready_for_pickup
+  delivered
+  cancelled
+
+  @@schema("public")
+}
+
+enum user_role {
+  sales
+  technician
+  manager
+  finance
+
+  @@schema("public")
+}
+
+enum image_entity_type {
+  bike
+  service_order
+  customer
+  part
+  comment
+  service_item
+
+  @@schema("public")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model images {
+  id             String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  entity_type    image_entity_type
+  entity_id      String             @db.Uuid
+  file_path      String
+  file_name      String
+  file_size      Int?
+  mime_type      String?            @db.VarChar(100)
+  storage_bucket String             @default("bikes") @db.VarChar(100)
+  public_url     String
+  display_order  Int?               @default(0)
+  is_primary     Boolean?           @default(false)
+  uploaded_by    String?            @db.Uuid
+  created_at     DateTime?          @default(now()) @db.Timestamptz(6)
+  updated_at     DateTime?          @default(now()) @db.Timestamptz(6)
+  user_profiles  user_profiles?     @relation(fields: [uploaded_by], references: [id], onDelete: SetNull, onUpdate: NoAction)
+
+  @@index([entity_type, entity_id], map: "idx_images_entity")
+  @@index([entity_id], map: "idx_images_entity_id")
+  @@index([uploaded_by], map: "idx_images_uploaded_by")
+  @@index([entity_type, entity_id, is_primary], map: "idx_images_is_primary")
+  @@schema("public")
+}
