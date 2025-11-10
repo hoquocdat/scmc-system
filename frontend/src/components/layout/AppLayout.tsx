@@ -43,6 +43,11 @@ import {
   Boxes,
   Building2,
   Tag,
+  Warehouse,
+  ShoppingCart,
+  BarChart,
+  ClipboardList,
+  Monitor,
 } from 'lucide-react';
 
 interface AppLayoutProps {
@@ -172,6 +177,52 @@ export function AppLayout({ children }: AppLayoutProps) {
       ],
     },
     {
+      id: 'inventory',
+      name: 'Kho Hàng',
+      icon: Warehouse,
+      roles: ['sales', 'manager'],
+      children: [
+        {
+          name: 'Sản Phẩm',
+          href: '/inventory/products',
+          icon: Package,
+          roles: ['sales', 'manager'],
+        },
+        {
+          name: 'Tồn Kho',
+          href: '/inventory/stock',
+          icon: BarChart,
+          roles: ['sales', 'manager'],
+        },
+        {
+          name: 'Điều Chỉnh Kho',
+          href: '/inventory/adjustments',
+          icon: ClipboardList,
+          roles: ['manager'],
+        },
+      ],
+    },
+    {
+      id: 'sales',
+      name: 'Bán Hàng',
+      icon: ShoppingCart,
+      roles: ['sales', 'manager'],
+      children: [
+        {
+          name: 'POS',
+          href: '/pos',
+          icon: Monitor,
+          roles: ['sales', 'manager'],
+        },
+        {
+          name: 'Đơn Hàng',
+          href: '/sales/orders',
+          icon: FileText,
+          roles: ['sales', 'manager'],
+        },
+      ],
+    },
+    {
       name: t('navigation.payments'),
       href: '/payments',
       icon: CreditCard,
@@ -231,6 +282,13 @@ export function AppLayout({ children }: AppLayoutProps) {
         'parts': t('navigation.parts'),
         'suppliers': 'Nhà Cung Cấp',
         'brands': 'Thương Hiệu',
+        'inventory': 'Kho Hàng',
+        'products': 'Sản Phẩm',
+        'stock': 'Tồn Kho',
+        'adjustments': 'Điều Chỉnh Kho',
+        'sales': 'Bán Hàng',
+        'orders': 'Đơn Hàng',
+        'pos': 'POS',
         'payments': t('navigation.payments'),
         'reports': t('navigation.reports'),
         'employees': t('navigation.employees'),
@@ -243,24 +301,36 @@ export function AppLayout({ children }: AppLayoutProps) {
           isLast: pathSegments.length === 1,
         });
 
-        // If there's a detail page (has an ID)
-        if (pathSegments.length === 2) {
-          let detailLabel = t('serviceOrders.orderDetails');
+        // Handle nested paths (e.g., /inventory/products, /sales/orders)
+        if (pathSegments.length >= 2) {
+          const secondSegment = pathSegments[1];
 
-          // Customize labels for detail pages
-          if (firstSegment === 'service-orders') {
-            detailLabel = t('serviceOrders.orderDetails');
-          } else if (firstSegment === 'customers') {
-            detailLabel = t('customers.customerDetails');
-          } else if (firstSegment === 'bikes') {
-            detailLabel = t('bikes.bikeDetails');
+          // Check if second segment is a label (not an ID)
+          if (segmentLabels[secondSegment]) {
+            breadcrumbs.push({
+              label: segmentLabels[secondSegment],
+              path: `/${firstSegment}/${secondSegment}`,
+              isLast: pathSegments.length === 2,
+            });
+          } else {
+            // It's a detail page (has an ID)
+            let detailLabel = t('serviceOrders.orderDetails');
+
+            // Customize labels for detail pages
+            if (firstSegment === 'service-orders') {
+              detailLabel = t('serviceOrders.orderDetails');
+            } else if (firstSegment === 'customers') {
+              detailLabel = t('customers.customerDetails');
+            } else if (firstSegment === 'bikes') {
+              detailLabel = t('bikes.bikeDetails');
+            }
+
+            breadcrumbs.push({
+              label: detailLabel,
+              path: location.pathname,
+              isLast: true,
+            });
           }
-
-          breadcrumbs.push({
-            label: detailLabel,
-            path: location.pathname,
-            isLast: true,
-          });
         }
       }
     }

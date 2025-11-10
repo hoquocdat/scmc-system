@@ -160,20 +160,44 @@ npm run test:cov     # Run tests with coverage
 ```
 
 ### Database Setup
-1. Start local PostgreSQL database:
+
+**IMPORTANT: We are NO LONGER using Supabase for this project.**
+
+The project uses a standalone PostgreSQL database running in Docker:
+- Container name: `backbone_postgres`
+- Port: `5432`
+- Database: `scmc_sms`
+- User: `backbone_user`
+- Password: `backbone_password`
+
+1. Ensure PostgreSQL Docker container is running:
    ```bash
-   cd backend
-   npx supabase start  # Starts local PostgreSQL via Docker
+   docker ps | grep backbone_postgres
    ```
+
 2. Copy `.env.example` to `.env` in both frontend and backend directories
+
 3. Configure database connection in backend `.env`:
-   - `DATABASE_URL="postgresql://postgres:postgres@127.0.0.1:54322/postgres"`
-4. Run Prisma migrations:
+   ```
+   DATABASE_URL="postgresql://backbone_user:backbone_password@127.0.0.1:5432/scmc_sms"
+   ```
+
+4. Apply database migrations (raw SQL files in prisma/migrations/):
    ```bash
    cd backend
-   npx prisma migrate dev        # Apply migrations in development
-   npx prisma generate           # Generate Prisma Client
+   # Apply base migration
+   cat prisma/migrations/20251107045751_init_public_schema_only/migration.sql | \
+     docker exec -i backbone_postgres psql -U backbone_user -d scmc_sms
+
+   # Apply POS foundation
+   cat prisma/migrations/005_pos_foundation.sql | \
+     docker exec -i backbone_postgres psql -U backbone_user -d scmc_sms
+
+   # Pull latest schema and regenerate client
+   npx prisma db pull
+   npx prisma generate
    ```
+
 5. Seed the database (optional):
    ```bash
    npm run seed                  # Run seed scripts
@@ -181,16 +205,19 @@ npm run test:cov     # Run tests with coverage
 
 ### Database Migrations
 When making schema changes:
-1. Update `prisma/schema.prisma`
-2. Create a raw SQL migration file in `prisma/migrations/` (e.g., `004_add_new_column.sql`)
-3. Apply the migration:
+1. Create a raw SQL migration file in `prisma/migrations/` (e.g., `006_add_new_feature.sql`)
+2. Apply the migration to the PostgreSQL database:
    ```bash
-   cat prisma/migrations/004_add_new_column.sql | docker exec -i supabase_db_saigonclassic psql -U postgres -d postgres
+   cat prisma/migrations/006_add_new_feature.sql | \
+     docker exec -i backbone_postgres psql -U backbone_user -d scmc_sms
    ```
-4. Regenerate Prisma client:
+3. Pull the updated schema and regenerate Prisma client:
    ```bash
-   npx prisma generate
+   npx prisma db pull      # Updates prisma/schema.prisma from database
+   npx prisma generate     # Generates TypeScript types
    ```
+
+**Note**: We use raw SQL migrations and `prisma db pull` instead of `prisma migrate` to maintain full control over the database schema.
 
 ## Critical Business Rules to Enforce
 

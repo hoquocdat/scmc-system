@@ -16,6 +16,11 @@ import { SuppliersPage } from './pages/SuppliersPage';
 import { BrandsPage } from './pages/BrandsPage';
 import { PaymentsPage } from './pages/PaymentsPage';
 import { ReportsPage } from './pages/ReportsPage';
+import { ProductsPage } from './pages/inventory/ProductsPage';
+import { StockLevelsPage } from './pages/inventory/StockLevelsPage';
+import { StockAdjustmentsPage } from './pages/inventory/StockAdjustmentsPage';
+import { SalesOrdersPage } from './pages/sales/SalesOrdersPage';
+import { POSPage } from './pages/pos/POSPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
 import { Toaster } from './components/ui/sonner';
@@ -182,6 +187,56 @@ function App() {
             <ProtectedRoute>
               <AppLayout>
                 <EmployeeDetailPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/products"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <ProductsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/stock"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <StockLevelsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/adjustments"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <StockAdjustmentsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sales/orders"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <SalesOrdersPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/pos"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <POSPage />
               </AppLayout>
             </ProtectedRoute>
           }

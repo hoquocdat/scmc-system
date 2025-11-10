@@ -19,6 +19,10 @@ import { ServiceItemsModule } from './service-items/service-items.module';
 import { ServicePartsModule } from './service-parts/service-parts.module';
 import { ModelsModule } from './models/models.module';
 import { ImagesModule } from './images/images.module';
+import { ProductsModule } from './products/products.module';
+import { InventoryModule } from './inventory/inventory.module';
+import { SalesModule } from './sales/sales.module';
+import { PosModule } from './pos/pos.module';
 
 @Module({
   imports: [
@@ -42,6 +46,10 @@ import { ImagesModule } from './images/images.module';
     ServicePartsModule,
     ModelsModule,
     ImagesModule,
+    ProductsModule,
+    InventoryModule,
+    SalesModule,
+    PosModule,
   ],
   controllers: [AppController],
   providers: [AppService],
