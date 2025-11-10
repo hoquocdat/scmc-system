@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -22,6 +22,11 @@ import { type Customer } from '@/lib/api/customers';
 import { formatCurrency } from '@/lib/utils';
 import { CustomerLookupDialog } from '@/components/pos/CustomerLookupDialog';
 import { CashPaymentDialog } from '@/components/pos/CashPaymentDialog';
+import { CardPaymentDialog } from '@/components/pos/CardPaymentDialog';
+import { EWalletPaymentDialog } from '@/components/pos/EWalletPaymentDialog';
+import { ReceiptDialog } from '@/components/pos/ReceiptDialog';
+import type { ReceiptData } from '@/components/pos/ReceiptTemplate';
+import { generateReceiptNumber } from '@/lib/utils/print';
 
 interface CartItem {
   product: Product;
@@ -36,6 +41,10 @@ export function POSPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isCustomerDialogOpen, setIsCustomerDialogOpen] = useState(false);
   const [isCashPaymentDialogOpen, setIsCashPaymentDialogOpen] = useState(false);
+  const [isCardPaymentDialogOpen, setIsCardPaymentDialogOpen] = useState(false);
+  const [isEWalletPaymentDialogOpen, setIsEWalletPaymentDialogOpen] = useState(false);
+  const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
+  const [receiptData, setReceiptData] = useState<ReceiptData | null>(null);
 
   // Fetch products for POS (active products only)
   const { data: productsData, isLoading: productsLoading } = useQuery({
@@ -102,6 +111,33 @@ export function POSPage() {
     setSelectedCustomer(null);
   };
 
+  // Generate receipt and show dialog
+  const showReceipt = (paymentMethod: string, paymentDetails: any) => {
+    const receipt: ReceiptData = {
+      receiptNumber: generateReceiptNumber(),
+      date: new Date(),
+      customer: selectedCustomer,
+      items: cart.map((item) => ({
+        product: item.product,
+        quantity: item.quantity,
+        price: item.price,
+        discount: item.discount,
+      })),
+      subtotal,
+      discount: totalDiscount,
+      vat,
+      total,
+      paymentMethod,
+      amountPaid: paymentDetails.amountPaid || total,
+      change: paymentDetails.change,
+      cashier: 'Current User', // TODO: Get from auth context
+      location: 'HCMC Store', // TODO: Get from settings
+    };
+
+    setReceiptData(receipt);
+    setIsReceiptDialogOpen(true);
+  };
+
   // Handle cash payment
   const handleCashPayment = (amountPaid: number, change: number) => {
     // TODO: Create sales transaction via API
@@ -113,8 +149,40 @@ export function POSPage() {
       items: cart,
     });
 
-    // Show success message and clear cart
-    alert(`Payment successful! Change: ${formatCurrency(change)}`);
+    // Show receipt
+    showReceipt('Tiền mặt', { amountPaid, change });
+    clearCart();
+  };
+
+  // Handle card payment
+  const handleCardPayment = (transactionId: string, last4Digits: string) => {
+    // TODO: Create sales transaction via API
+    console.log('Card payment completed:', {
+      total,
+      transactionId,
+      last4Digits,
+      customer: selectedCustomer,
+      items: cart,
+    });
+
+    // Show receipt
+    showReceipt(`Thẻ ****${last4Digits}`, { amountPaid: total });
+    clearCart();
+  };
+
+  // Handle e-wallet payment
+  const handleEWalletPayment = (provider: string, transactionId: string) => {
+    // TODO: Create sales transaction via API
+    console.log('E-wallet payment completed:', {
+      total,
+      provider,
+      transactionId,
+      customer: selectedCustomer,
+      items: cart,
+    });
+
+    // Show receipt
+    showReceipt(provider.toUpperCase(), { amountPaid: total });
     clearCart();
   };
 
@@ -349,7 +417,7 @@ export function POSPage() {
               size="lg"
               variant="outline"
               disabled={cart.length === 0}
-              onClick={() => alert('Card payment - To be implemented')}
+              onClick={() => setIsCardPaymentDialogOpen(true)}
             >
               <CreditCard className="mr-2 h-5 w-5" />
               Pay Card
@@ -359,7 +427,7 @@ export function POSPage() {
               size="lg"
               variant="outline"
               disabled={cart.length === 0}
-              onClick={() => alert('E-wallet payment - To be implemented')}
+              onClick={() => setIsEWalletPaymentDialogOpen(true)}
             >
               <DollarSign className="mr-2 h-5 w-5" />
               E-Wallet
@@ -392,6 +460,32 @@ export function POSPage() {
         totalAmount={total}
         onConfirmPayment={handleCashPayment}
       />
+
+      {/* Card Payment Dialog */}
+      <CardPaymentDialog
+        open={isCardPaymentDialogOpen}
+        onOpenChange={setIsCardPaymentDialogOpen}
+        totalAmount={total}
+        onConfirmPayment={handleCardPayment}
+      />
+
+      {/* E-Wallet Payment Dialog */}
+      <EWalletPaymentDialog
+        open={isEWalletPaymentDialogOpen}
+        onOpenChange={setIsEWalletPaymentDialogOpen}
+        totalAmount={total}
+        onConfirmPayment={handleEWalletPayment}
+      />
+
+      {/* Receipt Dialog */}
+      {receiptData && (
+        <ReceiptDialog
+          open={isReceiptDialogOpen}
+          onOpenChange={setIsReceiptDialogOpen}
+          receiptData={receiptData}
+          onNewSale={clearCart}
+        />
+      )}
     </div>
   );
 }

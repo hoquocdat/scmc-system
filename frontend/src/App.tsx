@@ -13,10 +13,14 @@ import { EmployeeDetailPage } from './pages/EmployeeDetailPage';
 import { ServiceBoardPage } from './pages/ServiceBoardPage';
 import { PartsPage } from './pages/PartsPage';
 import { SuppliersPage } from './pages/SuppliersPage';
-import { BrandsPage } from './pages/BrandsPage';
 import { PaymentsPage } from './pages/PaymentsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { ProductsPage } from './pages/inventory/ProductsPage';
+import { ProductDetailPage } from './pages/inventory/ProductDetailPage';
+import { ProductFormPage } from './pages/inventory/ProductFormPage';
+import { BrandsPage } from './pages/inventory/BrandsPage';
+import { ProductCategoriesPage } from './pages/inventory/ProductCategoriesPage';
+import { ProductCategoryFormPage } from './pages/inventory/ProductCategoryFormPage';
 import { StockLevelsPage } from './pages/inventory/StockLevelsPage';
 import { StockAdjustmentsPage } from './pages/inventory/StockAdjustmentsPage';
 import { SalesOrdersPage } from './pages/sales/SalesOrdersPage';
@@ -142,11 +146,41 @@ function App() {
           }
         />
         <Route
-          path="/brands"
+          path="/inventory/brands"
           element={
             <ProtectedRoute>
               <AppLayout>
                 <BrandsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/categories"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <ProductCategoriesPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/categories/new"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <ProductCategoryFormPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/categories/:id/edit"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <ProductCategoryFormPage />
               </AppLayout>
             </ProtectedRoute>
           }
@@ -197,6 +231,36 @@ function App() {
             <ProtectedRoute>
               <AppLayout>
                 <ProductsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/products/new"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <ProductFormPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/products/:id/edit"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <ProductFormPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/products/:id"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <ProductDetailPage />
               </AppLayout>
             </ProtectedRoute>
           }

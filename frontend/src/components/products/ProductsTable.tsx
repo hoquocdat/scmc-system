@@ -93,6 +93,33 @@ export function ProductsTable({ data, isLoading, onRefresh }: ProductsTableProps
         ),
       },
       {
+        id: 'stock_level',
+        header: 'Tồn kho',
+        cell: ({ row }) => {
+          const inventory = row.original.inventory || [];
+          const totalStock = inventory.reduce(
+            (sum, item) => sum + (item.quantity_on_hand || 0),
+            0
+          );
+          const totalReserved = inventory.reduce(
+            (sum, item) => sum + (item.quantity_reserved || 0),
+            0
+          );
+          const available = totalStock - totalReserved;
+
+          return (
+            <div className="text-sm">
+              <div className="font-medium">{totalStock}</div>
+              {totalReserved > 0 && (
+                <div className="text-xs text-muted-foreground">
+                  Còn: {available}
+                </div>
+              )}
+            </div>
+          );
+        },
+      },
+      {
         accessorKey: 'retail_price',
         header: 'Giá bán',
         cell: ({ row }) => (

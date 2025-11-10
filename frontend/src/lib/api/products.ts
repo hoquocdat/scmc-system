@@ -38,6 +38,11 @@ export interface Product {
     name: string;
   };
   product_variants?: ProductVariant[];
+  inventory?: Array<{
+    quantity_on_hand: number;
+    quantity_reserved: number;
+    location_id: string;
+  }>;
 }
 
 export interface ProductVariant {

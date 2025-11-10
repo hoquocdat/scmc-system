@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Plus, Filter, X } from 'lucide-react';
 import { productsApi, type ProductQueryParams } from '@/lib/api/products';
 import { Button } from '@/components/ui/button';
@@ -19,6 +19,7 @@ import { ProductFormDialog } from '@/components/products/ProductFormDialog';
 import { ProductFilters } from '@/components/products/ProductFilters';
 
 export function ProductsPage() {
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
@@ -97,7 +98,7 @@ export function ProductsPage() {
               Quản lý danh sách sản phẩm và hàng tồn kho
             </p>
           </div>
-          <Button onClick={() => setIsCreateDialogOpen(true)}>
+          <Button onClick={() => navigate('/inventory/products/new')}>
             <Plus className="mr-2 h-4 w-4" />
             Thêm sản phẩm
           </Button>

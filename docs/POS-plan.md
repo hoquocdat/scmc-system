@@ -8,6 +8,8 @@
 
 This implementation plan extends the existing SCMC Workshop Management System with comprehensive retail POS capabilities. By leveraging the current architecture (NestJS, React, PostgreSQL, TanStack Query), we can accelerate development while maintaining consistency.
 
+SKIP PHARSE 4 and PHARSE 5
+
 ---
 
 ## 📊 Project Timeline Overview

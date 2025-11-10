@@ -151,27 +151,33 @@ export function AppLayout({ children }: AppLayoutProps) {
       ],
     },
     {
-      id: 'parts',
-      name: t('navigation.parts'),
+      id: 'products',
+      name: 'Hàng hóa',
       icon: Package,
-      roles: ['employee', 'manager'],
+      roles: ['sales', 'manager'],
       children: [
         {
-          name: 'Phụ Tùng',
-          href: '/parts',
+          name: 'Sản Phẩm',
+          href: '/inventory/products',
+          icon: Package,
+          roles: ['sales', 'manager'],
+        },
+        {
+          name: 'Thương Hiệu',
+          href: '/inventory/brands',
+          icon: Tag,
+          roles: ['manager'],
+        },
+        {
+          name: 'Danh Mục',
+          href: '/inventory/categories',
           icon: Boxes,
-          roles: ['employee', 'manager'],
+          roles: ['manager'],
         },
         {
           name: 'Nhà Cung Cấp',
           href: '/suppliers',
           icon: Building2,
-          roles: ['manager'],
-        },
-        {
-          name: 'Thương Hiệu',
-          href: '/brands',
-          icon: Tag,
           roles: ['manager'],
         },
       ],
@@ -182,12 +188,6 @@ export function AppLayout({ children }: AppLayoutProps) {
       icon: Warehouse,
       roles: ['sales', 'manager'],
       children: [
-        {
-          name: 'Sản Phẩm',
-          href: '/inventory/products',
-          icon: Package,
-          roles: ['sales', 'manager'],
-        },
         {
           name: 'Tồn Kho',
           href: '/inventory/stock',
@@ -282,6 +282,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         'parts': t('navigation.parts'),
         'suppliers': 'Nhà Cung Cấp',
         'brands': 'Thương Hiệu',
+        'categories': 'Danh Mục',
         'inventory': 'Kho Hàng',
         'products': 'Sản Phẩm',
         'stock': 'Tồn Kho',

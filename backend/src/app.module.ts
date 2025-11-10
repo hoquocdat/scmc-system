@@ -23,6 +23,8 @@ import { ProductsModule } from './products/products.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { SalesModule } from './sales/sales.module';
 import { PosModule } from './pos/pos.module';
+import { ReportsModule } from './reports/reports.module';
+import { ProductCategoriesModule } from './product-categories/product-categories.module';
 
 @Module({
   imports: [
@@ -50,6 +52,8 @@ import { PosModule } from './pos/pos.module';
     InventoryModule,
     SalesModule,
     PosModule,
+    ReportsModule,
+    ProductCategoriesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

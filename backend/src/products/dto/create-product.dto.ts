@@ -52,8 +52,8 @@ export class CreateProductDto {
   supplier_id?: string;
 
   @ApiPropertyOptional({ description: 'Cost price', default: 0 })
-  @IsNumber()
   @IsOptional()
+  @IsNumber()
   @Min(0)
   cost_price?: number;
 
@@ -64,30 +64,30 @@ export class CreateProductDto {
   retail_price: number;
 
   @ApiPropertyOptional({ description: 'Sale price (if on sale)' })
-  @IsNumber()
   @IsOptional()
+  @IsNumber()
   @Min(0)
   sale_price?: number;
 
   @ApiPropertyOptional({ description: 'Sale price start date' })
-  @IsDateString()
   @IsOptional()
+  @IsDateString()
   sale_price_start_date?: string;
 
   @ApiPropertyOptional({ description: 'Sale price end date' })
-  @IsDateString()
   @IsOptional()
+  @IsDateString()
   sale_price_end_date?: string;
 
   @ApiPropertyOptional({ description: 'Reorder point threshold', default: 0 })
-  @IsNumber()
   @IsOptional()
+  @IsNumber()
   @Min(0)
   reorder_point?: number;
 
   @ApiPropertyOptional({ description: 'Reorder quantity', default: 0 })
-  @IsNumber()
   @IsOptional()
+  @IsNumber()
   @Min(0)
   reorder_quantity?: number;
 
@@ -107,26 +107,26 @@ export class CreateProductDto {
   is_featured?: boolean;
 
   @ApiPropertyOptional({ description: 'Weight in kg' })
-  @IsNumber()
   @IsOptional()
+  @IsNumber()
   @Min(0)
   weight?: number;
 
   @ApiPropertyOptional({ description: 'Length in cm' })
-  @IsNumber()
   @IsOptional()
+  @IsNumber()
   @Min(0)
   dimensions_length?: number;
 
   @ApiPropertyOptional({ description: 'Width in cm' })
-  @IsNumber()
   @IsOptional()
+  @IsNumber()
   @Min(0)
   dimensions_width?: number;
 
   @ApiPropertyOptional({ description: 'Height in cm' })
-  @IsNumber()
   @IsOptional()
+  @IsNumber()
   @Min(0)
   dimensions_height?: number;
 }

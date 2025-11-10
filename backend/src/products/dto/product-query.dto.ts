@@ -1,6 +1,6 @@
 import { IsOptional, IsString, IsBoolean, IsUUID, IsEnum, IsNumber, Min } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 import { ProductType } from './create-product.dto';
 
 export class ProductQueryDto {
@@ -32,13 +32,21 @@ export class ProductQueryDto {
   @ApiPropertyOptional({ description: 'Filter by active status' })
   @IsBoolean()
   @IsOptional()
-  @Type(() => Boolean)
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
   is_active?: boolean;
 
   @ApiPropertyOptional({ description: 'Filter by featured status' })
   @IsBoolean()
   @IsOptional()
-  @Type(() => Boolean)
+  @Transform(({ value }) => {
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    return value;
+  })
   is_featured?: boolean;
 
   @ApiPropertyOptional({ description: 'Page number', default: 1, minimum: 1 })

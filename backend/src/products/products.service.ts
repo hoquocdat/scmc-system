@@ -25,12 +25,17 @@ export class ProductsService {
         throw new ConflictException(`Product with SKU "${createProductDto.sku}" already exists`);
       }
 
-      // Convert decimal fields to proper format
+      // Destructure to exclude foreign key fields
+      const { category_id, brand_id, supplier_id, ...dtoData } = createProductDto;
+
+      // Convert decimal fields and date fields to proper format
       const data: Prisma.productsCreateInput = {
-        ...createProductDto,
+        ...dtoData,
         cost_price: createProductDto.cost_price ? new Prisma.Decimal(createProductDto.cost_price) : undefined,
         retail_price: new Prisma.Decimal(createProductDto.retail_price),
         sale_price: createProductDto.sale_price ? new Prisma.Decimal(createProductDto.sale_price) : undefined,
+        sale_price_start_date: createProductDto.sale_price_start_date ? new Date(createProductDto.sale_price_start_date) : undefined,
+        sale_price_end_date: createProductDto.sale_price_end_date ? new Date(createProductDto.sale_price_end_date) : undefined,
         weight: createProductDto.weight ? new Prisma.Decimal(createProductDto.weight) : undefined,
         dimensions_length: createProductDto.dimensions_length ? new Prisma.Decimal(createProductDto.dimensions_length) : undefined,
         dimensions_width: createProductDto.dimensions_width ? new Prisma.Decimal(createProductDto.dimensions_width) : undefined,
@@ -38,14 +43,14 @@ export class ProductsService {
       };
 
       // Handle foreign key relations
-      if (createProductDto.category_id) {
-        data.product_categories = { connect: { id: createProductDto.category_id } };
+      if (category_id) {
+        data.product_categories = { connect: { id: category_id } };
       }
-      if (createProductDto.brand_id) {
-        data.brands = { connect: { id: createProductDto.brand_id } };
+      if (brand_id) {
+        data.brands = { connect: { id: brand_id } };
       }
-      if (createProductDto.supplier_id) {
-        data.suppliers = { connect: { id: createProductDto.supplier_id } };
+      if (supplier_id) {
+        data.suppliers = { connect: { id: supplier_id } };
       }
 
       const product = await this.prisma.products.create({
@@ -112,6 +117,13 @@ export class ProductsService {
           brands: true,
           suppliers: true,
           product_variants: true,
+          inventory: {
+            select: {
+              quantity_on_hand: true,
+              quantity_reserved: true,
+              location_id: true,
+            },
+          },
         },
       }),
       this.prisma.products.count({ where }),
@@ -167,12 +179,17 @@ export class ProductsService {
         }
       }
 
-      // Convert decimal fields
+      // Destructure to exclude foreign key fields
+      const { category_id, brand_id, supplier_id, ...dtoData } = updateProductDto;
+
+      // Convert decimal fields and date fields to proper format
       const data: Prisma.productsUpdateInput = {
-        ...updateProductDto,
+        ...dtoData,
         cost_price: updateProductDto.cost_price ? new Prisma.Decimal(updateProductDto.cost_price) : undefined,
         retail_price: updateProductDto.retail_price ? new Prisma.Decimal(updateProductDto.retail_price) : undefined,
         sale_price: updateProductDto.sale_price ? new Prisma.Decimal(updateProductDto.sale_price) : undefined,
+        sale_price_start_date: updateProductDto.sale_price_start_date ? new Date(updateProductDto.sale_price_start_date) : undefined,
+        sale_price_end_date: updateProductDto.sale_price_end_date ? new Date(updateProductDto.sale_price_end_date) : undefined,
         weight: updateProductDto.weight ? new Prisma.Decimal(updateProductDto.weight) : undefined,
         dimensions_length: updateProductDto.dimensions_length ? new Prisma.Decimal(updateProductDto.dimensions_length) : undefined,
         dimensions_width: updateProductDto.dimensions_width ? new Prisma.Decimal(updateProductDto.dimensions_width) : undefined,
@@ -180,14 +197,14 @@ export class ProductsService {
       };
 
       // Handle foreign key relations
-      if (updateProductDto.category_id) {
-        data.product_categories = { connect: { id: updateProductDto.category_id } };
+      if (category_id) {
+        data.product_categories = { connect: { id: category_id } };
       }
-      if (updateProductDto.brand_id) {
-        data.brands = { connect: { id: updateProductDto.brand_id } };
+      if (brand_id) {
+        data.brands = { connect: { id: brand_id } };
       }
-      if (updateProductDto.supplier_id) {
-        data.suppliers = { connect: { id: updateProductDto.supplier_id } };
+      if (supplier_id) {
+        data.suppliers = { connect: { id: supplier_id } };
       }
 
       const product = await this.prisma.products.update({
