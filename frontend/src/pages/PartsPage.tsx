@@ -93,7 +93,6 @@ export function PartsPage() {
     handleSubmit,
     formState: { errors, isSubmitting },
     reset,
-    setError: setFormError,
     setValue,
   } = useForm<PartFormData>({
     defaultValues: {

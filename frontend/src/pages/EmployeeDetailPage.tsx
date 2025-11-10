@@ -7,7 +7,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ArrowLeft, Phone, Mail, User, Wrench, Activity } from 'lucide-react';
-import { toast } from 'sonner';
 import { useUrlTabs } from '@/hooks/useUrlTabs';
 import { getStatusColor, getStatusLabel } from '@/lib/utils/status';
 
@@ -30,7 +29,7 @@ export function EmployeeDetailPage() {
   const { data: serviceOrdersData, isLoading: isLoadingOrders } = useQuery({
     queryKey: ['service-orders', 'employee', id],
     queryFn: async () => {
-      const ordersResponse: any = await apiClient.serviceOrders.getAll(1, 100, id);
+      const ordersResponse: any = await apiClient.serviceOrders.getAll(1, 100, { employee: [id!] });
       return ordersResponse.data || [];
     },
     enabled: !!id,

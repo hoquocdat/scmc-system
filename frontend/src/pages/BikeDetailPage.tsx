@@ -4,7 +4,6 @@ import { apiClient } from '../lib/api-client';
 import type { Motorcycle, ServiceOrder, Customer } from '../types';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { toast } from 'sonner';
 import { useUrlTabs } from '@/hooks/useUrlTabs';
 import { BikeInfoTab } from '@/components/bikes/BikeInfoTab';
 import { BikeImagesTab } from '@/components/bikes/BikeImagesTab';

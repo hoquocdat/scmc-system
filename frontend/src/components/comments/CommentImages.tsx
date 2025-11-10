@@ -2,7 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useEntityImages, useUploadImages, useDeleteImage } from '@/hooks/useImages';
 import { ImageUploadButton, type UploadFile } from '../common/ImageUploadButton';
 import { toast } from 'sonner';
-import { X, Trash2 } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 import Lightbox from 'yet-another-react-lightbox';
 import 'yet-another-react-lightbox/styles.css';
 

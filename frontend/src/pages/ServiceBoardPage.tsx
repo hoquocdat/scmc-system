@@ -108,7 +108,7 @@ export function ServiceBoardPage() {
 
 
   const getFilteredOrders = () => {
-    return serviceOrders.filter(order => {
+    return serviceOrders.filter((order: any) => {
       // Filter by employee
       if (selectedEmployee !== 'all' && order.assigned_employee_id !== selectedEmployee) {
         return false;
@@ -142,7 +142,7 @@ export function ServiceBoardPage() {
 
   const getOrdersByStatus = (status: ServiceStatus) => {
     const filtered = getFilteredOrders();
-    return filtered.filter(order => order.status === status);
+    return filtered.filter((order: any) => order.status === status);
   };
 
   if (isLoading) {
