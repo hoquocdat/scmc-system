@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { apiClient } from '../../lib/api-client';
 import type { ServiceItem, ServiceStatus } from '../../types';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '../ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '../ui/sheet';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -13,7 +13,6 @@ import { XCircle } from 'lucide-react';
 import { PhotoGallery } from '@/components/common/PhotoGallery';
 import { ImageUploadButton, type UploadFile } from '@/components/common/ImageUploadButton';
 import { useEntityImages, useUploadImages, useDeleteImage } from '@/hooks/useImages';
-import { EmptyPhoto } from '../common/EmptyPhoto';
 
 interface ServiceItemFormProps {
   serviceOrderId: string;

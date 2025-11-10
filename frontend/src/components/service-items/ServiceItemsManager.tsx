@@ -120,7 +120,6 @@ export function ServiceItemsManager({ serviceOrderId }: ServiceItemsManagerProps
     return <div>Loading tasks...</div>;
   }
 
-  const totals = calculateTotals();
   const progress = calculateProgress();
 
   return (

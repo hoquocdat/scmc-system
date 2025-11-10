@@ -1,7 +1,6 @@
 import { IconCloud } from "@tabler/icons-react"
 import { useTranslation } from 'react-i18next';
 
-import { Button } from "@/components/ui/button"
 import {
   Empty,
   EmptyContent,
@@ -10,7 +9,6 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from "@/components/ui/empty"
-import { ImageUploadButton, type UploadFile } from '@/components/common/ImageUploadButton';
 
 export function EmptyPhoto({ children }: { children?: React.ReactNode }) {
   const { t } = useTranslation();

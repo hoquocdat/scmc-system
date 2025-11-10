@@ -245,7 +245,6 @@ export function AppLayout({ children }: AppLayoutProps) {
 
         // If there's a detail page (has an ID)
         if (pathSegments.length === 2) {
-          const id = pathSegments[1];
           let detailLabel = t('serviceOrders.orderDetails');
 
           // Customize labels for detail pages
