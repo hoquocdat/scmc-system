@@ -19,6 +19,8 @@ interface ActivityTimelineProps {
 
 interface ActivityWithUser extends ActivityLog {
   user_name?: string;
+  old_values?: any;
+  new_values?: any;
 }
 
 export function ActivityTimeline({ entityType, entityId }: ActivityTimelineProps) {
@@ -157,15 +159,6 @@ export function ActivityTimeline({ entityType, entityId }: ActivityTimelineProps
       cancelled: 'Hủy bỏ',
     };
     return actionLabels[action] || action;
-  };
-
-  const parseDetails = (details?: string): any => {
-    if (!details) return null;
-    try {
-      return JSON.parse(details);
-    } catch {
-      return details;
-    }
   };
 
   const getFieldLabel = (field: string): string => {

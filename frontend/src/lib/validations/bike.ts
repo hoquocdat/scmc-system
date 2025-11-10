@@ -16,9 +16,7 @@ export const createBikeSchema = z.object({
   model: requiredStringSchema('Vui lòng nhập hoặc chọn mẫu xe'),
   license_plate: licensePlateSchema,
   year: z
-    .number({
-      invalid_type_error: 'Năm phải là số',
-    })
+    .number({ message: 'Năm phải là số' })
     .int('Năm phải là số nguyên')
     .min(1900, 'Năm không hợp lệ')
     .max(new Date().getFullYear() + 1, 'Năm không hợp lệ')

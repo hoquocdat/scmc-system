@@ -57,8 +57,7 @@ export const uuidSchema = z.string().uuid('ID không hợp lệ');
 
 // Date validation
 export const dateSchema = z.coerce.date({
-  required_error: 'Vui lòng chọn ngày',
-  invalid_type_error: 'Ngày không hợp lệ',
+  message: 'Vui lòng chọn ngày hợp lệ',
 });
 
 // Vietnamese full name validation

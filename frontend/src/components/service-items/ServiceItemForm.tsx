@@ -213,14 +213,7 @@ export function ServiceItemForm({ serviceOrderId, item, onClose }: ServiceItemFo
           toast.info(`Đang tải lên ${pendingFiles.length} hình ảnh...`);
           try {
             // Upload images using API client
-            const formData = new FormData();
-            formData.append('entity_type', 'service_item');
-            formData.append('entity_id', taskId);
-            pendingFiles.forEach((file) => {
-              formData.append('files', file);
-            });
-
-            await apiClient.images.upload(formData);
+            await apiClient.images.upload('service_item', taskId, pendingFiles);
             toast.success('Hình ảnh đã được tải lên thành công');
           } catch (uploadError) {
             console.error('Error uploading images:', uploadError);
