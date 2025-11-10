@@ -149,7 +149,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
         <div className="flex justify-center">
           <img src="/logo.svg" alt="SCMC Workshop" className="h-16 w-auto" />
         </div>
-        <CardTitle className="text-2xl font-bold text-center">SCMC Workplace</CardTitle>
+        <CardTitle className="text-2xl font-bold text-center">SCMC Workspace</CardTitle>
         <CardDescription className="text-center">
           Nhập email của bạn để đăng nhập vào tài khoản
         </CardDescription>
