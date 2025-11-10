@@ -7,6 +7,7 @@ export type ServiceStatus =
   | 'confirmed'
   | 'in_progress'
   | 'waiting_parts'
+  | 'waiting_approval'
   | 'quality_check'
   | 'completed'
   | 'ready_for_pickup'
