@@ -3,6 +3,7 @@ import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { PrismaModule } from './prisma/prisma.module';
+import { HealthModule } from './health/health.module';
 import { CustomersModule } from './customers/customers.module';
 import { BikesModule } from './bikes/bikes.module';
 import { ServiceOrdersModule } from './service-orders/service-orders.module';
@@ -25,6 +26,7 @@ import { ImagesModule } from './images/images.module';
       isGlobal: true,
     }),
     PrismaModule,
+    HealthModule,
     AuthModule,
     CustomersModule,
     BikesModule,

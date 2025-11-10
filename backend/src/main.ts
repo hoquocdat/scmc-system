@@ -28,6 +28,7 @@ async function bootstrap() {
     .setTitle('SCMC Workshop Management API')
     .setDescription('API documentation for SCMC Motorcycle Workshop Management System')
     .setVersion('1.0')
+    .addTag('Health', 'Health check and monitoring endpoints')
     .addTag('Authentication', 'User authentication endpoints')
     .addTag('Customers', 'Customer management')
     .addTag('Bikes', 'Motorcycle management')

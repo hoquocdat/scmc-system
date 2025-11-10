@@ -42,7 +42,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
         onSuccess();
       }
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+      const errorMessage = error instanceof Error ? error.message : 'Đã xảy ra lỗi';
       setError(errorMessage);
 
       if (onError) {
@@ -66,7 +66,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
 
       setResetEmailSent(true);
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'An error occurred';
+      const errorMessage = error instanceof Error ? error.message : 'Đã xảy ra lỗi';
       setError(errorMessage);
     } finally {
       setIsLoading(false);
@@ -76,19 +76,22 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
   if (showForgotPassword) {
     return (
       <Card>
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Reset Password</CardTitle>
+        <CardHeader className="space-y-3">
+          <div className="flex justify-center">
+            <img src="/logo.svg" alt="SCMC Workshop" className="h-16 w-auto" />
+          </div>
+          <CardTitle className="text-2xl font-bold text-center">Đặt Lại Mật Khẩu</CardTitle>
           <CardDescription className="text-center">
             {resetEmailSent
-              ? 'Check your email for the password reset link'
-              : 'Enter your email address to receive a password reset link'}
+              ? 'Kiểm tra email của bạn để lấy liên kết đặt lại mật khẩu'
+              : 'Nhập địa chỉ email của bạn để nhận liên kết đặt lại mật khẩu'}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {resetEmailSent ? (
             <div className="space-y-4">
               <div className="text-sm text-green-600 bg-green-50 border border-green-200 rounded p-3">
-                Password reset email sent successfully! Check your inbox.
+                Email đặt lại mật khẩu đã được gửi thành công! Kiểm tra hộp thư của bạn.
               </div>
               <Button
                 type="button"
@@ -99,7 +102,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
                   setResetEmailSent(false);
                 }}
               >
-                Back to Login
+                Quay Lại Đăng Nhập
               </Button>
             </div>
           ) : (
@@ -122,7 +125,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
                   </div>
                 )}
                 <Button type="submit" className="w-full" disabled={isLoading}>
-                  {isLoading ? 'Sending...' : 'Send Reset Link'}
+                  {isLoading ? 'Đang gửi...' : 'Gửi Liên Kết Đặt Lại'}
                 </Button>
                 <Button
                   type="button"
@@ -130,7 +133,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
                   className="w-full"
                   onClick={() => setShowForgotPassword(false)}
                 >
-                  Back to Login
+                  Quay Lại Đăng Nhập
                 </Button>
               </div>
             </form>
@@ -142,10 +145,13 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
 
   return (
     <Card>
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold text-center">SCMC Workshop</CardTitle>
+      <CardHeader className="space-y-3">
+        <div className="flex justify-center">
+          <img src="/logo.svg" alt="SCMC Workshop" className="h-16 w-auto" />
+        </div>
+        <CardTitle className="text-2xl font-bold text-center">SCMC Workplace</CardTitle>
         <CardDescription className="text-center">
-          Enter your email below to login to your account
+          Nhập email của bạn để đăng nhập vào tài khoản
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -164,13 +170,13 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
             </div>
             <div className="grid gap-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Mật khẩu</Label>
                 <button
                   type="button"
                   onClick={() => setShowForgotPassword(true)}
                   className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
                 >
-                  Forgot password?
+                  Quên mật khẩu?
                 </button>
               </div>
               <div className="relative">
@@ -187,7 +193,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                 >
                   {showPassword ? (
                     <EyeOff className="h-4 w-4" />
@@ -203,7 +209,7 @@ export function LoginForm({ onSuccess, onError }: LoginFormProps) {
               </div>
             )}
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Logging in...' : 'Login'}
+              {isLoading ? 'Đang đăng nhập...' : 'Đăng Nhập'}
             </Button>
           </div>
         </form>

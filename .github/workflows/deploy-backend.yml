@@ -1,0 +1,124 @@
+name: Deploy Backend to Cloud Run
+
+on:
+  push:
+    branches:
+      - main
+      - production
+    paths:
+      - 'backend/**'
+      - '.github/workflows/deploy-backend.yml'
+  workflow_dispatch:
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  SERVICE_NAME: ${{ vars.SERVICE_NAME || 'scmc-backend' }}
+  REGION: ${{ vars.GCP_REGION || 'asia-southeast1' }}
+  REGISTRY: ${{ vars.ARTIFACT_REGISTRY || 'asia-southeast1-docker.pkg.dev' }}
+
+jobs:
+  deploy:
+    name: Deploy Backend to Cloud Run
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker ${{ env.REGISTRY }}
+
+      - name: Build Docker image
+        working-directory: ./backend
+        run: |
+          docker build \
+            --tag ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/scmc/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            --tag ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/scmc/${{ env.SERVICE_NAME }}:latest \
+            .
+
+      - name: Push Docker image to Artifact Registry
+        run: |
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/scmc/${{ env.SERVICE_NAME }}:${{ github.sha }}
+          docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/scmc/${{ env.SERVICE_NAME }}:latest
+
+      - name: Create service account for Cloud Run
+        run: |
+          # Create service account if it doesn't exist
+          if ! gcloud iam service-accounts describe ${SERVICE_NAME}-runtime@${PROJECT_ID}.iam.gserviceaccount.com --project=${PROJECT_ID} 2>/dev/null; then
+            gcloud iam service-accounts create ${SERVICE_NAME}-runtime \
+              --display-name="Cloud Run runtime service account for ${SERVICE_NAME}" \
+              --project=${PROJECT_ID}
+          fi
+
+          # Grant Secret Manager accessor role
+          gcloud projects add-iam-policy-binding ${PROJECT_ID} \
+            --member="serviceAccount:${SERVICE_NAME}-runtime@${PROJECT_ID}.iam.gserviceaccount.com" \
+            --role="roles/secretmanager.secretAccessor" \
+            --condition=None
+
+      - name: Check if service exists
+        id: check_service
+        run: |
+          if gcloud run services describe ${{ env.SERVICE_NAME }} --region=${{ env.REGION }} --project=${{ env.PROJECT_ID }} 2>/dev/null; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/scmc/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            --platform=managed \
+            --region=${{ env.REGION }} \
+            --service-account=${SERVICE_NAME}-runtime@${PROJECT_ID}.iam.gserviceaccount.com \
+            --allow-unauthenticated \
+            --min-instances=0 \
+            --max-instances=10 \
+            --memory=512Mi \
+            --cpu=1 \
+            --timeout=300 \
+            --cpu-boost \
+            --execution-environment=gen2
+
+      - name: Deploy to Cloud Run
+        if: steps.check_service.outputs.exists == 'true'
+        run: |
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/scmc/${{ env.SERVICE_NAME }}:${{ github.sha }} \
+            --platform=managed \
+            --region=${{ env.REGION }} \
+            --service-account=${SERVICE_NAME}-runtime@${PROJECT_ID}.iam.gserviceaccount.com \
+            --allow-unauthenticated \
+            --min-instances=0 \
+            --max-instances=10 \
+            --memory=512Mi \
+            --cpu=1 \
+            --timeout=300 \
+            --cpu-boost \
+            --execution-environment=gen2
+
+      - name: Get Service URL
+        run: |
+          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --platform=managed \
+            --region=${{ env.REGION }} \
+            --format='value(status.url)')
+          echo "Backend deployed to: $SERVICE_URL"
+          echo "SERVICE_URL=$SERVICE_URL" >> $GITHUB_ENV
+
+      - name: Test Deployment
+        run: |
+          echo "Testing backend health endpoint..."
+          curl -f ${{ env.SERVICE_URL }}/health || exit 1
+          echo "Backend is healthy!"
