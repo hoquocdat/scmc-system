@@ -106,16 +106,6 @@ export function ServiceItemsManager({ serviceOrderId }: ServiceItemsManagerProps
     return (completed / serviceItems.length) * 100;
   };
 
-  const calculateTotals = () => {
-    return serviceItems.reduce(
-      (acc, item) => ({
-        labor: acc.labor + (Number(item.labor_cost) || 0),
-        hours: acc.hours + (Number(item.hours_worked) || 0),
-      }),
-      { labor: 0, hours: 0 }
-    );
-  };
-
   if (loading) {
     return <div>Loading tasks...</div>;
   }

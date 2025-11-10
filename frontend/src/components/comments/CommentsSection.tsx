@@ -8,8 +8,7 @@ import { Avatar, AvatarFallback } from '../ui/avatar';
 import { MessageSquare, Trash2, Edit2, X, Check } from 'lucide-react';
 import { toast } from 'sonner';
 import { CommentImages } from './CommentImages';
-import { ImageUploadButton, type UploadFile } from '../common/ImageUploadButton';
-import { useUploadImages } from '@/hooks/useImages';
+import { ImageUploadButton } from '../common/ImageUploadButton';
 
 interface Comment {
   id: string;
