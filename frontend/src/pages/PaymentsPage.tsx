@@ -81,7 +81,6 @@ export function PaymentsPage() {
     formState: { errors, isSubmitting },
     reset,
     control,
-    setError: setFormError,
   } = useForm<PaymentFormData>({
     defaultValues: {
       amount: '',
