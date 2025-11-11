@@ -5,19 +5,17 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
+# Copy package files and Prisma schema
 COPY package*.json ./
 COPY prisma ./prisma/
 
-# Install dependencies
-RUN npm ci --only=production && \
+# Install ALL dependencies (needed for building)
+# @prisma/client postinstall will auto-generate the client
+RUN npm install && \
     npm cache clean --force
 
 # Copy source code
 COPY . .
-
-# Generate Prisma Client
-RUN npx prisma generate
 
 # Build the application
 RUN npm run build
@@ -30,16 +28,14 @@ WORKDIR /app
 # Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init
 
-# Copy package files
+# Copy package files and Prisma schema
 COPY package*.json ./
+COPY --from=builder /app/prisma ./prisma
 
 # Install production dependencies only
-RUN npm ci --only=production && \
+# @prisma/client postinstall will auto-generate the client
+RUN npm install --omit=dev && \
     npm cache clean --force
-
-# Copy Prisma schema and generate client
-COPY --from=builder /app/prisma ./prisma
-RUN npx prisma generate
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
