@@ -11,7 +11,7 @@ on:
   workflow_dispatch:
 
 env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  PROJECT_ID: ${{ vars.GCP_PROJECT_ID || 'truestack' }}
   SERVICE_NAME: ${{ vars.SERVICE_NAME || 'scmc-backend' }}
   REGION: ${{ vars.GCP_REGION || 'asia-southeast1' }}
   REGISTRY: ${{ vars.ARTIFACT_REGISTRY || 'asia-southeast1-docker.pkg.dev' }}
