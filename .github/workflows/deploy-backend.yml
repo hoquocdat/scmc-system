@@ -54,21 +54,6 @@ jobs:
           docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/scmc/${{ env.SERVICE_NAME }}:${{ github.sha }}
           docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/scmc/${{ env.SERVICE_NAME }}:latest
 
-      - name: Create service account for Cloud Run
-        run: |
-          # Create service account if it doesn't exist
-          if ! gcloud iam service-accounts describe ${SERVICE_NAME}-runtime@${PROJECT_ID}.iam.gserviceaccount.com --project=${PROJECT_ID} 2>/dev/null; then
-            gcloud iam service-accounts create ${SERVICE_NAME}-runtime \
-              --display-name="Cloud Run runtime service account for ${SERVICE_NAME}" \
-              --project=${PROJECT_ID}
-          fi
-
-          # Grant Secret Manager accessor role
-          gcloud projects add-iam-policy-binding ${PROJECT_ID} \
-            --member="serviceAccount:${SERVICE_NAME}-runtime@${PROJECT_ID}.iam.gserviceaccount.com" \
-            --role="roles/secretmanager.secretAccessor" \
-            --condition=None
-
       - name: Check if service exists
         id: check_service
         run: |
@@ -81,7 +66,6 @@ jobs:
             --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/scmc/${{ env.SERVICE_NAME }}:${{ github.sha }} \
             --platform=managed \
             --region=${{ env.REGION }} \
-            --service-account=${SERVICE_NAME}-runtime@${PROJECT_ID}.iam.gserviceaccount.com \
             --allow-unauthenticated \
             --min-instances=0 \
             --max-instances=10 \
@@ -98,7 +82,6 @@ jobs:
             --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/scmc/${{ env.SERVICE_NAME }}:${{ github.sha }} \
             --platform=managed \
             --region=${{ env.REGION }} \
-            --service-account=${SERVICE_NAME}-runtime@${PROJECT_ID}.iam.gserviceaccount.com \
             --allow-unauthenticated \
             --min-instances=0 \
             --max-instances=10 \
