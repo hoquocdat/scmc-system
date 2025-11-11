@@ -103,5 +103,5 @@ jobs:
       - name: Test Deployment
         run: |
           echo "Testing backend health endpoint..."
-          curl -f ${{ env.SERVICE_URL }}/health || exit 1
+          curl -f ${{ env.SERVICE_URL }}/api/health || exit 1
           echo "Backend is healthy!"

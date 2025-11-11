@@ -42,14 +42,14 @@ export function ProductFilters({ filters, onApply }: ProductFiltersProps) {
       <div className="space-y-2">
         <Label>Loại sản phẩm</Label>
         <Select
-          value={watch('product_type') || ''}
-          onValueChange={(value) => setValue('product_type', value || undefined)}
+          value={watch('product_type') || 'all'}
+          onValueChange={(value) => setValue('product_type', value === 'all' ? undefined : value)}
         >
           <SelectTrigger>
             <SelectValue placeholder="Tất cả loại sản phẩm" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Tất cả loại sản phẩm</SelectItem>
+            <SelectItem value="all">Tất cả loại sản phẩm</SelectItem>
             <SelectItem value="physical">Hàng hóa vật lý</SelectItem>
             <SelectItem value="service">Dịch vụ</SelectItem>
             <SelectItem value="digital">Sản phẩm số</SelectItem>
@@ -63,13 +63,13 @@ export function ProductFilters({ filters, onApply }: ProductFiltersProps) {
         <Select
           value={
             watch('is_active') === undefined
-              ? ''
+              ? 'all'
               : watch('is_active')
               ? 'true'
               : 'false'
           }
           onValueChange={(value) => {
-            if (value === '') {
+            if (value === 'all') {
               setValue('is_active', undefined);
             } else {
               setValue('is_active', value === 'true');
@@ -80,7 +80,7 @@ export function ProductFilters({ filters, onApply }: ProductFiltersProps) {
             <SelectValue placeholder="Tất cả trạng thái" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Tất cả trạng thái</SelectItem>
+            <SelectItem value="all">Tất cả trạng thái</SelectItem>
             <SelectItem value="true">Đang hoạt động</SelectItem>
             <SelectItem value="false">Ngưng bán</SelectItem>
           </SelectContent>
