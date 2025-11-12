@@ -14,6 +14,7 @@ import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ProductQueryDto } from './dto/product-query.dto';
+import { CreateMasterProductDto, FindVariantDto } from './dto/create-master-product.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -92,5 +93,64 @@ export class ProductsController {
   @ApiResponse({ status: 404, description: 'Product not found' })
   remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.productsService.remove(id);
+  }
+
+  @Post('master-with-variants')
+  @Roles('manager', 'store_manager')
+  @ApiOperation({
+    summary: 'Create master product with automatic variant generation',
+    description:
+      'Creates a master product and automatically generates all variant combinations based on provided attributes',
+  })
+  @ApiResponse({
+    status: 201,
+    description: 'Master product and variants created successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 409, description: 'Product with SKU already exists' })
+  createMasterWithVariants(@Body() dto: CreateMasterProductDto) {
+    return this.productsService.createMasterProductWithVariants(dto);
+  }
+
+  @Get(':id/variants')
+  @Roles('manager', 'store_manager', 'sales_associate', 'warehouse_staff')
+  @ApiOperation({ summary: 'Get all variants of a master product' })
+  @ApiParam({ name: 'id', description: 'Master product UUID' })
+  @ApiResponse({ status: 200, description: 'Variants retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'Master product not found' })
+  @ApiResponse({
+    status: 400,
+    description: 'Product is not a master product',
+  })
+  getVariants(@Param('id', ParseUUIDPipe) id: string) {
+    return this.productsService.getVariants(id);
+  }
+
+  @Post(':id/find-variant')
+  @Roles('manager', 'store_manager', 'sales_associate', 'warehouse_staff')
+  @ApiOperation({
+    summary: 'Find specific variant by attributes',
+    description:
+      'Searches for a specific variant of a master product based on attribute values',
+  })
+  @ApiParam({ name: 'id', description: 'Master product UUID' })
+  @ApiResponse({ status: 200, description: 'Variant found' })
+  @ApiResponse({ status: 404, description: 'Variant not found' })
+  findVariantByAttributes(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() findVariantDto: FindVariantDto,
+  ) {
+    return this.productsService.findVariantByAttributes(id, findVariantDto);
+  }
+
+  @Post('search-by-attributes')
+  @Roles('manager', 'store_manager', 'sales_associate', 'warehouse_staff')
+  @ApiOperation({
+    summary: 'Search products by attributes',
+    description: 'Find all products matching the specified attribute values',
+  })
+  @ApiResponse({ status: 200, description: 'Products found' })
+  searchByAttributes(@Body() attributes: Record<string, any>) {
+    return this.productsService.searchByAttributes(attributes);
   }
 }

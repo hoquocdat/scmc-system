@@ -844,43 +844,51 @@ model product_variants {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains an expression index which requires additional setup for migrations. Visit https://pris.ly/d/expression-indexes for more info.
 model products {
-  id                     String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  sku                    String                   @unique @db.VarChar(100)
-  name                   String                   @db.VarChar(255)
-  description            String?
-  category_id            String?                  @db.Uuid
-  brand_id               String?                  @db.Uuid
-  supplier_id            String?                  @db.Uuid
-  cost_price             Decimal?                 @default(0) @db.Decimal(10, 2)
-  retail_price           Decimal                  @db.Decimal(10, 2)
-  sale_price             Decimal?                 @db.Decimal(10, 2)
-  sale_price_start_date  DateTime?                @db.Timestamptz(6)
-  sale_price_end_date    DateTime?                @db.Timestamptz(6)
-  reorder_point          Int?                     @default(0)
-  reorder_quantity       Int?                     @default(0)
-  product_type           String?                  @default("physical") @db.VarChar(50)
-  is_active              Boolean?                 @default(true)
-  is_featured            Boolean?                 @default(false)
-  weight                 Decimal?                 @db.Decimal(10, 2)
-  dimensions_length      Decimal?                 @db.Decimal(10, 2)
-  dimensions_width       Decimal?                 @db.Decimal(10, 2)
-  dimensions_height      Decimal?                 @db.Decimal(10, 2)
-  created_at             DateTime?                @default(now()) @db.Timestamptz(6)
-  updated_at             DateTime?                @default(now()) @db.Timestamptz(6)
-  inventory              inventory[]
-  inventory_transactions inventory_transactions[]
-  product_variants       product_variants[]
-  brands                 brands?                  @relation(fields: [brand_id], references: [id], onUpdate: NoAction)
-  product_categories     product_categories?      @relation(fields: [category_id], references: [id], onUpdate: NoAction)
-  suppliers              suppliers?               @relation(fields: [supplier_id], references: [id], onUpdate: NoAction)
-  sales_order_items      sales_order_items[]
-  transfer_order_items   transfer_order_items[]
+  id                      String                   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sku                     String                   @unique @db.VarChar(100)
+  name                    String                   @db.VarChar(255)
+  description             String?
+  category_id             String?                  @db.Uuid
+  brand_id                String?                  @db.Uuid
+  supplier_id             String?                  @db.Uuid
+  cost_price              Decimal?                 @default(0) @db.Decimal(10, 2)
+  retail_price            Decimal                  @db.Decimal(10, 2)
+  sale_price              Decimal?                 @db.Decimal(10, 2)
+  sale_price_start_date   DateTime?                @db.Timestamptz(6)
+  sale_price_end_date     DateTime?                @db.Timestamptz(6)
+  reorder_point           Int?                     @default(0)
+  reorder_quantity        Int?                     @default(0)
+  product_type            String?                  @default("physical") @db.VarChar(50)
+  is_active               Boolean?                 @default(true)
+  is_featured             Boolean?                 @default(false)
+  weight                  Decimal?                 @db.Decimal(10, 2)
+  dimensions_length       Decimal?                 @db.Decimal(10, 2)
+  dimensions_width        Decimal?                 @db.Decimal(10, 2)
+  dimensions_height       Decimal?                 @db.Decimal(10, 2)
+  created_at              DateTime?                @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime?                @default(now()) @db.Timestamptz(6)
+  master_product_id       String?                  @db.Uuid
+  is_master               Boolean?                 @default(true)
+  variant_generation_type String?                  @default("manual") @db.VarChar(50)
+  attributes              Json?                    @default("{}")
+  inventory               inventory[]
+  inventory_transactions  inventory_transactions[]
+  product_variants        product_variants[]
+  brands                  brands?                  @relation(fields: [brand_id], references: [id], onUpdate: NoAction)
+  product_categories      product_categories?      @relation(fields: [category_id], references: [id], onUpdate: NoAction)
+  products                products?                @relation("productsToproducts", fields: [master_product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  other_products          products[]               @relation("productsToproducts")
+  suppliers               suppliers?               @relation(fields: [supplier_id], references: [id], onUpdate: NoAction)
+  sales_order_items       sales_order_items[]
+  transfer_order_items    transfer_order_items[]
 
   @@index([is_active], map: "idx_products_active")
   @@index([brand_id], map: "idx_products_brand")
   @@index([category_id], map: "idx_products_category")
   @@index([sku], map: "idx_products_sku")
   @@index([supplier_id], map: "idx_products_supplier")
+  @@index([attributes], map: "idx_products_attributes_gin", type: Gin)
+  @@index([is_master], map: "idx_products_is_master")
   @@schema("public")
 }
 
@@ -1082,6 +1090,33 @@ model images {
   @@index([entity_id], map: "idx_images_entity_id")
   @@index([entity_type, entity_id, is_primary], map: "idx_images_is_primary")
   @@index([uploaded_by], map: "idx_images_uploaded_by")
+  @@schema("public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model attribute_definitions {
+  id                   String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name                 String    @db.VarChar(100)
+  slug                 String    @unique @db.VarChar(100)
+  description          String?
+  input_type           String?   @default("select") @db.VarChar(50)
+  data_type            String?   @default("string") @db.VarChar(50)
+  is_variant_attribute Boolean?  @default(true)
+  is_filterable        Boolean?  @default(true)
+  is_required          Boolean?  @default(false)
+  options              Json?     @default("[]")
+  validation_rules     Json?     @default("{}")
+  display_order        Int?      @default(0)
+  icon                 String?   @db.VarChar(100)
+  help_text            String?
+  is_active            Boolean?  @default(true)
+  created_at           DateTime? @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime? @default(now()) @db.Timestamptz(6)
+
+  @@index([is_active], map: "idx_attr_def_active")
+  @@index([options], map: "idx_attr_def_options_gin", type: Gin)
+  @@index([display_order], map: "idx_attr_def_order")
+  @@index([slug], map: "idx_attr_def_slug")
   @@schema("public")
 }
 

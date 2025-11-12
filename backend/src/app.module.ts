@@ -23,8 +23,9 @@ import { ProductsModule } from './products/products.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { SalesModule } from './sales/sales.module';
 import { PosModule } from './pos/pos.module';
-import { ReportsModule } from './reports/reports.module';
+// import { ReportsModule } from './reports/reports.module'; // TODO: Fix reports module - uses outdated table names
 import { ProductCategoriesModule } from './product-categories/product-categories.module';
+import { AttributeDefinitionsModule } from './attribute-definitions/attribute-definitions.module';
 
 @Module({
   imports: [
@@ -52,8 +53,9 @@ import { ProductCategoriesModule } from './product-categories/product-categories
     InventoryModule,
     SalesModule,
     PosModule,
-    ReportsModule,
+    // ReportsModule, // TODO: Fix reports module - uses outdated table names
     ProductCategoriesModule,
+    AttributeDefinitionsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -129,4 +129,11 @@ export class CreateProductDto {
   @IsNumber()
   @Min(0)
   dimensions_height?: number;
+
+  @ApiPropertyOptional({
+    description: 'Product attributes (JSONB)',
+    example: { color: 'red', size: 'M' },
+  })
+  @IsOptional()
+  attributes?: Record<string, any>;
 }

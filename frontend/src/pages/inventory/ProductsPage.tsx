@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { Plus, Filter, X } from 'lucide-react';
+import { Plus, Filter, X, List, Layers } from 'lucide-react';
 import { productsApi, type ProductQueryParams } from '@/lib/api/products';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -15,6 +15,7 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { ProductsTable } from '@/components/products/ProductsTable';
+import { ProductsGroupedTable } from '@/components/products/ProductsGroupedTable';
 import { ProductFormDialog } from '@/components/products/ProductFormDialog';
 import { ProductFilters } from '@/components/products/ProductFilters';
 
@@ -23,6 +24,7 @@ export function ProductsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'grouped'>('list');
 
   // Extract filters from URL
   const filters: ProductQueryParams = {
@@ -31,6 +33,9 @@ export function ProductsPage() {
     brand_id: searchParams.get('brand_id') || undefined,
     is_active: searchParams.get('is_active') === 'true' ? true : searchParams.get('is_active') === 'false' ? false : undefined,
     is_featured: searchParams.get('is_featured') === 'true',
+    created_from: searchParams.get('created_from') || undefined,
+    created_to: searchParams.get('created_to') || undefined,
+    stock_status: (searchParams.get('stock_status') as any) || undefined,
     page: Number(searchParams.get('page')) || 1,
     limit: Number(searchParams.get('limit')) || 20,
     sort_by: searchParams.get('sort_by') || 'created_at',
@@ -115,6 +120,29 @@ export function ProductsPage() {
             className="max-w-md"
           />
         </div>
+
+        {/* View Mode Toggle */}
+        <div className="flex items-center border rounded-md">
+          <Button
+            variant={viewMode === 'list' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('list')}
+            className="rounded-r-none"
+          >
+            <List className="h-4 w-4 mr-2" />
+            Danh sách
+          </Button>
+          <Button
+            variant={viewMode === 'grouped' ? 'default' : 'ghost'}
+            size="sm"
+            onClick={() => setViewMode('grouped')}
+            className="rounded-l-none border-l"
+          >
+            <Layers className="h-4 w-4 mr-2" />
+            Nhóm theo sản phẩm chính
+          </Button>
+        </div>
+
         <Button
           variant="outline"
           onClick={() => setIsFilterSheetOpen(true)}
@@ -170,6 +198,38 @@ export function ProductsPage() {
               />
             </Badge>
           )}
+          {filters.created_from && (
+            <Badge variant="secondary" className="gap-1">
+              Từ: {new Date(filters.created_from).toLocaleDateString('vi-VN')}
+              <X
+                className="h-3 w-3 cursor-pointer"
+                onClick={() => handleRemoveFilter('created_from')}
+              />
+            </Badge>
+          )}
+          {filters.created_to && (
+            <Badge variant="secondary" className="gap-1">
+              Đến: {new Date(filters.created_to).toLocaleDateString('vi-VN')}
+              <X
+                className="h-3 w-3 cursor-pointer"
+                onClick={() => handleRemoveFilter('created_to')}
+              />
+            </Badge>
+          )}
+          {filters.stock_status && (
+            <Badge variant="secondary" className="gap-1">
+              Tồn kho: {
+                filters.stock_status === 'in_stock' ? 'Còn hàng' :
+                filters.stock_status === 'out_of_stock' ? 'Hết hàng' :
+                filters.stock_status === 'below_reorder' ? 'Dưới định mức' :
+                filters.stock_status === 'above_reorder' ? 'Vượt định mức' : ''
+              }
+              <X
+                className="h-3 w-3 cursor-pointer"
+                onClick={() => handleRemoveFilter('stock_status')}
+              />
+            </Badge>
+          )}
           <Button
             variant="ghost"
             size="sm"
@@ -182,11 +242,19 @@ export function ProductsPage() {
       )}
 
       {/* Products Table */}
-      <ProductsTable
-        data={productsData?.data || []}
-        isLoading={isLoading}
-        onRefresh={refetch}
-      />
+      {viewMode === 'list' ? (
+        <ProductsTable
+          data={productsData?.data || []}
+          isLoading={isLoading}
+          onRefresh={refetch}
+        />
+      ) : (
+        <ProductsGroupedTable
+          data={productsData?.data || []}
+          isLoading={isLoading}
+          onRefresh={refetch}
+        />
+      )}
 
       {/* Create Product Dialog */}
       <ProductFormDialog

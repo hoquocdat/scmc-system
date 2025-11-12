@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ArrowLeft, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Package, Box, Plus, X, Tag } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CurrencyInput } from '@/components/ui/currency-input';
 import { toast } from 'sonner';
 import { productsApi, type CreateProductDto } from '@/lib/api/products';
@@ -21,6 +22,7 @@ import { productCategoriesApi } from '@/lib/api/product-categories';
 import { suppliersApi } from '@/lib/api/suppliers';
 import { ImageUploadButton, type UploadFile } from '@/components/common/ImageUploadButton';
 import { PhotoGallery } from '@/components/common/PhotoGallery';
+import { MasterProductForm } from '@/components/products/MasterProductForm';
 
 // Helper for optional number fields that handles NaN from empty inputs
 const optionalNumber = z.number().min(0).optional().or(z.nan().transform(() => undefined));
@@ -65,6 +67,11 @@ export function ProductFormPage() {
   // Image upload state
   const [images, setImages] = useState<string[]>([]);
   const [uploadingFiles, setUploadingFiles] = useState<UploadFile[]>([]);
+
+  // Attributes state for editing
+  const [attributes, setAttributes] = useState<Record<string, string>>({});
+  const [newAttrKey, setNewAttrKey] = useState('');
+  const [newAttrValue, setNewAttrValue] = useState('');
 
   const {
     register,
@@ -141,6 +148,11 @@ export function ProductFormPage() {
       setValue('category_id', product.category_id || undefined);
       setValue('brand_id', product.brand_id || undefined);
       setValue('supplier_id', product.supplier_id || undefined);
+
+      // Load attributes
+      if (product.attributes && typeof product.attributes === 'object') {
+        setAttributes(product.attributes as Record<string, string>);
+      }
 
       // TODO: Load product images when backend supports it
       // setImages(product.images || []);
@@ -251,11 +263,35 @@ export function ProductFormPage() {
   });
 
   const onSubmit = (data: ProductFormData) => {
-    if (isEditMode) {
-      updateMutation.mutate(data as CreateProductDto);
-    } else {
-      createMutation.mutate(data as CreateProductDto);
+    const productData: any = { ...data };
+
+    // Include attributes if they exist
+    if (Object.keys(attributes).length > 0) {
+      productData.attributes = attributes;
     }
+
+    if (isEditMode) {
+      updateMutation.mutate(productData);
+    } else {
+      createMutation.mutate(productData);
+    }
+  };
+
+  // Handle attribute management
+  const handleAddAttribute = () => {
+    if (!newAttrKey.trim() || !newAttrValue.trim()) {
+      toast.error('Vui lòng nhập tên và giá trị thuộc tính');
+      return;
+    }
+    setAttributes({ ...attributes, [newAttrKey.trim()]: newAttrValue.trim() });
+    setNewAttrKey('');
+    setNewAttrValue('');
+  };
+
+  const handleRemoveAttribute = (key: string) => {
+    const newAttrs = { ...attributes };
+    delete newAttrs[key];
+    setAttributes(newAttrs);
   };
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
@@ -293,7 +329,23 @@ export function ProductFormPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+      {/* Only show tabs when creating new product */}
+      {!isEditMode ? (
+        <Tabs defaultValue="simple" className="space-y-6">
+          <TabsList className="grid w-full max-w-md grid-cols-2">
+            <TabsTrigger value="simple" className="flex items-center gap-2">
+              <Box className="h-4 w-4" />
+              Sản phẩm đơn giản
+            </TabsTrigger>
+            <TabsTrigger value="variants" className="flex items-center gap-2">
+              <Package className="h-4 w-4" />
+              Sản phẩm có biến thể
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Simple Product Form */}
+          <TabsContent value="simple">
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Information */}
           <div className="lg:col-span-2 space-y-6">
@@ -664,6 +716,222 @@ export function ProductFormPage() {
           </div>
         </div>
       </form>
+          </TabsContent>
+
+          {/* Product with Variants Form */}
+          <TabsContent value="variants">
+            <MasterProductForm
+              onSuccess={() => navigate('/inventory/products')}
+              onCancel={() => navigate('/inventory/products')}
+            />
+          </TabsContent>
+        </Tabs>
+      ) : (
+        // Edit mode - show simple form only
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Information */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Basic Information */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Thông tin cơ bản</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-sku">SKU *</Label>
+                    <Input
+                      id="edit-sku"
+                      {...register('sku')}
+                      placeholder="PRODUCT-001"
+                    />
+                    {errors.sku && (
+                      <p className="text-sm text-destructive">{errors.sku.message}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-name">Tên sản phẩm *</Label>
+                    <Input
+                      id="edit-name"
+                      {...register('name')}
+                      placeholder="Tên sản phẩm"
+                    />
+                    {errors.name && (
+                      <p className="text-sm text-destructive">{errors.name.message}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="edit-description">Mô tả</Label>
+                  <Textarea
+                    id="edit-description"
+                    {...register('description')}
+                    placeholder="Mô tả sản phẩm..."
+                    rows={3}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Pricing - simplified for edit mode */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Giá cả</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-cost_price">Giá vốn *</Label>
+                    <CurrencyInput
+                      id="edit-cost_price"
+                      value={watch('cost_price')}
+                      onValueChange={(value) => setValue('cost_price', value || 0)}
+                      placeholder="0"
+                    />
+                    {errors.cost_price && (
+                      <p className="text-sm text-destructive">{errors.cost_price.message}</p>
+                    )}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="edit-retail_price">Giá bán *</Label>
+                    <CurrencyInput
+                      id="edit-retail_price"
+                      value={watch('retail_price')}
+                      onValueChange={(value) => setValue('retail_price', value || 0)}
+                      placeholder="0"
+                    />
+                    {errors.retail_price && (
+                      <p className="text-sm text-destructive">{errors.retail_price.message}</p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Product Attributes Editor */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Tag className="h-5 w-5" />
+                  Thuộc tính sản phẩm
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Existing attributes */}
+                {Object.keys(attributes).length > 0 && (
+                  <div className="space-y-2">
+                    <Label>Thuộc tính hiện tại</Label>
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(attributes).map(([key, value]) => (
+                        <div
+                          key={key}
+                          className="flex items-center gap-1 px-3 py-1 bg-secondary rounded-md"
+                        >
+                          <span className="text-sm">
+                            <span className="font-medium">{key}:</span> {value}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-5 w-5 p-0 hover:bg-destructive/20"
+                            onClick={() => handleRemoveAttribute(key)}
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Add new attribute */}
+                <div className="space-y-2">
+                  <Label>Thêm thuộc tính mới</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      placeholder="Tên (vd: màu sắc)"
+                      value={newAttrKey}
+                      onChange={(e) => setNewAttrKey(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddAttribute();
+                        }
+                      }}
+                    />
+                    <Input
+                      placeholder="Giá trị (vd: đỏ)"
+                      value={newAttrValue}
+                      onChange={(e) => setNewAttrValue(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddAttribute();
+                        }
+                      }}
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={handleAddAttribute}
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Nhập tên và giá trị thuộc tính, sau đó nhấn + hoặc Enter
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Sidebar */}
+          <div className="space-y-6">
+            {/* Actions */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Thao tác</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Đang lưu...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="mr-2 h-4 w-4" />
+                      Cập nhật sản phẩm
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate('/inventory/products')}
+                  disabled={isSubmitting}
+                  className="w-full"
+                >
+                  Hủy
+                </Button>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </form>
+      )}
     </div>
   );
 }

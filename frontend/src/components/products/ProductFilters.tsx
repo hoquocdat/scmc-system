@@ -1,7 +1,11 @@
 import { useForm } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
 import type { ProductQueryParams } from '@/lib/api/products';
+import { brandsApi } from '@/lib/api/brands';
+import { productCategoriesApi } from '@/lib/api/product-categories';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Input } from '@/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -16,8 +20,19 @@ interface ProductFiltersProps {
 }
 
 export function ProductFilters({ filters, onApply }: ProductFiltersProps) {
-  const { handleSubmit, setValue, watch, reset } = useForm<ProductQueryParams>({
+  const { handleSubmit, setValue, watch, reset, register } = useForm<ProductQueryParams>({
     defaultValues: filters,
+  });
+
+  // Fetch brands and categories
+  const { data: brands } = useQuery({
+    queryKey: ['brands'],
+    queryFn: () => brandsApi.getAll(),
+  });
+
+  const { data: categories } = useQuery({
+    queryKey: ['productCategories'],
+    queryFn: () => productCategoriesApi.getAll(),
   });
 
   const onSubmit = (data: ProductQueryParams) => {
@@ -32,6 +47,9 @@ export function ProductFilters({ filters, onApply }: ProductFiltersProps) {
       product_type: undefined,
       is_active: undefined,
       is_featured: undefined,
+      created_from: undefined,
+      created_to: undefined,
+      stock_status: undefined,
     });
     onApply({});
   };
@@ -100,6 +118,89 @@ export function ProductFilters({ filters, onApply }: ProductFiltersProps) {
           <SelectContent>
             <SelectItem value="false">Tất cả sản phẩm</SelectItem>
             <SelectItem value="true">Chỉ sản phẩm nổi bật</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Brand */}
+      <div className="space-y-2">
+        <Label>Thương hiệu</Label>
+        <Select
+          value={watch('brand_id') || 'all'}
+          onValueChange={(value) => setValue('brand_id', value === 'all' ? undefined : value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Tất cả thương hiệu" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tất cả thương hiệu</SelectItem>
+            {brands?.filter(b => b.is_active).map((brand) => (
+              <SelectItem key={brand.id} value={brand.id}>
+                {brand.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Product Category */}
+      <div className="space-y-2">
+        <Label>Danh mục</Label>
+        <Select
+          value={watch('category_id') || 'all'}
+          onValueChange={(value) => setValue('category_id', value === 'all' ? undefined : value)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Tất cả danh mục" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tất cả danh mục</SelectItem>
+            {categories?.filter(c => c.is_active).map((category) => (
+              <SelectItem key={category.id} value={category.id}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Date Range */}
+      <div className="space-y-2">
+        <Label>Thời gian tạo</Label>
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <Input
+              type="date"
+              placeholder="Từ ngày"
+              {...register('created_from')}
+            />
+          </div>
+          <div>
+            <Input
+              type="date"
+              placeholder="Đến ngày"
+              {...register('created_to')}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Stock Status */}
+      <div className="space-y-2">
+        <Label>Tồn kho</Label>
+        <Select
+          value={watch('stock_status') || 'all'}
+          onValueChange={(value) => setValue('stock_status', value === 'all' ? undefined : value as any)}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Tất cả trạng thái" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tất cả trạng thái</SelectItem>
+            <SelectItem value="in_stock">Còn hàng</SelectItem>
+            <SelectItem value="out_of_stock">Hết hàng</SelectItem>
+            <SelectItem value="below_reorder">Dưới định mức tồn</SelectItem>
+            <SelectItem value="above_reorder">Vượt định mức tồn</SelectItem>
           </SelectContent>
         </Select>
       </div>

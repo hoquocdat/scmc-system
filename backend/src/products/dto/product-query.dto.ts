@@ -49,6 +49,24 @@ export class ProductQueryDto {
   })
   is_featured?: boolean;
 
+  @ApiPropertyOptional({ description: 'Filter by created date start (ISO 8601)' })
+  @IsString()
+  @IsOptional()
+  created_from?: string;
+
+  @ApiPropertyOptional({ description: 'Filter by created date end (ISO 8601)' })
+  @IsString()
+  @IsOptional()
+  created_to?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by stock status',
+    enum: ['in_stock', 'out_of_stock', 'below_reorder', 'above_reorder']
+  })
+  @IsEnum(['in_stock', 'out_of_stock', 'below_reorder', 'above_reorder'])
+  @IsOptional()
+  stock_status?: 'in_stock' | 'out_of_stock' | 'below_reorder' | 'above_reorder';
+
   @ApiPropertyOptional({ description: 'Page number', default: 1, minimum: 1 })
   @IsNumber()
   @IsOptional()

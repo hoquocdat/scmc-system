@@ -1,12 +1,21 @@
 import { useQuery } from '@tanstack/react-query';
-import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Package, DollarSign, Info, Tag } from 'lucide-react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import { ArrowLeft, Edit, Package, DollarSign, Info, Tag, Link2, Layers } from 'lucide-react';
 import { productsApi } from '@/lib/api/products';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Loader2 } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { formatCurrency } from '@/lib/utils';
 
 export function ProductDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -17,6 +26,20 @@ export function ProductDetailPage() {
     queryKey: ['product', id],
     queryFn: () => productsApi.getById(id!),
     enabled: !!id,
+  });
+
+  // Fetch variants if this is a master product
+  const { data: variants, isLoading: variantsLoading } = useQuery({
+    queryKey: ['productVariants', id],
+    queryFn: () => productsApi.getVariants(id!),
+    enabled: !!id && !!product && product.master_product_id === null,
+  });
+
+  // Fetch master product if this is a variant
+  const { data: masterProduct } = useQuery({
+    queryKey: ['masterProduct', product?.master_product_id],
+    queryFn: () => productsApi.getById(product!.master_product_id!),
+    enabled: !!product?.master_product_id,
   });
 
   if (isLoading) {
@@ -40,15 +63,6 @@ export function ProductDetailPage() {
       </div>
     );
   }
-
-  const formatCurrency = (value?: number | string) => {
-    if (!value) return '-';
-    const numValue = typeof value === 'string' ? parseFloat(value) : value;
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-    }).format(numValue);
-  };
 
   const formatDate = (dateString?: string) => {
     if (!dateString) return '-';
@@ -114,6 +128,131 @@ export function ProductDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Product Attributes */}
+          {product.attributes && Object.keys(product.attributes).length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Tag className="h-5 w-5" />
+                  Thuộc tính sản phẩm
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {Object.entries(product.attributes as Record<string, string>).map(([key, value]) => (
+                    <Badge key={key} variant="outline" className="text-sm">
+                      <span className="font-medium">{key}:</span>
+                      <span className="ml-1">{value}</span>
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Master Product Link (if this is a variant) */}
+          {product.master_product_id && masterProduct && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Link2 className="h-5 w-5" />
+                  Sản phẩm chính
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Link to={`/inventory/products/${masterProduct.id}`}>
+                  <div className="flex items-center gap-3 p-3 rounded-lg border hover:bg-accent transition-colors">
+                    <Package className="h-5 w-5 text-muted-foreground" />
+                    <div className="flex-1">
+                      <p className="font-medium">{masterProduct.name}</p>
+                      <p className="text-sm text-muted-foreground">SKU: {masterProduct.sku}</p>
+                    </div>
+                    <Badge variant="outline">Sản phẩm chính</Badge>
+                  </div>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Variants List (if this is a master product) */}
+          {product.master_product_id === null && variants && variants.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Layers className="h-5 w-5" />
+                  Biến thể ({variants.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>SKU</TableHead>
+                        <TableHead>Tên</TableHead>
+                        <TableHead>Thuộc tính</TableHead>
+                        <TableHead className="text-right">Giá bán</TableHead>
+                        <TableHead className="text-center">Tồn kho</TableHead>
+                        <TableHead className="text-center">Trạng thái</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {variantsLoading ? (
+                        <TableRow>
+                          <TableCell colSpan={6} className="text-center py-4">
+                            <Loader2 className="h-4 w-4 animate-spin inline-block mr-2" />
+                            Đang tải...
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        variants.map((variant) => (
+                          <TableRow key={variant.id} className="cursor-pointer hover:bg-accent/50">
+                            <TableCell className="font-mono text-sm">
+                              <Link to={`/inventory/products/${variant.id}`} className="hover:underline">
+                                {variant.sku}
+                              </Link>
+                            </TableCell>
+                            <TableCell>
+                              <Link to={`/inventory/products/${variant.id}`} className="hover:underline">
+                                {variant.name}
+                              </Link>
+                            </TableCell>
+                            <TableCell>
+                              {variant.attributes && Object.keys(variant.attributes).length > 0 ? (
+                                <div className="flex flex-wrap gap-1">
+                                  {Object.entries(variant.attributes as Record<string, string>).map(([key, value]) => (
+                                    <Badge key={key} variant="outline" className="text-xs">
+                                      {key}: {value}
+                                    </Badge>
+                                  ))}
+                                </div>
+                              ) : (
+                                '-'
+                              )}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {formatCurrency(variant.retail_price)}
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant={variant.quantity_on_hand && variant.quantity_on_hand > 0 ? 'default' : 'secondary'}>
+                                {variant.quantity_on_hand || 0}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-center">
+                              <Badge variant={variant.is_active ? 'default' : 'secondary'}>
+                                {variant.is_active ? 'Hoạt động' : 'Ngừng'}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Pricing */}
           <Card>
