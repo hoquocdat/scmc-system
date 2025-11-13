@@ -133,4 +133,19 @@ export class UsersService {
       },
     });
   }
+
+  async updatePassword(id: string, newPassword: string) {
+    // Verify user exists
+    await this.findOne(id);
+
+    // Update password in Supabase Auth
+    const { data, error } = await supabaseAuth.auth.admin.updateUserById(id, {
+      password: newPassword,
+    });
+
+    if (error) throw new Error(error.message);
+    if (!data.user) throw new Error('Failed to update password');
+
+    return { message: 'Password updated successfully' };
+  }
 }

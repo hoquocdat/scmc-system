@@ -1,10 +1,12 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../../store/authStore';
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { LanguageSwitcher } from '../LanguageSwitcher';
+import { permissionsApi } from '@/lib/api/permissions';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -48,6 +50,8 @@ import {
   BarChart,
   ClipboardList,
   Monitor,
+  Shield,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 interface AppLayoutProps {
@@ -59,6 +63,19 @@ export function AppLayout({ children }: AppLayoutProps) {
   const { t } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
+
+  // Fetch user roles and permissions for navigation filtering
+  const { data: userRoles = [] } = useQuery({
+    queryKey: ['user-roles', user?.id],
+    queryFn: () => user?.id ? permissionsApi.getUserRoles(user.id) : Promise.resolve([]),
+    enabled: !!user?.id,
+  });
+
+  const { data: userPermissions = [] } = useQuery({
+    queryKey: ['user-permissions', user?.id],
+    queryFn: () => user?.id ? permissionsApi.getUserPermissions(user.id) : Promise.resolve([]),
+    enabled: !!user?.id,
+  });
 
   // Mobile detection - hide sidebar by default on mobile
   const [isMobile, setIsMobile] = useState(false);
@@ -110,13 +127,13 @@ export function AppLayout({ children }: AppLayoutProps) {
       name: t('navigation.dashboard'),
       href: '/dashboard',
       icon: LayoutDashboard,
-      roles: ['sales', 'employee', 'manager', 'finance'],
+      roles: ['sales', 'employee', 'technician', 'manager', 'finance'],
     },
     {
       name: t('navigation.myWork'),
       href: '/my-work',
       icon: Wrench,
-      roles: ['employee'],
+      roles: ['employee', 'technician'],
     },
     {
       name: t('navigation.customers'),
@@ -134,19 +151,22 @@ export function AppLayout({ children }: AppLayoutProps) {
       id: 'service-orders',
       name: t('navigation.serviceOrders'),
       icon: FileText,
-      roles: ['sales', 'employee', 'manager'],
+      roles: ['sales', 'employee', 'technician', 'manager'],
+      permission: { resource: 'service_orders', action: 'read' },
       children: [
         {
           name: 'Bảng Theo Dõi',
           href: '/service-board',
           icon: Columns3,
-          roles: ['sales', 'employee', 'manager'],
+          roles: ['sales', 'employee', 'technician', 'manager'],
+          permission: { resource: 'service_orders', action: 'read' },
         },
         {
           name: 'Danh Sách',
           href: '/service-orders',
           icon: FileText,
-          roles: ['sales', 'employee', 'manager'],
+          roles: ['sales', 'employee', 'technician', 'manager'],
+          permission: { resource: 'service_orders', action: 'read' },
         },
       ],
     },
@@ -240,6 +260,26 @@ export function AppLayout({ children }: AppLayoutProps) {
       icon: UserCog,
       roles: ['manager'],
     },
+    {
+      id: 'settings',
+      name: 'Cài Đặt',
+      icon: Settings,
+      roles: ['superadmin', 'manager'],
+      children: [
+        {
+          name: 'Vai Trò',
+          href: '/settings/roles',
+          icon: Shield,
+          roles: ['superadmin', 'manager'],
+        },
+        {
+          name: 'Nhật Ký Quyền Hạn',
+          href: '/settings/audit',
+          icon: FileSpreadsheet,
+          roles: ['superadmin', 'manager'],
+        },
+      ],
+    },
   ];
 
   const isActive = (path: string) => location.pathname === path;
@@ -252,9 +292,48 @@ export function AppLayout({ children }: AppLayoutProps) {
     );
   };
 
-  const filteredNavigation = navigation.filter(
-    (item) => user?.role && item.roles.includes(user.role)
-  );
+  // Helper function to check if user has permission
+  const hasPermission = (resource: string, action: string): boolean => {
+    // Check role-based permissions
+    for (const userRole of userRoles) {
+      const rolePermissions = (userRole as any).role_permissions || [];
+      for (const rp of rolePermissions) {
+        const perm = rp.permissions;
+        if (perm.resource === resource && perm.action === action) {
+          return true;
+        }
+      }
+    }
+
+    // Check user-specific permissions
+    for (const up of userPermissions) {
+      const perm = (up as any).permissions;
+      if (perm.resource === resource && perm.action === action) {
+        return (up as any).granted === true;
+      }
+    }
+
+    return false;
+  };
+
+  const filteredNavigation = navigation.filter((item: any) => {
+    // Check role-based access
+    const hasRoleAccess = user?.role && item.roles.includes(user.role);
+
+    // If no permission required, use role-based access only
+    if (!item.permission) {
+      return hasRoleAccess;
+    }
+
+    // Check permission-based access
+    const hasPermissionAccess = hasPermission(
+      item.permission.resource,
+      item.permission.action
+    );
+
+    // User must have both role AND permission
+    return hasRoleAccess && hasPermissionAccess;
+  });
 
   // Generate breadcrumbs based on current path
   const generateBreadcrumbs = () => {

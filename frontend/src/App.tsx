@@ -25,6 +25,10 @@ import { StockLevelsPage } from './pages/inventory/StockLevelsPage';
 import { StockAdjustmentsPage } from './pages/inventory/StockAdjustmentsPage';
 import { SalesOrdersPage } from './pages/sales/SalesOrdersPage';
 import { POSPage } from './pages/pos/POSPage';
+import { RolesPage } from './pages/settings/RolesPage';
+import { RoleDetailPage } from './pages/settings/RoleDetailPage';
+import { PermissionAuditPage } from './pages/settings/PermissionAuditPage';
+import { EmployeeEditPage } from './pages/EmployeeEditPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
 import { Toaster } from './components/ui/sonner';
@@ -301,6 +305,46 @@ function App() {
             <ProtectedRoute>
               <AppLayout>
                 <POSPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings/roles"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <RolesPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings/roles/:id"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <RoleDetailPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/employees/:id/edit"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <EmployeeEditPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings/audit"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <PermissionAuditPage />
               </AppLayout>
             </ProtectedRoute>
           }

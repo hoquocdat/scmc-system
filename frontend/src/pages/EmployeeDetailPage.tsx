@@ -6,9 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Phone, Mail, User, Wrench, Activity } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, User, Wrench, Activity, Shield } from 'lucide-react';
 import { useUrlTabs } from '@/hooks/useUrlTabs';
 import { getStatusColor, getStatusLabel } from '@/lib/utils/status';
+import { PermissionsMatrixTab } from '@/components/employees/PermissionsMatrixTab';
 
 export function EmployeeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -122,6 +123,7 @@ export function EmployeeDetailPage() {
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="inline-flex w-auto min-w-full sm:min-w-0">
             <TabsTrigger value="overview" className="whitespace-nowrap">Tổng Quan</TabsTrigger>
+            <TabsTrigger value="permissions" className="whitespace-nowrap">Ma trận quyền</TabsTrigger>
             <TabsTrigger value="service-orders" className="whitespace-nowrap">
               Service Orders ({serviceOrders.length})
             </TabsTrigger>
@@ -204,6 +206,11 @@ export function EmployeeDetailPage() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* Permissions Matrix Tab */}
+        <TabsContent value="permissions">
+          <PermissionsMatrixTab userId={id!} />
         </TabsContent>
 
         {/* Service Orders Tab */}

@@ -63,4 +63,12 @@ export class UsersController {
   async toggleActive(@Param('id') id: string) {
     return this.usersService.toggleActive(id);
   }
+
+  @Patch(':id/password')
+  async updatePassword(
+    @Param('id') id: string,
+    @Body() body: { password: string },
+  ) {
+    return this.usersService.updatePassword(id, body.password);
+  }
 }

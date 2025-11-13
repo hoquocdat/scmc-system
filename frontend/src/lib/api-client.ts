@@ -178,6 +178,8 @@ class APIClient {
       this.request(`/users/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     toggleActive: (id: string) =>
       this.request(`/users/${id}/activate`, { method: 'PATCH' }),
+    updatePassword: (id: string, password: string) =>
+      this.request(`/users/${id}/password`, { method: 'PATCH', body: JSON.stringify({ password }) }),
   };
 
   // Comments

@@ -289,29 +289,35 @@ model suppliers {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model user_profiles {
-  id                                                          String                    @id @db.Uuid
-  role                                                        user_role
-  full_name                                                   String                    @db.VarChar(255)
-  phone                                                       String?                   @db.VarChar(20)
-  email                                                       String?                   @db.VarChar(255)
-  is_active                                                   Boolean?                  @default(true)
-  created_at                                                  DateTime?                 @default(now()) @db.Timestamptz(6)
-  updated_at                                                  DateTime?                 @default(now()) @db.Timestamptz(6)
-  activity_logs                                               activity_logs[]
-  images                                                      images[]
-  inventory_transactions                                      inventory_transactions[]
-  payments                                                    payments[]
-  pos_sessions                                                pos_sessions[]
-  sales_order_payments                                        sales_order_payments[]
-  sales_orders_sales_orders_created_byTouser_profiles         sales_orders[]            @relation("sales_orders_created_byTouser_profiles")
-  sales_orders_sales_orders_processed_byTouser_profiles       sales_orders[]            @relation("sales_orders_processed_byTouser_profiles")
-  service_items                                               service_items[]
-  service_order_comments                                      service_order_comments[]
-  service_order_employees                                     service_order_employees[]
-  service_orders                                              service_orders[]
-  transfer_orders_transfer_orders_received_byTouser_profiles  transfer_orders[]         @relation("transfer_orders_received_byTouser_profiles")
-  transfer_orders_transfer_orders_requested_byTouser_profiles transfer_orders[]         @relation("transfer_orders_requested_byTouser_profiles")
-  transfer_orders_transfer_orders_shipped_byTouser_profiles   transfer_orders[]         @relation("transfer_orders_shipped_byTouser_profiles")
+  id                                                                    String                    @id @db.Uuid
+  role                                                                  user_role
+  full_name                                                             String                    @db.VarChar(255)
+  phone                                                                 String?                   @db.VarChar(20)
+  email                                                                 String?                   @db.VarChar(255)
+  is_active                                                             Boolean?                  @default(true)
+  created_at                                                            DateTime?                 @default(now()) @db.Timestamptz(6)
+  updated_at                                                            DateTime?                 @default(now()) @db.Timestamptz(6)
+  activity_logs                                                         activity_logs[]
+  images                                                                images[]
+  inventory_transactions                                                inventory_transactions[]
+  payments                                                              payments[]
+  permission_audit_log_permission_audit_log_performed_byTouser_profiles permission_audit_log[]    @relation("permission_audit_log_performed_byTouser_profiles")
+  permission_audit_log_permission_audit_log_user_idTouser_profiles      permission_audit_log[]    @relation("permission_audit_log_user_idTouser_profiles")
+  pos_sessions                                                          pos_sessions[]
+  sales_order_payments                                                  sales_order_payments[]
+  sales_orders_sales_orders_created_byTouser_profiles                   sales_orders[]            @relation("sales_orders_created_byTouser_profiles")
+  sales_orders_sales_orders_processed_byTouser_profiles                 sales_orders[]            @relation("sales_orders_processed_byTouser_profiles")
+  service_items                                                         service_items[]
+  service_order_comments                                                service_order_comments[]
+  service_order_employees                                               service_order_employees[]
+  service_orders                                                        service_orders[]
+  transfer_orders_transfer_orders_received_byTouser_profiles            transfer_orders[]         @relation("transfer_orders_received_byTouser_profiles")
+  transfer_orders_transfer_orders_requested_byTouser_profiles           transfer_orders[]         @relation("transfer_orders_requested_byTouser_profiles")
+  transfer_orders_transfer_orders_shipped_byTouser_profiles             transfer_orders[]         @relation("transfer_orders_shipped_byTouser_profiles")
+  user_permissions_user_permissions_assigned_byTouser_profiles          user_permissions[]        @relation("user_permissions_assigned_byTouser_profiles")
+  user_permissions_user_permissions_user_idTouser_profiles              user_permissions[]        @relation("user_permissions_user_idTouser_profiles")
+  user_roles_user_roles_assigned_byTouser_profiles                      user_roles[]              @relation("user_roles_assigned_byTouser_profiles")
+  user_roles_user_roles_user_idTouser_profiles                          user_roles[]              @relation("user_roles_user_idTouser_profiles")
 
   @@schema("public")
 }
@@ -1117,6 +1123,105 @@ model attribute_definitions {
   @@index([options], map: "idx_attr_def_options_gin", type: Gin)
   @@index([display_order], map: "idx_attr_def_order")
   @@index([slug], map: "idx_attr_def_slug")
+  @@schema("public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model permission_audit_log {
+  id                                                             String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id                                                        String?        @db.Uuid
+  action                                                         String         @db.VarChar(50)
+  resource_type                                                  String?        @db.VarChar(100)
+  resource_id                                                    String?        @db.Uuid
+  changes                                                        Json?
+  performed_by                                                   String?        @db.Uuid
+  created_at                                                     DateTime       @default(now()) @db.Timestamptz(6)
+  user_profiles_permission_audit_log_performed_byTouser_profiles user_profiles? @relation("permission_audit_log_performed_byTouser_profiles", fields: [performed_by], references: [id], onUpdate: NoAction)
+  user_profiles_permission_audit_log_user_idTouser_profiles      user_profiles? @relation("permission_audit_log_user_idTouser_profiles", fields: [user_id], references: [id], onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "idx_permission_audit_log_created_at")
+  @@index([performed_by], map: "idx_permission_audit_log_performed_by")
+  @@index([user_id], map: "idx_permission_audit_log_user_id")
+  @@schema("public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model permissions {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String             @unique @db.VarChar(255)
+  resource         String             @db.VarChar(100)
+  action           String             @db.VarChar(50)
+  conditions       Json?
+  description      String?
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime           @default(now()) @db.Timestamptz(6)
+  role_permissions role_permissions[]
+  user_permissions user_permissions[]
+
+  @@index([resource, action], map: "idx_permissions_resource_action")
+  @@schema("public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model role_permissions {
+  role_id       String      @db.Uuid
+  permission_id String      @db.Uuid
+  created_at    DateTime    @default(now()) @db.Timestamptz(6)
+  permissions   permissions @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  roles         roles       @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([role_id, permission_id])
+  @@index([permission_id], map: "idx_role_permissions_permission_id")
+  @@index([role_id], map: "idx_role_permissions_role_id")
+  @@schema("public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model roles {
+  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name             String             @unique @db.VarChar(100)
+  description      String?
+  is_system        Boolean?           @default(false)
+  created_at       DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at       DateTime           @default(now()) @db.Timestamptz(6)
+  role_permissions role_permissions[]
+  user_roles       user_roles[]
+
+  @@schema("public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_roles {
+  user_id                                             String         @db.Uuid
+  role_id                                             String         @db.Uuid
+  assigned_at                                         DateTime       @default(now()) @db.Timestamptz(6)
+  assigned_by                                         String?        @db.Uuid
+  user_profiles_user_roles_assigned_byTouser_profiles user_profiles? @relation("user_roles_assigned_byTouser_profiles", fields: [assigned_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  roles                                               roles          @relation(fields: [role_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profiles_user_roles_user_idTouser_profiles     user_profiles  @relation("user_roles_user_idTouser_profiles", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_id, role_id])
+  @@index([role_id], map: "idx_user_roles_role_id")
+  @@index([user_id], map: "idx_user_roles_user_id")
+  @@schema("public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model user_permissions {
+  user_id                                                   String         @db.Uuid
+  permission_id                                             String         @db.Uuid
+  granted                                                   Boolean        @default(true)
+  assigned_at                                               DateTime?      @default(now()) @db.Timestamptz(6)
+  assigned_by                                               String?        @db.Uuid
+  reason                                                    String?
+  user_profiles_user_permissions_assigned_byTouser_profiles user_profiles? @relation("user_permissions_assigned_byTouser_profiles", fields: [assigned_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  permissions                                               permissions    @relation(fields: [permission_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profiles_user_permissions_user_idTouser_profiles     user_profiles  @relation("user_permissions_user_idTouser_profiles", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([user_id, permission_id])
+  @@index([granted], map: "idx_user_permissions_granted")
+  @@index([permission_id], map: "idx_user_permissions_permission_id")
+  @@index([user_id], map: "idx_user_permissions_user_id")
   @@schema("public")
 }
 

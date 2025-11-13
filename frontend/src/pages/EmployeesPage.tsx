@@ -17,7 +17,6 @@ interface EmployeeFormData {
 export function EmployeesPage() {
   const navigate = useNavigate();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingEmployee, setEditingEmployee] = useState<UserProfile | null>(null);
 
   // Fetch employees with useQuery
   const { data: employeesData, isLoading, refetch } = useQuery({
@@ -30,48 +29,34 @@ export function EmployeesPage() {
 
   const employees: UserProfile[] = employeesData || [];
 
-  const handleOpenDialog = (employee?: UserProfile) => {
-    if (employee) {
-      setEditingEmployee(employee);
-    } else {
-      setEditingEmployee(null);
-    }
+  const handleOpenDialog = () => {
     setIsDialogOpen(true);
+  };
+
+  const handleEditEmployee = (employee: UserProfile) => {
+    navigate(`/employees/${employee.id}/edit`);
   };
 
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
-    setEditingEmployee(null);
   };
 
   const handleSubmit = async (data: EmployeeFormData) => {
     try {
-      if (!editingEmployee && !data.password) {
+      if (!data.password) {
         throw new Error('Mật khẩu là bắt buộc cho nhân viên mới');
       }
 
-      if (editingEmployee) {
-        // Update existing employee
-        const payload = {
-          full_name: data.full_name,
-          email: data.email,
-          phone: data.phone,
-          role: 'employee',
-        };
+      // Create new employee with auth user
+      const payload = {
+        email: data.email,
+        password: data.password,
+        full_name: data.full_name,
+        phone: data.phone,
+        role: 'employee',
+      };
 
-        await apiClient.users.update(editingEmployee.id, payload);
-      } else {
-        // Create new employee with auth user
-        const payload = {
-          email: data.email,
-          password: data.password!,
-          full_name: data.full_name,
-          phone: data.phone,
-          role: 'employee',
-        };
-
-        await apiClient.users.create(payload);
-      }
+      await apiClient.users.create(payload);
 
       handleCloseDialog();
       refetch();
@@ -92,7 +77,7 @@ export function EmployeesPage() {
   // Create table columns with callbacks
   const columns = createEmployeeColumns({
     onView: (employeeId) => navigate(`/employees/${employeeId}`),
-    onEdit: (employee) => handleOpenDialog(employee),
+    onEdit: handleEditEmployee,
     onToggleActive: handleToggleActive,
   });
 
@@ -118,12 +103,12 @@ export function EmployeesPage() {
         }}
       />
 
-      {/* Reusable Employee Form Dialog */}
+      {/* Employee Form Dialog - Create Only */}
       <EmployeeFormDialog
         isOpen={isDialogOpen}
         onClose={handleCloseDialog}
         onSubmit={handleSubmit}
-        editingEmployee={editingEmployee}
+        editingEmployee={null}
       />
     </div>
   );

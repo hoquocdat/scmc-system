@@ -26,16 +26,20 @@ import { UpdateServiceOrderDto } from './dto/update-service-order.dto';
 import { UpdateStatusDto } from './dto/update-status.dto';
 import { AssignEmployeeDto } from './dto/assign-employee.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { PoliciesGuard } from '../casl/policies.guard';
+import { CheckPolicies } from '../casl/check-policies.decorator';
+import { Action } from '../casl/casl-ability.factory';
 import { User } from '../auth/decorators/user.decorator';
 
 @ApiTags('Service Orders')
 @ApiBearerAuth('JWT-auth')
 @Controller('service-orders')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, PoliciesGuard)
 export class ServiceOrdersController {
   constructor(private readonly serviceOrdersService: ServiceOrdersService) {}
 
   @Get()
+  @CheckPolicies({ action: Action.Read, subject: 'service_orders' })
   @ApiOperation({ summary: 'Get all service orders with pagination' })
   @ApiQuery({ name: 'page', required: false, type: Number })
   @ApiQuery({ name: 'limit', required: false, type: Number })
