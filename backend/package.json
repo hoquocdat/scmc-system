@@ -27,7 +27,8 @@
     "seed:data": "ts-node scripts/seed-service-data.ts",
     "seed:verify": "ts-node scripts/verify-seed-data.ts",
     "seed:assign": "ts-node scripts/assign-employees.ts",
-    "seed:all": "npm run seed:employees && npm run seed:brands && npm run seed:data"
+    "seed:all": "npm run seed:employees && npm run seed:brands && npm run seed:data",
+    "create:superadmin": "ts-node scripts/create-superadmin.ts"
   },
   "dependencies": {
     "@casl/ability": "^6.7.3",

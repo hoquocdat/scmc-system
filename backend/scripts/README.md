@@ -1,6 +1,62 @@
+# Backend Scripts
+
+This directory contains utility scripts for managing the SCMC Workshop Management System.
+
+## Create Superadmin User
+
+Create a new superadmin (manager) user with full system access.
+
+### Usage
+
+```bash
+npm run create:superadmin
+```
+
+Or using npx directly:
+
+```bash
+npx ts-node scripts/create-superadmin.ts
+```
+
+### Interactive Prompts
+
+The script will prompt you for:
+
+1. **Full Name** (required)
+2. **Email** (required) - Must be valid email format, used for login
+3. **Phone** (optional) - Vietnamese format: `+84901234567` or `0901234567`
+4. **Role** (default: manager)
+   - `manager` - Full system access
+   - `store_manager` - POS and inventory management
+   - `sales` - Service order creation and management
+   - `sales_associate` - POS sales operations
+   - `technician` - Service execution and updates
+   - `warehouse_staff` - Inventory management
+   - `finance` - Payment processing
+5. **Password** (required, min 6 characters)
+6. **Confirmation** - Review all details before creating
+
+### Example Output
+
+```
+✨ Success! Superadmin user created:
+
+┌──────────────────────────────────────────────────────┐
+│ Name:  John Doe                                      │
+│ Email: john@example.com                              │
+│ Phone: +84901234567                                  │
+│ Role:  manager                                       │
+│ ID:    xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx          │
+└──────────────────────────────────────────────────────┘
+
+💡 User can now log in with their email and password.
+```
+
+---
+
 # Seed Scripts
 
-This directory contains scripts to populate the database with test data for development.
+Scripts to populate the database with test data for development.
 
 ## Prerequisites
 
