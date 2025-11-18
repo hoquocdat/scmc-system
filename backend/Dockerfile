@@ -32,13 +32,17 @@ RUN apk add --no-cache dumb-init
 COPY package*.json ./
 COPY --from=builder /app/prisma ./prisma
 
-# Install production dependencies only
+# Install production dependencies + ts-node for CLI scripts
 # @prisma/client postinstall will auto-generate the client
 RUN npm install --omit=dev && \
+    npm install ts-node typescript && \
     npm cache clean --force
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
+
+# Copy scripts directory for CLI tools
+COPY scripts ./scripts
 
 # Create non-root user
 RUN addgroup -g 1001 -S nodejs && \
