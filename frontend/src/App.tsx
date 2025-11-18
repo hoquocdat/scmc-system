@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { LoginPage } from './pages/LoginPage';
 import { DashboardPage } from './pages/DashboardPage';
 import { CustomersPage } from './pages/CustomersPage';
@@ -32,10 +32,15 @@ import { EmployeeEditPage } from './pages/EmployeeEditPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
 import { Toaster } from './components/ui/sonner';
+import { getPageTitle } from './hooks/useDocumentTitle';
 
-function App() {
+// Component that uses the router context
+function AppRoutes() {
+  const location = useLocation();
+
   return (
-    <BrowserRouter>
+    <>
+      <title>{getPageTitle(location.pathname)}</title>
       <Toaster />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
@@ -351,6 +356,14 @@ function App() {
         />
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
       </Routes>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppRoutes />
     </BrowserRouter>
   );
 }

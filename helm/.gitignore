@@ -1,0 +1,8 @@
+# Ignore production values files with real secrets
+values-production.yaml
+values-staging.yaml
+values-*.yaml
+
+# Keep example and dev files
+!values-*.example.yaml
+!values-dev.yaml

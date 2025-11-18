@@ -1,0 +1,76 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "scmc-backend.fullname" . }}
+  labels:
+    {{- include "scmc-backend.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "scmc-backend.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "scmc-backend.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "scmc-backend.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+      - name: {{ .Chart.Name }}
+        securityContext:
+          {{- toYaml .Values.securityContext | nindent 12 }}
+        image: {{ include "scmc-backend.image" . }}
+        imagePullPolicy: {{ .Values.image.pullPolicy }}
+        ports:
+        - name: http
+          containerPort: {{ .Values.app.port }}
+          protocol: TCP
+        envFrom:
+        - configMapRef:
+            name: {{ include "scmc-backend.fullname" . }}-config
+        - secretRef:
+            name: {{ .Values.secrets.name }}
+        {{- if .Values.healthCheck.enabled }}
+        livenessProbe:
+          httpGet:
+            path: {{ .Values.healthCheck.path }}
+            port: {{ .Values.app.port }}
+          initialDelaySeconds: {{ .Values.healthCheck.livenessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.healthCheck.livenessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.healthCheck.livenessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.healthCheck.livenessProbe.failureThreshold }}
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.healthCheck.path }}
+            port: {{ .Values.app.port }}
+          initialDelaySeconds: {{ .Values.healthCheck.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.healthCheck.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.healthCheck.readinessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.healthCheck.readinessProbe.failureThreshold }}
+        {{- end }}
+        resources:
+          {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

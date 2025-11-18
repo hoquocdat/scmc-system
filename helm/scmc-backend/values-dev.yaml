@@ -1,0 +1,34 @@
+# Development values file
+# DO NOT COMMIT THIS FILE WITH REAL SECRETS
+
+# Use fewer replicas in development
+replicaCount: 1
+
+# Disable autoscaling in development
+autoscaling:
+  enabled: false
+
+# Disable ingress in development (use port-forward instead)
+ingress:
+  enabled: false
+
+# Disable managed certificate in development
+managedCertificate:
+  enabled: false
+
+# Lower resource requirements for development
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+# Create secrets via Helm in development
+secrets:
+  create: true
+  name: scmc-backend-secrets
+  data:
+    DATABASE_URL: "postgresql://backbone_user:backbone_password@host.docker.internal:5432/scmc_sms"
+    JWT_SECRET: "dev-jwt-secret-change-in-production"

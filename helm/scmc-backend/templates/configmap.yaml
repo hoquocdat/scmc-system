@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "scmc-backend.fullname" . }}-config
+  labels:
+    {{- include "scmc-backend.labels" . | nindent 4 }}
+data:
+  PORT: {{ .Values.app.port | quote }}
+  NODE_ENV: {{ .Values.app.nodeEnv | quote }}
+  JWT_EXPIRATION: {{ .Values.app.jwtExpiration | quote }}
+  CORS_ORIGIN: {{ .Values.app.corsOrigin | quote }}
+  {{- with .Values.configMap.data }}
+    {{- toYaml . | nindent 2 }}
+  {{- end }}

@@ -1,4 +1,4 @@
-name: Deploy Backend to Cloud Run
+name: Deploy Backend to GKE
 
 on:
   push:
@@ -7,6 +7,7 @@ on:
       - production
     paths:
       - 'backend/**'
+      - 'helm/scmc-backend/**'
       - '.github/workflows/deploy-backend.yml'
   workflow_dispatch:
 
@@ -15,10 +16,14 @@ env:
   SERVICE_NAME: ${{ vars.SERVICE_NAME || 'scmc-backend' }}
   REGION: ${{ vars.GCP_REGION || 'asia-southeast1' }}
   REGISTRY: ${{ vars.ARTIFACT_REGISTRY || 'asia-southeast1-docker.pkg.dev' }}
+  GKE_CLUSTER: ${{ vars.GKE_CLUSTER || 'scmc-cluster' }}
+  GKE_ZONE: ${{ vars.GKE_ZONE || 'asia-southeast1-a' }}
+  HELM_RELEASE: ${{ vars.HELM_RELEASE || 'scmc-backend' }}
+  NAMESPACE: ${{ vars.K8S_NAMESPACE || 'default' }}
 
 jobs:
-  deploy:
-    name: Deploy Backend to Cloud Run
+  build-and-deploy:
+    name: Build and Deploy to GKE
     runs-on: ubuntu-latest
 
     permissions:
@@ -54,54 +59,67 @@ jobs:
           docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/scmc/${{ env.SERVICE_NAME }}:${{ github.sha }}
           docker push ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/scmc/${{ env.SERVICE_NAME }}:latest
 
-      - name: Check if service exists
-        id: check_service
+      - name: Install gke-gcloud-auth-plugin
         run: |
-          if gcloud run services describe ${{ env.SERVICE_NAME }} --region=${{ env.REGION }} --project=${{ env.PROJECT_ID }} 2>/dev/null; then
-            echo "exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "exists=false" >> $GITHUB_OUTPUT
-          fi
-          gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/scmc/${{ env.SERVICE_NAME }}:${{ github.sha }} \
-            --platform=managed \
-            --region=${{ env.REGION }} \
-            --allow-unauthenticated \
-            --min-instances=0 \
-            --max-instances=10 \
-            --memory=512Mi \
-            --cpu=1 \
-            --timeout=300 \
-            --cpu-boost \
-            --execution-environment=gen2
+          gcloud components install gke-gcloud-auth-plugin
 
-      - name: Deploy to Cloud Run
-        if: steps.check_service.outputs.exists == 'true'
+      - name: Get GKE credentials
         run: |
-          gcloud run deploy ${{ env.SERVICE_NAME }} \
-            --image=${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/scmc/${{ env.SERVICE_NAME }}:${{ github.sha }} \
-            --platform=managed \
+          gcloud container clusters get-credentials ${{ env.GKE_CLUSTER }} \
             --region=${{ env.REGION }} \
-            --allow-unauthenticated \
-            --min-instances=0 \
-            --max-instances=10 \
-            --memory=512Mi \
-            --cpu=1 \
-            --timeout=300 \
-            --cpu-boost \
-            --execution-environment=gen2
+            --project=${{ env.PROJECT_ID }}
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: '3.13.0'
+
+      - name: Deploy to GKE with Helm
+        run: |
+          helm upgrade --install ${{ env.HELM_RELEASE }} ./helm/scmc-backend \
+            --namespace ${{ env.NAMESPACE }} \
+            --create-namespace \
+            --set image.tag=${{ github.sha }} \
+            --set image.registry=${{ env.REGISTRY }} \
+            --set image.repository=${{ env.PROJECT_ID }}/scmc/${{ env.SERVICE_NAME }} \
+            --wait \
+            --timeout 5m
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment/${{ env.HELM_RELEASE }} -n ${{ env.NAMESPACE }}
+          kubectl get pods -n ${{ env.NAMESPACE }} -l app.kubernetes.io/instance=${{ env.HELM_RELEASE }}
 
       - name: Get Service URL
+        id: get_url
         run: |
-          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
-            --platform=managed \
-            --region=${{ env.REGION }} \
-            --format='value(status.url)')
-          echo "Backend deployed to: $SERVICE_URL"
-          echo "SERVICE_URL=$SERVICE_URL" >> $GITHUB_ENV
+          # Wait for ingress to be ready
+          sleep 10
+          INGRESS_IP=$(kubectl get ingress ${{ env.HELM_RELEASE }} -n ${{ env.NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
 
-      - name: Test Deployment
+          if [ -n "$INGRESS_IP" ]; then
+            echo "Backend deployed to: http://$INGRESS_IP"
+            echo "BACKEND_URL=http://$INGRESS_IP" >> $GITHUB_ENV
+          else
+            echo "Ingress IP not yet assigned. Check 'kubectl get ingress' later."
+            # Get service endpoint as fallback
+            SVC_IP=$(kubectl get svc ${{ env.HELM_RELEASE }} -n ${{ env.NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+            if [ -n "$SVC_IP" ]; then
+              echo "Service IP: http://$SVC_IP"
+              echo "BACKEND_URL=http://$SVC_IP" >> $GITHUB_ENV
+            fi
+          fi
+
+      - name: Deployment Summary
         run: |
-          echo "Testing backend health endpoint..."
-          curl -f ${{ env.SERVICE_URL }}/api/health || exit 1
-          echo "Backend is healthy!"
+          echo "### Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/scmc/${{ env.SERVICE_NAME }}:${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Cluster**: ${{ env.GKE_CLUSTER }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Namespace**: ${{ env.NAMESPACE }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release**: ${{ env.HELM_RELEASE }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "#### Pods Status:" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          kubectl get pods -n ${{ env.NAMESPACE }} -l app.kubernetes.io/instance=${{ env.HELM_RELEASE }} >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
