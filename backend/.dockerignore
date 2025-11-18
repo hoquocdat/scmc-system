@@ -63,9 +63,6 @@ docker-compose*.yml
 .eslintrc.js
 .eslintignore
 
-# Scripts
-scripts
-
 # Logs
 logs
 *.log
