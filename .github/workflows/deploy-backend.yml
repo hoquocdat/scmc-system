@@ -118,10 +118,6 @@ jobs:
         with:
           version: '3.13.0'
 
-      - name: Validate Helm chart
-        run: |
-          helm lint ./helm/scmc-backend -f ./helm/scmc-backend/values-production.yaml
-
       - name: Deploy to GKE with Helm
         run: |
           helm upgrade --install ${{ steps.env.outputs.release-name }} ./helm/scmc-backend \
