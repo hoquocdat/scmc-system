@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Edit, Trash2, Shield, Settings } from 'lucide-react';
+import { Plus, Trash2, Shield, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -51,10 +51,6 @@ export function RolesPage() {
       toast.error(error.response?.data?.message || 'Không thể xóa vai trò');
     },
   });
-
-  const handleEdit = (role: Role) => {
-    setEditingRole(role);
-  };
 
   const handleDelete = (role: Role) => {
     if (role.is_system) {

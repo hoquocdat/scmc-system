@@ -49,7 +49,7 @@ export function EmployeeEditPage() {
   // Fetch employee details
   const { data: employee, isLoading: isLoadingEmployee } = useQuery<UserProfile>({
     queryKey: ['employee', id],
-    queryFn: () => apiClient.users.getOne(id!),
+    queryFn: async () => await apiClient.users.getOne(id!) as UserProfile,
     enabled: !!id,
   });
 
@@ -60,12 +60,12 @@ export function EmployeeEditPage() {
   });
 
   // Fetch employee's current roles
-  const { data: employeeRoles = [], isLoading: isLoadingRoles } = useQuery({
+  const { data: employeeRoles = [], isLoading: isLoadingRoles } = useQuery<Role[]>({
     queryKey: ['employee-roles', id],
     queryFn: async () => {
       const users = await permissionsApi.getAllUsersWithRoles();
       const user = users.find((u) => u.id === id);
-      return user?.user_roles?.map((ur) => ur.role) || [];
+      return user?.user_roles?.map((ur) => ur.roles) || [];
     },
     enabled: !!id,
   });

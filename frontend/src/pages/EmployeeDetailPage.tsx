@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Phone, Mail, User, Wrench, Activity, Shield } from 'lucide-react';
+import { ArrowLeft, Phone, Mail, User, Wrench, Activity } from 'lucide-react';
 import { useUrlTabs } from '@/hooks/useUrlTabs';
 import { getStatusColor, getStatusLabel } from '@/lib/utils/status';
 import { PermissionsMatrixTab } from '@/components/employees/PermissionsMatrixTab';

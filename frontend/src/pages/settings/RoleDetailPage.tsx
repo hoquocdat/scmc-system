@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -34,7 +34,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { permissionsApi, type Permission } from '@/lib/api/permissions';
+import { permissionsApi, type Permission, type Role } from '@/lib/api/permissions';
 import { toast } from 'sonner';
 
 export function RoleDetailPage() {
@@ -55,23 +55,27 @@ export function RoleDetailPage() {
   });
 
   // Fetch role details
-  const { data: role, isLoading: loadingRole } = useQuery({
+  const { data: role, isLoading: loadingRole } = useQuery<Role>({
     queryKey: ['role', id],
     queryFn: () => permissionsApi.getRoleById(id!),
     enabled: !!id,
-    onSuccess: (data) => {
+  });
+
+  // Initialize form data when role loads
+  useEffect(() => {
+    if (role) {
       setFormData({
-        name: data.name,
-        description: data.description || '',
-        is_system: data.is_system,
+        name: role.name,
+        description: role.description || '',
+        is_system: role.is_system,
       });
-      if (data.role_permissions) {
+      if (role.role_permissions) {
         setSelectedPermissions(
-          new Set(data.role_permissions.map((rp) => rp.permissions.id))
+          new Set(role.role_permissions.map((rp: any) => rp.permissions.id))
         );
       }
-    },
-  });
+    }
+  }, [role]);
 
   // Fetch all permissions
   const { data: allPermissions, isLoading: loadingPermissions } = useQuery({

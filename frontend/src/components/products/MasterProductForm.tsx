@@ -20,7 +20,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 import { Separator } from '@/components/ui/separator';
-import { AlertCircle, Check, Package } from 'lucide-react';
+import { Check, Package } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface MasterProductFormProps {
@@ -33,7 +33,7 @@ export function MasterProductForm({ onSuccess, onCancel }: MasterProductFormProp
   const [selectedAttributes, setSelectedAttributes] = useState<string[]>([]);
   const [attributeValues, setAttributeValues] = useState<Record<string, string[]>>({});
 
-  const { register, handleSubmit, formState: { errors }, watch, setValue } = useForm<CreateMasterProductDto>();
+  const { register, handleSubmit, formState: { errors }, setValue } = useForm<CreateMasterProductDto>();
 
   // Fetch variant attributes
   const { data: attributes } = useQuery({
