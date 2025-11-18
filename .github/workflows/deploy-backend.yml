@@ -127,7 +127,7 @@ jobs:
           helm upgrade --install ${{ steps.env.outputs.release-name }} ./helm/scmc-backend \
             --namespace ${{ steps.env.outputs.namespace }} \
             --create-namespace \
-            -f ./helm/scmc-backend/values-production.yaml \
+            --reuse-values \
             --set image.tag=${{ needs.build.outputs.image-tag }} \
             --set image.registry=${{ env.REGISTRY }} \
             --set image.repository=${{ env.PROJECT_ID }}/scmc/${{ env.SERVICE_NAME }} \
