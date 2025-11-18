@@ -89,6 +89,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Set deployment config
+        id: env
+        run: |
+          echo "release-name=${{ env.HELM_RELEASE }}" >> $GITHUB_OUTPUT
+          echo "namespace=${{ env.NAMESPACE }}" >> $GITHUB_OUTPUT
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -112,11 +118,16 @@ jobs:
         with:
           version: '3.13.0'
 
+      - name: Validate Helm chart
+        run: |
+          helm lint ./helm/scmc-backend -f ./helm/scmc-backend/values-production.yaml
+
       - name: Deploy to GKE with Helm
         run: |
-          helm upgrade --install ${{ env.HELM_RELEASE }} ./helm/scmc-backend \
-            --namespace ${{ env.NAMESPACE }} \
+          helm upgrade --install ${{ steps.env.outputs.release-name }} ./helm/scmc-backend \
+            --namespace ${{ steps.env.outputs.namespace }} \
             --create-namespace \
+            -f ./helm/scmc-backend/values-production.yaml \
             --set image.tag=${{ needs.build.outputs.image-tag }} \
             --set image.registry=${{ env.REGISTRY }} \
             --set image.repository=${{ env.PROJECT_ID }}/scmc/${{ env.SERVICE_NAME }} \
@@ -125,26 +136,28 @@ jobs:
 
       - name: Verify deployment
         run: |
-          kubectl rollout status deployment/${{ env.HELM_RELEASE }} -n ${{ env.NAMESPACE }}
-          kubectl get pods -n ${{ env.NAMESPACE }} -l app.kubernetes.io/instance=${{ env.HELM_RELEASE }}
+          kubectl rollout status deployment/${{ steps.env.outputs.release-name }} -n ${{ steps.env.outputs.namespace }}
+          kubectl get pods -n ${{ steps.env.outputs.namespace }} -l app.kubernetes.io/instance=${{ steps.env.outputs.release-name }}
 
       - name: Get Service URL
         id: get_url
         run: |
           # Wait for ingress to be ready
           sleep 10
-          INGRESS_IP=$(kubectl get ingress ${{ env.HELM_RELEASE }} -n ${{ env.NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+          INGRESS_IP=$(kubectl get ingress ${{ steps.env.outputs.release-name }} -n ${{ steps.env.outputs.namespace }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
 
           if [ -n "$INGRESS_IP" ]; then
             echo "Backend deployed to: http://$INGRESS_IP"
-            echo "BACKEND_URL=http://$INGRESS_IP" >> $GITHUB_ENV
+            echo "url=http://$INGRESS_IP" >> $GITHUB_OUTPUT
           else
             echo "Ingress IP not yet assigned. Check 'kubectl get ingress' later."
             # Get service endpoint as fallback
-            SVC_IP=$(kubectl get svc ${{ env.HELM_RELEASE }} -n ${{ env.NAMESPACE }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
+            SVC_IP=$(kubectl get svc ${{ steps.env.outputs.release-name }} -n ${{ steps.env.outputs.namespace }} -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null || echo "")
             if [ -n "$SVC_IP" ]; then
               echo "Service IP: http://$SVC_IP"
-              echo "BACKEND_URL=http://$SVC_IP" >> $GITHUB_ENV
+              echo "url=http://$SVC_IP" >> $GITHUB_OUTPUT
+            else
+              echo "url=pending" >> $GITHUB_OUTPUT
             fi
           fi
 
@@ -152,12 +165,16 @@ jobs:
         run: |
           echo "### Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Values File**: values-production.yaml" >> $GITHUB_STEP_SUMMARY
           echo "- **Image**: ${{ env.REGISTRY }}/${{ env.PROJECT_ID }}/scmc/${{ env.SERVICE_NAME }}:${{ needs.build.outputs.image-tag }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Cluster**: ${{ env.GKE_CLUSTER }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Namespace**: ${{ env.NAMESPACE }}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Release**: ${{ env.HELM_RELEASE }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Namespace**: ${{ steps.env.outputs.namespace }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Release**: ${{ steps.env.outputs.release-name }}" >> $GITHUB_STEP_SUMMARY
+          if [ "${{ steps.get_url.outputs.url }}" != "pending" ]; then
+            echo "- **URL**: ${{ steps.get_url.outputs.url }}" >> $GITHUB_STEP_SUMMARY
+          fi
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "#### Pods Status:" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          kubectl get pods -n ${{ env.NAMESPACE }} -l app.kubernetes.io/instance=${{ env.HELM_RELEASE }} >> $GITHUB_STEP_SUMMARY
+          kubectl get pods -n ${{ steps.env.outputs.namespace }} -l app.kubernetes.io/instance=${{ steps.env.outputs.release-name }} >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
