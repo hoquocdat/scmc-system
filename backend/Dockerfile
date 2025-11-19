@@ -11,7 +11,7 @@ COPY prisma ./prisma/
 
 # Install ALL dependencies (needed for building)
 # @prisma/client postinstall will auto-generate the client
-RUN npm install && \
+RUN npm install --legacy-peer-deps && \
     npm cache clean --force
 
 # Copy source code
@@ -34,15 +34,17 @@ COPY --from=builder /app/prisma ./prisma
 
 # Install production dependencies + ts-node for CLI scripts
 # @prisma/client postinstall will auto-generate the client
-RUN npm install --omit=dev && \
-    npm install ts-node typescript @types/node && \
+RUN npm install --omit=dev --legacy-peer-deps && \
+    npm install ts-node typescript @types/node --legacy-peer-deps && \
     npm cache clean --force
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
 
-# Copy scripts directory and tsconfig for CLI tools
-COPY scripts ./scripts
+# Copy source files (needed for CLI tools using ts-node)
+COPY --from=builder /app/src ./src
+
+# Copy tsconfig for CLI tools
 COPY tsconfig*.json ./
 
 # Create non-root user
