@@ -55,7 +55,7 @@ export function EmployeeFormDialog({
       email: editingEmployee?.email || '',
       phone: editingEmployee?.phone || '',
       password: '',
-      role: editingEmployee?.role || 'employee',
+      role: editingEmployee?.role || 'technician',
     },
   });
 
@@ -122,7 +122,7 @@ export function EmployeeFormDialog({
                 <SelectValue placeholder="Chọn vai trò" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="employee">Nhân Viên</SelectItem>
+                <SelectItem value="technician">Kỹ Thuật Viên</SelectItem>
                 <SelectItem value="sales">Bán Hàng</SelectItem>
                 <SelectItem value="manager">Quản Lý</SelectItem>
                 <SelectItem value="finance">Tài Chính</SelectItem>

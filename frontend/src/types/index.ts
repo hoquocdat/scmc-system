@@ -1,5 +1,5 @@
 // User Roles
-export type UserRole = 'sales' | 'employee' | 'manager' | 'finance';
+export type UserRole = 'sales' | 'technician' | 'manager' | 'finance';
 
 // Service Status
 export type ServiceStatus =
