@@ -1,8 +1,17 @@
 import { IsEnum, IsOptional, IsString, IsBoolean, IsInt, IsUUID } from 'class-validator';
 import { image_entity_type } from '@prisma/client';
 
+// Create runtime enum for validation (Prisma enums are types only)
+export enum ImageEntityType {
+  bike = 'bike',
+  service_order = 'service_order',
+  customer = 'customer',
+  part = 'part',
+  comment = 'comment',
+}
+
 export class CreateImageDto {
-  @IsEnum(image_entity_type)
+  @IsEnum(ImageEntityType)
   entity_type: image_entity_type;
 
   @IsUUID()
