@@ -38,7 +38,8 @@ RUN npm install --omit=dev --legacy-peer-deps && \
     npm cache clean --force
 
 # Generate Prisma Client (must be after npm install)
-RUN npx prisma generate
+# Increase Node memory limit for Prisma generation
+RUN NODE_OPTIONS="--max-old-space-size=2048" npx prisma generate
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
@@ -58,6 +59,9 @@ RUN chown -R nestjs:nodejs /app
 
 # Switch to non-root user
 USER nestjs
+
+# Set Node.js memory limit for CLI and runtime
+ENV NODE_OPTIONS="--max-old-space-size=2048"
 
 # Expose port (Cloud Run uses PORT env var, defaults to 8080)
 EXPOSE 8080

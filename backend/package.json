@@ -22,7 +22,7 @@
     "prisma:studio": "prisma studio",
     "prisma:pull": "prisma db pull",
     "prisma:sync": "npm run prisma:pull && npm run prisma:generate",
-    "cli": "ts-node -r tsconfig-paths/register src/cli/main.ts",
+    "cli": "node --max-old-space-size=2048 -r ts-node/register -r tsconfig-paths/register src/cli/main.ts",
     "cli:create-user": "npm run cli -- create:user",
     "cli:seed-employees": "npm run cli -- seed:employees",
     "cli:seed-brands": "npm run cli -- seed:brands",
