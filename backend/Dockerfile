@@ -33,10 +33,12 @@ COPY package*.json ./
 COPY --from=builder /app/prisma ./prisma
 
 # Install production dependencies + ts-node for CLI scripts
-# @prisma/client postinstall will auto-generate the client
 RUN npm install --omit=dev --legacy-peer-deps && \
     npm install ts-node typescript @types/node --legacy-peer-deps && \
     npm cache clean --force
+
+# Generate Prisma Client (must be after npm install)
+RUN npx prisma generate
 
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
