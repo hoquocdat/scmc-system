@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../lib/api-client';
-import type { UserProfile } from '../types';
+import type { UserProfile, UserRole } from '../types';
 import { DataTable } from '@/components/ui/data-table/DataTable';
 import { EmployeeFormDialog } from '@/components/employees/EmployeeFormDialog';
 import { createEmployeeColumns } from '@/components/employees/EmployeeTableColumns';
@@ -12,6 +12,7 @@ interface EmployeeFormData {
   email: string;
   phone?: string;
   password?: string;
+  role: UserRole; 
 }
 
 export function EmployeesPage() {
@@ -53,7 +54,7 @@ export function EmployeesPage() {
         password: data.password,
         full_name: data.full_name,
         phone: data.phone,
-        role: 'employee',
+        role: data.role,
       };
 
       await apiClient.users.create(payload);
