@@ -22,13 +22,14 @@
     "prisma:studio": "prisma studio",
     "prisma:pull": "prisma db pull",
     "prisma:sync": "npm run prisma:pull && npm run prisma:generate",
-    "seed:employees": "ts-node scripts/seed-employees.ts",
-    "seed:brands": "ts-node scripts/seed-brands-models.ts",
-    "seed:data": "ts-node scripts/seed-service-data.ts",
-    "seed:verify": "ts-node scripts/verify-seed-data.ts",
-    "seed:assign": "ts-node scripts/assign-employees.ts",
-    "seed:all": "npm run seed:employees && npm run seed:brands && npm run seed:data",
-    "cli": "ts-node -r tsconfig-paths/register src/cli/main.ts"
+    "cli": "ts-node -r tsconfig-paths/register src/cli/main.ts",
+    "cli:create-user": "npm run cli -- create:user",
+    "cli:seed-employees": "npm run cli -- seed:employees",
+    "cli:seed-brands": "npm run cli -- seed:brands",
+    "cli:seed-data": "npm run cli -- seed:data",
+    "cli:seed-verify": "npm run cli -- seed:verify",
+    "cli:seed-assign": "npm run cli -- seed:assign-employees",
+    "cli:seed-all": "npm run cli:seed-employees && npm run cli:seed-brands && npm run cli:seed-data"
   },
   "dependencies": {
     "@casl/ability": "^6.7.3",

@@ -2,6 +2,11 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PrismaModule } from '../prisma/prisma.module';
 import { CreateUserCommand, CreateUserQuestions, ConfirmQuestions } from './commands/create-user.command';
+import { SeedEmployeesCommand } from './commands/seed-employees.command';
+import { SeedBrandsCommand } from './commands/seed-brands.command';
+import { SeedDataCommand } from './commands/seed-data.command';
+import { VerifySeedCommand } from './commands/verify-seed.command';
+import { AssignEmployeesCommand } from './commands/assign-employees.command';
 
 @Module({
   imports: [
@@ -10,6 +15,15 @@ import { CreateUserCommand, CreateUserQuestions, ConfirmQuestions } from './comm
     }),
     PrismaModule,
   ],
-  providers: [CreateUserCommand, CreateUserQuestions, ConfirmQuestions],
+  providers: [
+    CreateUserCommand,
+    CreateUserQuestions,
+    ConfirmQuestions,
+    SeedEmployeesCommand,
+    SeedBrandsCommand,
+    SeedDataCommand,
+    VerifySeedCommand,
+    AssignEmployeesCommand,
+  ],
 })
 export class CliModule {}

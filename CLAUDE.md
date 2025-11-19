@@ -160,10 +160,16 @@ npm run test:cov     # Run tests with coverage
 
 # CLI Commands (using Nest Commander)
 npm run cli -- --help            # Show all available CLI commands
-npm run cli -- create:user       # Create a new user interactively
+npm run cli:create-user          # Create a new user interactively
+npm run cli:seed-employees       # Seed employee accounts
+npm run cli:seed-brands          # Seed motorcycle brands and models
+npm run cli:seed-data            # Seed service data (customers, bikes, orders)
+npm run cli:seed-verify          # Verify seed data
+npm run cli:seed-assign          # Assign technicians to service orders
+npm run cli:seed-all             # Run all seed commands
 ```
 
-**Note**: The project uses **Nest Commander** for CLI commands. See [CLI_USAGE.md](backend/CLI_USAGE.md) for details.
+**Note**: The project uses **Nest Commander** for CLI commands. See [CLI_COMMANDS.md](backend/CLI_COMMANDS.md) for complete reference.
 
 ### Database Setup
 
