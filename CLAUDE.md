@@ -157,7 +157,13 @@ npm run build        # Build for production
 npm run test         # Run unit tests
 npm run test:e2e     # Run end-to-end tests
 npm run test:cov     # Run tests with coverage
+
+# CLI Commands (using Nest Commander)
+npm run cli -- --help            # Show all available CLI commands
+npm run cli -- create:user       # Create a new user interactively
 ```
+
+**Note**: The project uses **Nest Commander** for CLI commands. See [CLI_USAGE.md](backend/CLI_USAGE.md) for details.
 
 ### Database Setup
 

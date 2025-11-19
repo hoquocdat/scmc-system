@@ -28,7 +28,7 @@
     "seed:verify": "ts-node scripts/verify-seed-data.ts",
     "seed:assign": "ts-node scripts/assign-employees.ts",
     "seed:all": "npm run seed:employees && npm run seed:brands && npm run seed:data",
-    "create:superadmin": "ts-node scripts/create-superadmin.ts"
+    "cli": "ts-node -r tsconfig-paths/register src/cli/main.ts"
   },
   "dependencies": {
     "@casl/ability": "^6.7.3",
@@ -48,7 +48,9 @@
     "class-validator": "^0.14.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "inquirer": "^13.0.1",
     "lucide-react": "^0.546.0",
+    "nest-commander": "^3.20.1",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.16.3",
@@ -67,10 +69,12 @@
     "@nestjs/testing": "^11.0.1",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.0",
+    "@types/inquirer": "^9.0.9",
     "@types/jest": "^30.0.0",
     "@types/multer": "^2.0.0",
     "@types/node": "^22.10.7",
     "@types/passport-jwt": "^4.0.1",
+    "@types/pg": "^8.15.6",
     "@types/supertest": "^6.0.2",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
