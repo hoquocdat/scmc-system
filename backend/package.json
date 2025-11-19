@@ -28,7 +28,8 @@
     "cli:seed-brands": "npm run cli -- seed:brands",
     "cli:seed-data": "npm run cli -- seed:data",
     "cli:seed-verify": "npm run cli -- seed:verify",
-    "cli:seed-all": "npm run cli:seed-employees && npm run cli:seed-brands && npm run cli:seed-data"
+    "cli:seed-roles-permissions": "npm run cli -- seed:roles-permissions",
+    "cli:seed-all": "npm run cli:seed-roles-permissions && npm run cli:seed-employees && npm run cli:seed-brands && npm run cli:seed-data"
   },
   "dependencies": {
     "@casl/ability": "^6.7.3",
