@@ -6,7 +6,6 @@ import { SeedEmployeesCommand } from './commands/seed-employees.command';
 import { SeedBrandsCommand } from './commands/seed-brands.command';
 import { SeedDataCommand } from './commands/seed-data.command';
 import { VerifySeedCommand } from './commands/verify-seed.command';
-import { AssignEmployeesCommand } from './commands/assign-employees.command';
 
 @Module({
   imports: [
@@ -23,7 +22,6 @@ import { AssignEmployeesCommand } from './commands/assign-employees.command';
     SeedBrandsCommand,
     SeedDataCommand,
     VerifySeedCommand,
-    AssignEmployeesCommand,
   ],
 })
 export class CliModule {}

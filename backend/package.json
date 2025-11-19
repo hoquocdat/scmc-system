@@ -28,7 +28,6 @@
     "cli:seed-brands": "npm run cli -- seed:brands",
     "cli:seed-data": "npm run cli -- seed:data",
     "cli:seed-verify": "npm run cli -- seed:verify",
-    "cli:seed-assign": "npm run cli -- seed:assign-employees",
     "cli:seed-all": "npm run cli:seed-employees && npm run cli:seed-brands && npm run cli:seed-data"
   },
   "dependencies": {
