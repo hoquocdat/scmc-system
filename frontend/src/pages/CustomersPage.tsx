@@ -89,10 +89,15 @@ export function CustomersPage() {
 
   const onSubmit = async (data: CustomerFormData) => {
     try {
-      // Remove empty email to avoid validation errors
+      // Convert empty strings to undefined for all optional fields
       const payload = {
-        ...data,
+        full_name: data.full_name,
+        phone: data.phone,
         email: data.email?.trim() || undefined,
+        address: data.address?.trim() || undefined,
+        notes: data.notes?.trim() || undefined,
+        facebook: data.facebook?.trim() || undefined,
+        instagram: data.instagram?.trim() || undefined,
       };
 
       await apiClient.customers.create(payload);

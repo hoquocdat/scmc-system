@@ -106,8 +106,11 @@ export function EditBikeSheet({ isOpen, onClose, bike, onSuccess }: EditBikeShee
   // Update bike mutation
   const updateBikeMutation = useMutation({
     mutationFn: async (data: UpdateBikeFormData) => {
+      // Convert empty strings to undefined for all optional fields
       const payload = {
-        ...data,
+        brand: data.brand,
+        model: data.model,
+        license_plate: data.license_plate,
         year: data.year ? Number(data.year) : undefined,
         vin: data.vin?.trim() || undefined,
         engine_number: data.engine_number?.trim() || undefined,

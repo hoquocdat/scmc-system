@@ -192,9 +192,12 @@ export function CreateBikeForm({ ownerId, onSuccess, onCancel }: CreateBikeFormP
         return;
       }
 
+      // Convert empty strings to undefined for all optional fields
       const payload = {
-        ...data,
         owner_id: finalOwnerId,
+        brand: data.brand,
+        model: data.model,
+        license_plate: data.license_plate,
         year: data.year ? Number(data.year) : undefined,
         vin: data.vin?.trim() || undefined,
         engine_number: data.engine_number?.trim() || undefined,
