@@ -1,20 +1,41 @@
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Bike } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Bike, Pencil } from 'lucide-react';
 import type { Motorcycle } from '@/types';
+import { EditBikeSheet } from './EditBikeSheet';
 
 interface BikeInfoTabProps {
   bike: Motorcycle;
+  onBikeUpdate?: () => void;
 }
 
-export function BikeInfoTab({ bike }: BikeInfoTabProps) {
+export function BikeInfoTab({ bike, onBikeUpdate }: BikeInfoTabProps) {
+  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
+
+  const handleEditSuccess = () => {
+    onBikeUpdate?.();
+  };
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Bike className="h-5 w-5" />
-          Thông Tin Xe
-        </CardTitle>
-      </CardHeader>
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2">
+              <Bike className="h-5 w-5" />
+              Thông Tin Xe
+            </CardTitle>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsEditSheetOpen(true)}
+            >
+              <Pencil className="h-4 w-4 mr-2" />
+              Sửa
+            </Button>
+          </div>
+        </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
           <div>
@@ -76,5 +97,13 @@ export function BikeInfoTab({ bike }: BikeInfoTabProps) {
         </div>
       </CardContent>
     </Card>
+
+      <EditBikeSheet
+        isOpen={isEditSheetOpen}
+        onClose={() => setIsEditSheetOpen(false)}
+        bike={bike}
+        onSuccess={handleEditSuccess}
+      />
+    </>
   );
 }

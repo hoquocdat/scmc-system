@@ -98,7 +98,7 @@ export function BikeDetailPage() {
 
         {/* Bike Info Tab */}
         <TabsContent value="info">
-          <BikeInfoTab bike={bike} />
+          <BikeInfoTab bike={bike} onBikeUpdate={refetchBike} />
         </TabsContent>
 
         {/* Images Tab */}
