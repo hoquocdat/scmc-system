@@ -121,15 +121,19 @@ export function ServiceOrdersPage() {
   // Create service order mutation
   const createOrderMutation = useMutation({
     mutationFn: async (data: ServiceOrderFormData) => {
+      // Convert empty strings to undefined and format date to ISO-8601 DateTime
       const payload: any = {
         motorcycle_id: data.motorcycle_id,
         customer_id: data.customer_id,
-        assigned_employee_id: data.assigned_employee_id,
+        assigned_employee_id: data.assigned_employee_id || undefined,
         priority: data.priority,
-        description: data.description,
-        customer_demand: data.customer_demand,
+        description: data.description?.trim() || undefined,
+        customer_demand: data.customer_demand?.trim() || undefined,
         mileage_in: data.mileage_in ? parseInt(data.mileage_in) : undefined,
-        estimated_completion_date: data.estimated_completion_date,
+        // Convert date string to ISO-8601 DateTime format (add time component)
+        estimated_completion_date: data.estimated_completion_date
+          ? new Date(data.estimated_completion_date).toISOString()
+          : undefined,
       };
       return apiClient.serviceOrders.create(payload);
     },
