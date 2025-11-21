@@ -12,6 +12,17 @@ export class CustomersService {
 
     const [data, count] = await Promise.all([
       this.prisma.customers.findMany({
+        include: {
+          salesperson: {
+            select: {
+              id: true,
+              full_name: true,
+              email: true,
+              phone: true,
+              role: true,
+            },
+          },
+        },
         orderBy: {
           created_at: 'desc',
         },
@@ -35,6 +46,17 @@ export class CustomersService {
   async findOne(id: string) {
     const customer = await this.prisma.customers.findUnique({
       where: { id },
+      include: {
+        salesperson: {
+          select: {
+            id: true,
+            full_name: true,
+            email: true,
+            phone: true,
+            role: true,
+          },
+        },
+      },
     });
 
     if (!customer) {
@@ -75,6 +97,21 @@ export class CustomersService {
         address: createCustomerDto.address || null,
         notes: createCustomerDto.notes || null,
         id_number: createCustomerDto.id_number || null,
+        facebook: createCustomerDto.facebook || null,
+        instagram: createCustomerDto.instagram || null,
+        birthday: createCustomerDto.birthday || null,
+        salesperson_id: createCustomerDto.salesperson_id || null,
+      },
+      include: {
+        salesperson: {
+          select: {
+            id: true,
+            full_name: true,
+            email: true,
+            phone: true,
+            role: true,
+          },
+        },
       },
     });
   }
@@ -105,6 +142,17 @@ export class CustomersService {
       data: {
         ...updateCustomerDto,
         updated_at: new Date(),
+      },
+      include: {
+        salesperson: {
+          select: {
+            id: true,
+            full_name: true,
+            email: true,
+            phone: true,
+            role: true,
+          },
+        },
       },
     });
   }

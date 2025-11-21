@@ -1,4 +1,4 @@
-import { IsString, IsUUID, IsOptional, IsEnum, IsNumber, Min, IsArray } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsNumber, Min, IsArray } from 'class-validator';
 
 export enum ServiceStatus {
   PENDING = 'pending',

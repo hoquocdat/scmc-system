@@ -1,4 +1,10 @@
-import { IsString, IsOptional, IsEmail, MinLength } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  IsEmail,
+  MinLength,
+  IsDateString,
+} from 'class-validator';
 
 export class UpdateCustomerDto {
   @IsOptional()
@@ -34,4 +40,12 @@ export class UpdateCustomerDto {
   @IsOptional()
   @IsString()
   instagram?: string;
+
+  @IsOptional()
+  @IsDateString({}, { message: 'Ngày sinh không hợp lệ' })
+  birthday?: string;
+
+  @IsOptional()
+  @IsString()
+  salesperson_id?: string;
 }

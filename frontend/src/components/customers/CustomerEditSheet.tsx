@@ -1,12 +1,14 @@
 import { useForm, Controller } from 'react-hook-form';
+import { useQuery } from '@tanstack/react-query';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PhoneInput from 'react-phone-number-input';
 import { apiClient } from '../../lib/api-client';
-import type { Customer } from '../../types';
+import type { Customer, UserProfile } from '../../types';
 
 interface CustomerFormData {
   full_name: string;
@@ -15,8 +17,10 @@ interface CustomerFormData {
   address?: string;
   notes?: string;
   id_number?: string;
+  birthday?: string;
   facebook?: string;
   instagram?: string;
+  salesperson_id?: string;
 }
 
 interface CustomerEditSheetProps {
@@ -34,6 +38,8 @@ export function CustomerEditSheet({ customer, isOpen, onClose, onSuccess, onErro
     formState: { errors, isSubmitting },
     setError: setFormError,
     control,
+    setValue,
+    watch,
   } = useForm<CustomerFormData>({
     defaultValues: {
       full_name: customer.full_name,
@@ -42,10 +48,22 @@ export function CustomerEditSheet({ customer, isOpen, onClose, onSuccess, onErro
       address: customer.address || '',
       notes: customer.notes || '',
       id_number: customer.id_number || '',
+      birthday: customer.birthday ? customer.birthday.split('T')[0] : '',
       facebook: customer.facebook || '',
       instagram: customer.instagram || '',
+      salesperson_id: customer.salesperson_id || '',
     },
   });
+
+  const { data: employees = [] } = useQuery<UserProfile[]>({
+    queryKey: ['employees'],
+    queryFn: async () => {
+      const result: any = await apiClient.users.getEmployees();
+      return result || [];
+    },
+  });
+
+  const salespersonId = watch('salesperson_id');
 
   const onSubmit = async (data: CustomerFormData) => {
     try {
@@ -57,8 +75,10 @@ export function CustomerEditSheet({ customer, isOpen, onClose, onSuccess, onErro
         address: data.address?.trim() || undefined,
         notes: data.notes?.trim() || undefined,
         id_number: data.id_number?.trim() || undefined,
+        birthday: data.birthday || undefined,
         facebook: data.facebook?.trim() || undefined,
         instagram: data.instagram?.trim() || undefined,
+        salesperson_id: data.salesperson_id || undefined,
       };
 
       await apiClient.customers.update(customer.id, payload);
@@ -167,6 +187,15 @@ export function CustomerEditSheet({ customer, isOpen, onClose, onSuccess, onErro
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="birthday">Ngày Sinh</Label>
+              <Input
+                id="birthday"
+                type="date"
+                {...register('birthday')}
+              />
+            </div>
+
+            <div className="space-y-2">
               <Label htmlFor="facebook">Facebook</Label>
               <Input
                 id="facebook"
@@ -182,6 +211,26 @@ export function CustomerEditSheet({ customer, isOpen, onClose, onSuccess, onErro
                 placeholder="Instagram username hoặc URL"
                 {...register('instagram')}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="salesperson_id">Nhân Viên Phụ Trách</Label>
+              <Select
+                value={salespersonId || ''}
+                onValueChange={(value) => setValue('salesperson_id', value === 'none' ? '' : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Chọn nhân viên phụ trách" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Không có</SelectItem>
+                  {employees.map((employee) => (
+                    <SelectItem key={employee.id} value={employee.id}>
+                      {employee.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">

@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Phone, Mail, MapPin, FileText, User, Facebook, Instagram } from 'lucide-react';
+import { Phone, Mail, MapPin, FileText, User, Facebook, Instagram, Cake, UserCheck } from 'lucide-react';
 import type { Customer } from '../../types';
 
 interface CustomerInfoTabProps {
@@ -45,6 +45,18 @@ export function CustomerInfoTab({ customer }: CustomerInfoTabProps) {
             </div>
           )}
 
+          {customer.birthday && (
+            <div className="flex items-start gap-2 sm:gap-3">
+              <Cake className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Ngày Sinh</p>
+                <p className="text-base sm:text-lg truncate">
+                  {new Date(customer.birthday).toLocaleDateString('vi-VN')}
+                </p>
+              </div>
+            </div>
+          )}
+
           {customer.facebook && (
             <div className="flex items-start gap-2 sm:gap-3">
               <Facebook className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground mt-0.5 shrink-0" />
@@ -61,6 +73,16 @@ export function CustomerInfoTab({ customer }: CustomerInfoTabProps) {
               <div className="min-w-0">
                 <p className="text-xs sm:text-sm font-medium text-muted-foreground">Instagram</p>
                 <p className="text-base sm:text-lg truncate">{customer.instagram}</p>
+              </div>
+            </div>
+          )}
+
+          {customer.salesperson && (
+            <div className="flex items-start gap-2 sm:gap-3">
+              <UserCheck className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground mt-0.5 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-xs sm:text-sm font-medium text-muted-foreground">Nhân Viên Phụ Trách</p>
+                <p className="text-base sm:text-lg truncate">{customer.salesperson.full_name}</p>
               </div>
             </div>
           )}

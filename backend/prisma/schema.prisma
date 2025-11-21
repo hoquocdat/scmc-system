@@ -79,10 +79,17 @@ model customers {
   notes          String?
   created_at     DateTime?        @default(now()) @db.Timestamptz(6)
   updated_at     DateTime?        @default(now()) @db.Timestamptz(6)
+  birthday       DateTime?        @db.Date
+  facebook       String?          @db.VarChar(255)
+  instagram      String?          @db.VarChar(255)
+  salesperson_id String?          @db.Uuid
   bikes          bikes[]
+  salesperson    user_profiles?   @relation("customer_salesperson", fields: [salesperson_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   sales_orders   sales_orders[]
   service_orders service_orders[]
 
+  @@index([birthday], map: "idx_customers_birthday")
+  @@index([salesperson_id], map: "idx_customers_salesperson")
   @@schema("public")
 }
 
@@ -230,17 +237,20 @@ model service_orders {
   created_at                DateTime?                 @default(now()) @db.Timestamptz(6)
   updated_at                DateTime?                 @default(now()) @db.Timestamptz(6)
   image_url                 String?
+  created_by_id             String?                   @db.Uuid
   payments                  payments[]
   service_items             service_items[]
   service_order_comments    service_order_comments[]
   service_order_employees   service_order_employees[]
-  user_profiles             user_profiles?            @relation(fields: [assigned_employee_id], references: [id], onUpdate: NoAction, map: "service_orders_assigned_technician_id_fkey")
+  assigned_employee         user_profiles?            @relation("assigned_employee", fields: [assigned_employee_id], references: [id], onUpdate: NoAction, map: "service_orders_assigned_technician_id_fkey")
   bikes                     bikes                     @relation(fields: [motorcycle_id], references: [id], onUpdate: NoAction, map: "service_orders_bike_id_fkey")
+  created_by                user_profiles?            @relation("created_by", fields: [created_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   customers                 customers                 @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
   service_parts             service_parts[]
 
   @@index([customer_id], map: "idx_service_orders_customer")
   @@index([assigned_employee_id], map: "idx_service_orders_employee")
+  @@index([created_by_id], map: "idx_service_orders_created_by")
   @@index([motorcycle_id], map: "idx_service_orders_motorcycle")
   @@index([order_number], map: "idx_service_orders_order_number")
   @@index([status], map: "idx_service_orders_status")
@@ -298,6 +308,7 @@ model user_profiles {
   created_at                                                            DateTime?                 @default(now()) @db.Timestamptz(6)
   updated_at                                                            DateTime?                 @default(now()) @db.Timestamptz(6)
   activity_logs                                                         activity_logs[]
+  customers_salesperson                                                 customers[]               @relation("customer_salesperson")
   images                                                                images[]
   inventory_transactions                                                inventory_transactions[]
   payments                                                              payments[]
@@ -310,7 +321,8 @@ model user_profiles {
   service_items                                                         service_items[]
   service_order_comments                                                service_order_comments[]
   service_order_employees                                               service_order_employees[]
-  service_orders                                                        service_orders[]
+  service_orders_assigned_employee                                      service_orders[]          @relation("assigned_employee")
+  service_orders_created_by                                             service_orders[]          @relation("created_by")
   transfer_orders_transfer_orders_received_byTouser_profiles            transfer_orders[]         @relation("transfer_orders_received_byTouser_profiles")
   transfer_orders_transfer_orders_requested_byTouser_profiles           transfer_orders[]         @relation("transfer_orders_requested_byTouser_profiles")
   transfer_orders_transfer_orders_shipped_byTouser_profiles             transfer_orders[]         @relation("transfer_orders_shipped_byTouser_profiles")

@@ -78,15 +78,22 @@ export class ServiceOrdersService {
       }
     }
 
-    console.log('Prisma where clause:', JSON.stringify(where, null, 2));
-
     const [data, count] = await Promise.all([
       this.prisma.service_orders.findMany({
         where,
         include: {
           bikes: true,
           customers: true,
-          user_profiles: {
+          assigned_employee: {
+            select: {
+              id: true,
+              full_name: true,
+              email: true,
+              phone: true,
+              role: true,
+            },
+          },
+          created_by: {
             select: {
               id: true,
               full_name: true,
@@ -199,6 +206,7 @@ export class ServiceOrdersService {
         motorcycle_id: createServiceOrderDto.motorcycle_id,
         customer_id: createServiceOrderDto.customer_id,
         assigned_employee_id: createServiceOrderDto.assigned_employee_id || null,
+        created_by_id: userId || null,
         status: 'pending',
         priority: createServiceOrderDto.priority as any,
         description: createServiceOrderDto.description || null,

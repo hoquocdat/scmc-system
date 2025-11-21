@@ -44,8 +44,17 @@ export interface Customer {
   email?: string;
   address?: string;
   notes?: string;
+  birthday?: string;
   facebook?: string;
   instagram?: string;
+  salesperson_id?: string;
+  salesperson?: {
+    id: string;
+    full_name: string;
+    email?: string;
+    phone?: string;
+    role: UserRole;
+  };
   created_at: string;
   updated_at: string;
 }
@@ -75,6 +84,7 @@ export interface ServiceOrder {
   motorcycle_id: string;
   customer_id: string; // Person who brought the bike (motorcycle.owner_id is the legal owner)
   assigned_employee_id?: string;
+  created_by_id?: string;
   status: ServiceStatus;
   priority: PriorityLevel;
   description?: string;
@@ -89,6 +99,20 @@ export interface ServiceOrder {
   pickup_id_verified: boolean;
   estimated_cost?: number;
   final_cost?: number;
+  assigned_employee?: {
+    id: string;
+    full_name: string;
+    email?: string;
+    phone?: string;
+    role: UserRole;
+  };
+  created_by?: {
+    id: string;
+    full_name: string;
+    email?: string;
+    phone?: string;
+    role: UserRole;
+  };
   created_at: string;
   updated_at: string;
 }
