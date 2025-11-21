@@ -5,10 +5,10 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PhoneInput from 'react-phone-number-input';
 import { apiClient } from '../../lib/api-client';
 import type { Customer, UserProfile } from '../../types';
+import { EmployeeSelect } from '../forms/EmployeeSelect';
 
 interface CustomerFormData {
   full_name: string;
@@ -38,8 +38,6 @@ export function CustomerEditSheet({ customer, isOpen, onClose, onSuccess, onErro
     formState: { errors, isSubmitting },
     setError: setFormError,
     control,
-    setValue,
-    watch,
   } = useForm<CustomerFormData>({
     defaultValues: {
       full_name: customer.full_name,
@@ -63,7 +61,6 @@ export function CustomerEditSheet({ customer, isOpen, onClose, onSuccess, onErro
     },
   });
 
-  const salespersonId = watch('salesperson_id');
 
   const onSubmit = async (data: CustomerFormData) => {
     try {
@@ -213,25 +210,13 @@ export function CustomerEditSheet({ customer, isOpen, onClose, onSuccess, onErro
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="salesperson_id">Nhân Viên Phụ Trách</Label>
-              <Select
-                value={salespersonId || ''}
-                onValueChange={(value) => setValue('salesperson_id', value === 'none' ? '' : value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn nhân viên phụ trách" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Không có</SelectItem>
-                  {employees.map((employee) => (
-                    <SelectItem key={employee.id} value={employee.id}>
-                      {employee.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <EmployeeSelect
+              control={control}
+              name="salesperson_id"
+              employees={employees}
+              label="Nhân Viên Phụ Trách"
+              placeholder="Chọn nhân viên phụ trách..."
+            />
 
             <div className="space-y-2">
               <Label htmlFor="address">Địa Chỉ</Label>

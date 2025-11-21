@@ -48,14 +48,16 @@ interface EmployeeSelectProps {
   control: Control<any>;
   name: string;
   employees: UserProfile[];
+  label?: string;
+  placeholder?: string;
 }
 
-export function EmployeeSelect({ control, name, employees }: EmployeeSelectProps) {
+export function EmployeeSelect({ control, name, employees, label = 'Phân Công Nhân Viên', placeholder = 'Chưa phân công...' }: EmployeeSelectProps) {
   const employeeOptions = createEmployeeOptions(employees);
 
   return (
     <div className="space-y-2">
-      <Label htmlFor={name}>Phân Công Nhân Viên</Label>
+      <Label htmlFor={name}>{label}</Label>
       <Controller
         name={name}
         control={control}
@@ -65,7 +67,7 @@ export function EmployeeSelect({ control, name, employees }: EmployeeSelectProps
             options={employeeOptions}
             value={employeeOptions.find(option => option.value === field.value) || null}
             onChange={(option) => field.onChange(option?.value || '')}
-            placeholder="Chưa phân công..."
+            placeholder={placeholder}
             isClearable
             styles={selectStyles}
             components={{

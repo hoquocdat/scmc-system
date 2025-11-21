@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import PhoneInput from 'react-phone-number-input';
 import {
   Sheet,
@@ -16,6 +15,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet';
+import { EmployeeSelect } from '@/components/forms/EmployeeSelect';
 import { CustomerCell } from '@/components/table/TableCells';
 import type {
   ColumnDef,
@@ -87,8 +87,6 @@ export function CustomersPage() {
     reset,
     setError: setFormError,
     control,
-    setValue,
-    watch,
   } = useForm<CustomerFormData>({
     defaultValues: {
       full_name: '',
@@ -102,8 +100,6 @@ export function CustomersPage() {
       salesperson_id: '',
     },
   });
-
-  const salespersonId = watch('salesperson_id');
 
   const onSubmit = async (data: CustomerFormData) => {
     try {
@@ -397,25 +393,13 @@ export function CustomersPage() {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="salesperson_id">Nhân Viên Phụ Trách</Label>
-              <Select
-                value={salespersonId || ''}
-                onValueChange={(value) => setValue('salesperson_id', value === 'none' ? '' : value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Chọn nhân viên phụ trách" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Không có</SelectItem>
-                  {employees.map((employee) => (
-                    <SelectItem key={employee.id} value={employee.id}>
-                      {employee.full_name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <EmployeeSelect
+              control={control}
+              name="salesperson_id"
+              employees={employees}
+              label="Nhân Viên Phụ Trách"
+              placeholder="Chọn nhân viên phụ trách..."
+            />
 
             <div className="space-y-2">
               <Label htmlFor="address">Địa Chỉ</Label>
