@@ -52,6 +52,7 @@
     "inquirer": "^13.0.1",
     "lucide-react": "^0.546.0",
     "nest-commander": "^3.20.1",
+    "nestjs-cls": "^6.1.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.16.3",

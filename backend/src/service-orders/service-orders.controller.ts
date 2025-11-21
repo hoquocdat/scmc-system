@@ -29,7 +29,6 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PoliciesGuard } from '../casl/policies.guard';
 import { CheckPolicies } from '../casl/check-policies.decorator';
 import { Action } from '../casl/casl-ability.factory';
-import { User } from '../auth/decorators/user.decorator';
 
 @ApiTags('Service Orders')
 @ApiBearerAuth('JWT-auth')
@@ -115,11 +114,8 @@ export class ServiceOrdersController {
   @ApiOperation({ summary: 'Create a new service order' })
   @ApiResponse({ status: 201, description: 'Service order created successfully' })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
-  async create(
-    @Body() createServiceOrderDto: CreateServiceOrderDto,
-    @User() user: any,
-  ) {
-    return this.serviceOrdersService.create(createServiceOrderDto, user.id);
+  async create(@Body() createServiceOrderDto: CreateServiceOrderDto) {
+    return this.serviceOrdersService.create(createServiceOrderDto);
   }
 
   @Put(':id')
@@ -130,9 +126,8 @@ export class ServiceOrdersController {
   async update(
     @Param('id') id: string,
     @Body() updateServiceOrderDto: UpdateServiceOrderDto,
-    @User() user: any,
   ) {
-    return this.serviceOrdersService.update(id, updateServiceOrderDto, user.id);
+    return this.serviceOrdersService.update(id, updateServiceOrderDto);
   }
 
   @Patch(':id/status')
@@ -143,9 +138,8 @@ export class ServiceOrdersController {
   async updateStatus(
     @Param('id') id: string,
     @Body() updateStatusDto: UpdateStatusDto,
-    @User() user: any,
   ) {
-    return this.serviceOrdersService.updateStatus(id, updateStatusDto, user.id);
+    return this.serviceOrdersService.updateStatus(id, updateStatusDto);
   }
 
   @Patch(':id/assign')
@@ -156,9 +150,8 @@ export class ServiceOrdersController {
   async assignEmployee(
     @Param('id') id: string,
     @Body() assignEmployeeDto: AssignEmployeeDto,
-    @User() user: any,
   ) {
-    return this.serviceOrdersService.assignEmployee(id, assignEmployeeDto, user.id);
+    return this.serviceOrdersService.assignEmployee(id, assignEmployeeDto);
   }
 
   @Delete(':id')

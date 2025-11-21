@@ -35,6 +35,15 @@ export interface UserProfile {
   updated_at: string;
 }
 
+// Audit metadata for tracking who created/updated records
+export interface AuditUser {
+  id: string;
+  full_name: string;
+  email?: string;
+  phone?: string;
+  role: UserRole;
+}
+
 // Customer (individual only - can be both owner and/or person bringing bike)
 export interface Customer {
   id: string;
@@ -48,13 +57,11 @@ export interface Customer {
   facebook?: string;
   instagram?: string;
   salesperson_id?: string;
-  salesperson?: {
-    id: string;
-    full_name: string;
-    email?: string;
-    phone?: string;
-    role: UserRole;
-  };
+  salesperson?: AuditUser;
+  created_by_id?: string;
+  created_by?: AuditUser;
+  updated_by_id?: string;
+  updated_by?: AuditUser;
   created_at: string;
   updated_at: string;
 }
@@ -73,6 +80,10 @@ export interface Motorcycle {
   image_url?: string; // Primary image for backward compatibility
   image_urls?: string[]; // Array of all images for gallery
   notes?: string;
+  created_by_id?: string;
+  created_by?: AuditUser;
+  updated_by_id?: string;
+  updated_by?: AuditUser;
   created_at: string;
   updated_at: string;
 }
@@ -85,6 +96,7 @@ export interface ServiceOrder {
   customer_id: string; // Person who brought the bike (motorcycle.owner_id is the legal owner)
   assigned_employee_id?: string;
   created_by_id?: string;
+  updated_by_id?: string;
   status: ServiceStatus;
   priority: PriorityLevel;
   description?: string;
@@ -99,20 +111,9 @@ export interface ServiceOrder {
   pickup_id_verified: boolean;
   estimated_cost?: number;
   final_cost?: number;
-  assigned_employee?: {
-    id: string;
-    full_name: string;
-    email?: string;
-    phone?: string;
-    role: UserRole;
-  };
-  created_by?: {
-    id: string;
-    full_name: string;
-    email?: string;
-    phone?: string;
-    role: UserRole;
-  };
+  assigned_employee?: AuditUser;
+  created_by?: AuditUser;
+  updated_by?: AuditUser;
   created_at: string;
   updated_at: string;
 }

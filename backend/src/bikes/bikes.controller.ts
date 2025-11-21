@@ -71,7 +71,10 @@ export class BikesController {
   @ApiParam({ name: 'id', description: 'Bike UUID' })
   @ApiResponse({ status: 200, description: 'Bike updated successfully' })
   @ApiResponse({ status: 404, description: 'Bike not found' })
-  async update(@Param('id') id: string, @Body() updateBikeDto: UpdateBikeDto) {
+  async update(
+    @Param('id') id: string,
+    @Body() updateBikeDto: UpdateBikeDto,
+  ) {
     return this.bikesService.update(id, updateBikeDto);
   }
 

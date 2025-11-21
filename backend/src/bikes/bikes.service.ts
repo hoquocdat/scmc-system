@@ -3,12 +3,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateBikeDto } from './dto/create-bike.dto';
 import { UpdateBikeDto } from './dto/update-bike.dto';
 import { StorageService } from '../storage/storage.service';
+import { UserContextService } from '../auth/user-context.service';
 
 @Injectable()
 export class BikesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly storageService: StorageService,
+    private readonly userContext: UserContextService,
   ) {}
 
   async findAll(page: number = 1, limit: number = 10) {
@@ -116,6 +118,7 @@ export class BikesService {
         engine_number: createBikeDto.engine_number || null,
         color: createBikeDto.color || null,
         notes: createBikeDto.notes || null,
+        created_by_id: this.userContext.getUserId(),
       },
     });
   }
@@ -129,6 +132,7 @@ export class BikesService {
       data: {
         ...updateBikeDto,
         updated_at: new Date(),
+        updated_by_id: this.userContext.getUserId(),
       },
     });
   }

@@ -2,10 +2,14 @@ import { Injectable, NotFoundException, ConflictException } from '@nestjs/common
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { UserContextService } from '../auth/user-context.service';
 
 @Injectable()
 export class CustomersService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private userContext: UserContextService,
+  ) {}
 
   async findAll(page: number = 1, limit: number = 10) {
     const offset = (page - 1) * limit;
@@ -101,6 +105,7 @@ export class CustomersService {
         instagram: createCustomerDto.instagram || null,
         birthday: createCustomerDto.birthday || null,
         salesperson_id: createCustomerDto.salesperson_id || null,
+        created_by_id: this.userContext.getUserId(),
       },
       include: {
         salesperson: {
@@ -142,6 +147,7 @@ export class CustomersService {
       data: {
         ...updateCustomerDto,
         updated_at: new Date(),
+        updated_by_id: this.userContext.getUserId(),
       },
       include: {
         salesperson: {

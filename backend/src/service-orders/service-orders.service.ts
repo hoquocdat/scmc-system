@@ -6,6 +6,7 @@ import { UpdateStatusDto } from './dto/update-status.dto';
 import { AssignEmployeeDto } from './dto/assign-employee.dto';
 import { StorageService } from '../storage/storage.service';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
+import { UserContextService } from '../auth/user-context.service';
 
 @Injectable()
 export class ServiceOrdersService {
@@ -13,6 +14,7 @@ export class ServiceOrdersService {
     private readonly prisma: PrismaService,
     private readonly storageService: StorageService,
     private readonly activityLogsService: ActivityLogsService,
+    private readonly userContext: UserContextService,
   ) {}
 
   async findAll(
@@ -93,7 +95,7 @@ export class ServiceOrdersService {
               role: true,
             },
           },
-          created_by: {
+          user_profiles_service_orders_created_by_idTouser_profiles: {
             select: {
               id: true,
               full_name: true,
@@ -114,11 +116,15 @@ export class ServiceOrdersService {
 
     console.log('Results count:', data.length, 'Unique employees:', [...new Set(data.map(o => o.assigned_employee_id))]);
 
-    // Map 'bikes' to 'motorcycles' for frontend compatibility
-    const mappedData = data.map((order) => ({
-      ...order,
-      motorcycles: order.bikes,
-    }));
+    // Map relation names for frontend compatibility
+    const mappedData = data.map((order) => {
+      const { user_profiles_service_orders_created_by_idTouser_profiles, bikes, ...rest } = order;
+      return {
+        ...rest,
+        motorcycles: bikes,
+        created_by: user_profiles_service_orders_created_by_idTouser_profiles,
+      };
+    });
 
     return {
       data: mappedData,
@@ -179,7 +185,9 @@ export class ServiceOrdersService {
     });
   }
 
-  async create(createServiceOrderDto: CreateServiceOrderDto, userId?: string) {
+  async create(createServiceOrderDto: CreateServiceOrderDto) {
+    const userId = this.userContext.getUserId();
+
     // Generate order number (format: SO-YYYYMMDD-XXXX)
     const today = new Date();
     const dateStr = today.toISOString().slice(0, 10).replace(/-/g, '');
@@ -206,7 +214,7 @@ export class ServiceOrdersService {
         motorcycle_id: createServiceOrderDto.motorcycle_id,
         customer_id: createServiceOrderDto.customer_id,
         assigned_employee_id: createServiceOrderDto.assigned_employee_id || null,
-        created_by_id: userId || null,
+        created_by_id: userId,
         status: 'pending',
         priority: createServiceOrderDto.priority as any,
         description: createServiceOrderDto.description || null,
@@ -249,7 +257,8 @@ export class ServiceOrdersService {
     return serviceOrder;
   }
 
-  async update(id: string, updateServiceOrderDto: UpdateServiceOrderDto, userId?: string) {
+  async update(id: string, updateServiceOrderDto: UpdateServiceOrderDto) {
+    const userId = this.userContext.getUserId();
     const oldData = await this.findOne(id);
 
     const serviceOrder = await this.prisma.service_orders.update({
@@ -257,6 +266,7 @@ export class ServiceOrdersService {
       data: {
         ...updateServiceOrderDto,
         updated_at: new Date(),
+        updated_by_id: userId,
       },
     });
 
@@ -273,12 +283,14 @@ export class ServiceOrdersService {
     return serviceOrder;
   }
 
-  async updateStatus(id: string, updateStatusDto: UpdateStatusDto, userId?: string) {
+  async updateStatus(id: string, updateStatusDto: UpdateStatusDto) {
+    const userId = this.userContext.getUserId();
     const oldData = await this.findOne(id);
 
     const updateData: any = {
       status: updateStatusDto.status,
       updated_at: new Date(),
+      updated_by_id: userId,
     };
 
     // Set completion date when status changes to completed
@@ -304,7 +316,8 @@ export class ServiceOrdersService {
     return serviceOrder;
   }
 
-  async assignEmployee(id: string, assignEmployeeDto: AssignEmployeeDto, userId?: string) {
+  async assignEmployee(id: string, assignEmployeeDto: AssignEmployeeDto) {
+    const userId = this.userContext.getUserId();
     const oldData = await this.findOne(id);
 
     const serviceOrder = await this.prisma.service_orders.update({
@@ -312,6 +325,7 @@ export class ServiceOrdersService {
       data: {
         assigned_employee_id: assignEmployeeDto.employee_id,
         updated_at: new Date(),
+        updated_by_id: userId,
       },
     });
 

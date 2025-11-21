@@ -30,22 +30,28 @@ model activity_logs {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model bikes {
-  id             String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  brand          String           @db.VarChar(100)
-  model          String           @db.VarChar(100)
-  year           Int?
-  license_plate  String           @db.VarChar(20)
-  vin            String?          @db.VarChar(50)
-  engine_number  String?          @db.VarChar(50)
-  color          String?          @db.VarChar(50)
-  notes          String?
-  created_at     DateTime?        @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime?        @default(now()) @db.Timestamptz(6)
-  owner_id       String?          @db.Uuid
-  image_url      String?
-  customers      customers?       @relation(fields: [owner_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  service_orders service_orders[]
+  id                                               String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  brand                                            String           @db.VarChar(100)
+  model                                            String           @db.VarChar(100)
+  year                                             Int?
+  license_plate                                    String           @db.VarChar(20)
+  vin                                              String?          @db.VarChar(50)
+  engine_number                                    String?          @db.VarChar(50)
+  color                                            String?          @db.VarChar(50)
+  notes                                            String?
+  created_at                                       DateTime?        @default(now()) @db.Timestamptz(6)
+  updated_at                                       DateTime?        @default(now()) @db.Timestamptz(6)
+  owner_id                                         String?          @db.Uuid
+  image_url                                        String?
+  created_by_id                                    String?          @db.Uuid
+  updated_by_id                                    String?          @db.Uuid
+  user_profiles_bikes_created_by_idTouser_profiles user_profiles?   @relation("bikes_created_by_idTouser_profiles", fields: [created_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customers                                        customers?       @relation(fields: [owner_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profiles_bikes_updated_by_idTouser_profiles user_profiles?   @relation("bikes_updated_by_idTouser_profiles", fields: [updated_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  service_orders                                   service_orders[]
 
+  @@index([created_by_id], map: "idx_bikes_created_by")
+  @@index([updated_by_id], map: "idx_bikes_updated_by")
   @@schema("public")
 }
 
@@ -70,26 +76,32 @@ model brands {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model customers {
-  id             String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  full_name      String           @db.VarChar(255)
-  phone          String           @unique(map: "customers_phone_unique_idx") @db.VarChar(20)
-  email          String?          @db.VarChar(255)
-  id_number      String?          @db.VarChar(50)
-  address        String?
-  notes          String?
-  created_at     DateTime?        @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime?        @default(now()) @db.Timestamptz(6)
-  birthday       DateTime?        @db.Date
-  facebook       String?          @db.VarChar(255)
-  instagram      String?          @db.VarChar(255)
-  salesperson_id String?          @db.Uuid
-  bikes          bikes[]
-  salesperson    user_profiles?   @relation("customer_salesperson", fields: [salesperson_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  sales_orders   sales_orders[]
-  service_orders service_orders[]
+  id                                                   String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  full_name                                            String           @db.VarChar(255)
+  phone                                                String           @unique(map: "customers_phone_unique_idx") @db.VarChar(20)
+  email                                                String?          @db.VarChar(255)
+  id_number                                            String?          @db.VarChar(50)
+  address                                              String?
+  notes                                                String?
+  created_at                                           DateTime?        @default(now()) @db.Timestamptz(6)
+  updated_at                                           DateTime?        @default(now()) @db.Timestamptz(6)
+  birthday                                             DateTime?        @db.Date
+  facebook                                             String?          @db.VarChar(255)
+  instagram                                            String?          @db.VarChar(255)
+  salesperson_id                                       String?          @db.Uuid
+  created_by_id                                        String?          @db.Uuid
+  updated_by_id                                        String?          @db.Uuid
+  bikes                                                bikes[]
+  user_profiles_customers_created_by_idTouser_profiles user_profiles?   @relation("customers_created_by_idTouser_profiles", fields: [created_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  salesperson                                          user_profiles?   @relation("customer_salesperson", fields: [salesperson_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_profiles_customers_updated_by_idTouser_profiles user_profiles?   @relation("customers_updated_by_idTouser_profiles", fields: [updated_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sales_orders                                         sales_orders[]
+  service_orders                                       service_orders[]
 
   @@index([birthday], map: "idx_customers_birthday")
   @@index([salesperson_id], map: "idx_customers_salesperson")
+  @@index([created_by_id], map: "idx_customers_created_by")
+  @@index([updated_by_id], map: "idx_customers_updated_by")
   @@schema("public")
 }
 
@@ -215,38 +227,40 @@ model service_order_employees {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model service_orders {
-  id                        String                    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  order_number              String                    @unique @db.VarChar(20)
-  motorcycle_id             String                    @db.Uuid
-  customer_id               String                    @db.Uuid
-  assigned_employee_id      String?                   @db.Uuid
-  status                    service_status?           @default(pending)
-  priority                  priority_level?           @default(normal)
-  description               String?
-  customer_demand           String?
-  mileage_in                Int?
-  mileage_out               Int?
-  drop_off_date             DateTime?                 @default(now()) @db.Timestamptz(6)
-  estimated_completion_date DateTime?                 @db.Timestamptz(6)
-  actual_completion_date    DateTime?                 @db.Timestamptz(6)
-  pickup_date               DateTime?                 @db.Timestamptz(6)
-  picked_up_by              String?                   @db.VarChar(255)
-  pickup_id_verified        Boolean?                  @default(false)
-  estimated_cost            Decimal?                  @db.Decimal(10, 2)
-  final_cost                Decimal?                  @db.Decimal(10, 2)
-  created_at                DateTime?                 @default(now()) @db.Timestamptz(6)
-  updated_at                DateTime?                 @default(now()) @db.Timestamptz(6)
-  image_url                 String?
-  created_by_id             String?                   @db.Uuid
-  payments                  payments[]
-  service_items             service_items[]
-  service_order_comments    service_order_comments[]
-  service_order_employees   service_order_employees[]
-  assigned_employee         user_profiles?            @relation("assigned_employee", fields: [assigned_employee_id], references: [id], onUpdate: NoAction, map: "service_orders_assigned_technician_id_fkey")
-  bikes                     bikes                     @relation(fields: [motorcycle_id], references: [id], onUpdate: NoAction, map: "service_orders_bike_id_fkey")
-  created_by                user_profiles?            @relation("created_by", fields: [created_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  customers                 customers                 @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
-  service_parts             service_parts[]
+  id                                                        String                    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  order_number                                              String                    @unique @db.VarChar(20)
+  motorcycle_id                                             String                    @db.Uuid
+  customer_id                                               String                    @db.Uuid
+  assigned_employee_id                                      String?                   @db.Uuid
+  status                                                    service_status?           @default(pending)
+  priority                                                  priority_level?           @default(normal)
+  description                                               String?
+  mileage_in                                                Int?
+  mileage_out                                               Int?
+  drop_off_date                                             DateTime?                 @default(now()) @db.Timestamptz(6)
+  estimated_completion_date                                 DateTime?                 @db.Timestamptz(6)
+  actual_completion_date                                    DateTime?                 @db.Timestamptz(6)
+  pickup_date                                               DateTime?                 @db.Timestamptz(6)
+  picked_up_by                                              String?                   @db.VarChar(255)
+  pickup_id_verified                                        Boolean?                  @default(false)
+  estimated_cost                                            Decimal?                  @db.Decimal(10, 2)
+  final_cost                                                Decimal?                  @db.Decimal(10, 2)
+  created_at                                                DateTime?                 @default(now()) @db.Timestamptz(6)
+  updated_at                                                DateTime?                 @default(now()) @db.Timestamptz(6)
+  image_url                                                 String?
+  created_by_id                                             String?                   @db.Uuid
+  customer_demand                                           String?
+  updated_by_id                                             String?                   @db.Uuid
+  payments                                                  payments[]
+  service_items                                             service_items[]
+  service_order_comments                                    service_order_comments[]
+  service_order_employees                                   service_order_employees[]
+  assigned_employee                                         user_profiles?            @relation("assigned_employee", fields: [assigned_employee_id], references: [id], onUpdate: NoAction, map: "service_orders_assigned_technician_id_fkey")
+  bikes                                                     bikes                     @relation(fields: [motorcycle_id], references: [id], onUpdate: NoAction, map: "service_orders_bike_id_fkey")
+  user_profiles_service_orders_created_by_idTouser_profiles user_profiles?            @relation("service_orders_created_by_idTouser_profiles", fields: [created_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customers                                                 customers                 @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
+  user_profiles_service_orders_updated_by_idTouser_profiles user_profiles?            @relation("service_orders_updated_by_idTouser_profiles", fields: [updated_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  service_parts                                             service_parts[]
 
   @@index([customer_id], map: "idx_service_orders_customer")
   @@index([assigned_employee_id], map: "idx_service_orders_employee")
@@ -254,6 +268,7 @@ model service_orders {
   @@index([motorcycle_id], map: "idx_service_orders_motorcycle")
   @@index([order_number], map: "idx_service_orders_order_number")
   @@index([status], map: "idx_service_orders_status")
+  @@index([updated_by_id], map: "idx_service_orders_updated_by")
   @@schema("public")
 }
 
@@ -308,7 +323,11 @@ model user_profiles {
   created_at                                                            DateTime?                 @default(now()) @db.Timestamptz(6)
   updated_at                                                            DateTime?                 @default(now()) @db.Timestamptz(6)
   activity_logs                                                         activity_logs[]
+  bikes_bikes_created_by_idTouser_profiles                              bikes[]                   @relation("bikes_created_by_idTouser_profiles")
+  bikes_bikes_updated_by_idTouser_profiles                              bikes[]                   @relation("bikes_updated_by_idTouser_profiles")
+  customers_customers_created_by_idTouser_profiles                      customers[]               @relation("customers_created_by_idTouser_profiles")
   customers_salesperson                                                 customers[]               @relation("customer_salesperson")
+  customers_customers_updated_by_idTouser_profiles                      customers[]               @relation("customers_updated_by_idTouser_profiles")
   images                                                                images[]
   inventory_transactions                                                inventory_transactions[]
   payments                                                              payments[]
@@ -322,7 +341,8 @@ model user_profiles {
   service_order_comments                                                service_order_comments[]
   service_order_employees                                               service_order_employees[]
   service_orders_assigned_employee                                      service_orders[]          @relation("assigned_employee")
-  service_orders_created_by                                             service_orders[]          @relation("created_by")
+  service_orders_service_orders_created_by_idTouser_profiles            service_orders[]          @relation("service_orders_created_by_idTouser_profiles")
+  service_orders_service_orders_updated_by_idTouser_profiles            service_orders[]          @relation("service_orders_updated_by_idTouser_profiles")
   transfer_orders_transfer_orders_received_byTouser_profiles            transfer_orders[]         @relation("transfer_orders_received_byTouser_profiles")
   transfer_orders_transfer_orders_requested_byTouser_profiles           transfer_orders[]         @relation("transfer_orders_requested_byTouser_profiles")
   transfer_orders_transfer_orders_shipped_byTouser_profiles             transfer_orders[]         @relation("transfer_orders_shipped_byTouser_profiles")
