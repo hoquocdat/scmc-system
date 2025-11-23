@@ -77,9 +77,32 @@ export interface AuditLog {
   };
 }
 
+export interface UserPermission {
+  id: string;
+  permissions: Permission;
+  granted: boolean;
+  assigned_at: string;
+  user_profiles_user_permissions_assigned_byTouser_profiles?: {
+    id: string;
+    full_name: string;
+    email: string;
+  };
+}
+
 // ============ API FUNCTIONS ============
 
 export const permissionsApi = {
+  // Current User (no policy check required)
+  getMyPermissions: async (): Promise<UserPermission[]> => {
+    const response = await apiClient.get('/permissions/me');
+    return response.data;
+  },
+
+  getMyRoles: async (): Promise<Role[]> => {
+    const response = await apiClient.get('/permissions/me/roles');
+    return response.data;
+  },
+
   // Permissions
   getAllPermissions: async (): Promise<Permission[]> => {
     const response = await apiClient.get('/permissions');

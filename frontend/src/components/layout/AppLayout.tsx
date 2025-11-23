@@ -64,16 +64,16 @@ export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Fetch user roles and permissions for navigation filtering
+  // Fetch current user's roles and permissions (no policy check required)
   const { data: userRoles = [] } = useQuery({
-    queryKey: ['user-roles', user?.id],
-    queryFn: () => user?.id ? permissionsApi.getUserRoles(user.id) : Promise.resolve([]),
+    queryKey: ['my-roles'],
+    queryFn: () => permissionsApi.getMyRoles(),
     enabled: !!user?.id,
   });
 
   const { data: userPermissions = [] } = useQuery({
-    queryKey: ['user-permissions', user?.id],
-    queryFn: () => user?.id ? permissionsApi.getUserPermissions(user.id) : Promise.resolve([]),
+    queryKey: ['my-permissions'],
+    queryFn: () => permissionsApi.getMyPermissions(),
     enabled: !!user?.id,
   });
 

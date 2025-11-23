@@ -27,6 +27,24 @@ import { Action } from '../casl/casl-ability.factory';
 export class PermissionsController {
   constructor(private readonly permissionsService: PermissionsService) {}
 
+  // ============ CURRENT USER PERMISSIONS (NO POLICY CHECK) ============
+
+  @Get('me')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get current user permissions' })
+  @ApiResponse({ status: 200, description: 'Current user permissions' })
+  async getMyPermissions(@Request() req: any) {
+    return this.permissionsService.getUserPermissions(req.user.id);
+  }
+
+  @Get('me/roles')
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get current user roles' })
+  @ApiResponse({ status: 200, description: 'Current user roles' })
+  async getMyRoles(@Request() req: any) {
+    return this.permissionsService.getUserRoles(req.user.id);
+  }
+
   // ============ PERMISSIONS ENDPOINTS ============
 
   @Get()
