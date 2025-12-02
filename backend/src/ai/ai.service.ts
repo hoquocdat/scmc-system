@@ -129,6 +129,12 @@ Lưu ý:
 - Kiểm tra kỹ yêu cầu để đảm bảo không bỏ sót công việc quan trọng nào.
 - Description không cần quá dài, vì đây là mô tả cho kỹ thuật viên, chỉ cần đủ chi tiết để hiểu công việc.
 
+Thuật ngữ:
+- "Zin": các bộ phận, linh kiện chính hãng theo xe, không phải đồ chơi hay hàng thay thế.
+- "Dậm": Sơn lại, phục hồi bề mặt sơn bị trầy xước nhẹ.
+- "Làm sạch": Rửa xe, lau chùi các chi tiết để xe sạch sẽ.
+- "Custom SCMC": Đồ chơi do SCMC sản xuất.
+
 Ví dụ:
 
 Yêu cầu: "Về zin đèn, đồng hồ, lẫy số cho Moto2, làm sạch"
