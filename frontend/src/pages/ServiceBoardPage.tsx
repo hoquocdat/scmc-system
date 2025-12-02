@@ -1,17 +1,32 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import {
+  DndContext,
+  DragOverlay,
+  closestCorners,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import { apiClient } from '../lib/api-client';
-import type { ServiceStatus } from '../types';
+import type { ServiceStatus, ServiceOrder } from '../types';
 import { toast } from 'sonner';
 import { BoardHeader } from '../components/service-board/BoardHeader';
 import { BoardFilters } from '../components/service-board/BoardFilters';
 import { KanbanColumn } from '../components/service-board/KanbanColumn';
+import { ServiceOrderCard } from '../components/service-board/ServiceOrderCard';
 
 export function ServiceBoardPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [activeOrder, setActiveOrder] = useState<ServiceOrder | null>(null);
 
   // Filters
   const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
@@ -38,6 +53,18 @@ export function ServiceBoardPage() {
     return new Set(allColumns.map(col => col.status));
   });
 
+  // DnD sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8, // 8px movement before drag starts
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
+
   // Fetch service orders with useQuery
   const { data: serviceOrdersData, isLoading: isLoadingOrders, refetch: refetchOrders } = useQuery({
     queryKey: ['service-orders', 'kanban'],
@@ -54,6 +81,21 @@ export function ServiceBoardPage() {
     queryFn: async () => {
       const response: any = await apiClient.users.getEmployees();
       return response || [];
+    },
+  });
+
+  // Mutation for updating service order status
+  const updateStatusMutation = useMutation({
+    mutationFn: async ({ orderId, status }: { orderId: string; status: ServiceStatus }) => {
+      return await apiClient.serviceOrders.updateStatus(orderId, status);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['service-orders', 'kanban'] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || 'Không thể cập nhật trạng thái');
+      // Refetch to revert optimistic update
+      queryClient.invalidateQueries({ queryKey: ['service-orders', 'kanban'] });
     },
   });
 
@@ -106,6 +148,65 @@ export function ServiceBoardPage() {
     }
   };
 
+  // DnD handlers
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    const order = serviceOrders.find((o: ServiceOrder) => o.id === active.id);
+    if (order) {
+      setActiveOrder(order);
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    setActiveOrder(null);
+
+    if (!over) return;
+
+    const orderId = active.id as string;
+    const order = serviceOrders.find((o: ServiceOrder) => o.id === orderId);
+
+    if (!order) return;
+
+    // Determine the target status
+    let targetStatus: ServiceStatus | null = null;
+
+    // Check if dropped on a column
+    if (over.data.current?.type === 'column') {
+      targetStatus = over.data.current.status as ServiceStatus;
+    } else {
+      // Dropped on another card - find its column
+      const targetOrder = serviceOrders.find((o: ServiceOrder) => o.id === over.id);
+      if (targetOrder) {
+        targetStatus = targetOrder.status;
+      }
+    }
+
+    // If status hasn't changed, do nothing
+    if (!targetStatus || order.status === targetStatus) return;
+
+    // Get status label for toast
+    const targetColumn = allColumns.find(col => col.status === targetStatus);
+    const statusLabel = targetColumn?.label || targetStatus;
+
+    // Optimistically update the UI
+    queryClient.setQueryData(['service-orders', 'kanban'], (old: ServiceOrder[] | undefined) => {
+      if (!old) return old;
+      return old.map(o =>
+        o.id === orderId ? { ...o, status: targetStatus } : o
+      );
+    });
+
+    // Update on server
+    updateStatusMutation.mutate(
+      { orderId, status: targetStatus },
+      {
+        onSuccess: () => {
+          toast.success(`Đã chuyển sang "${statusLabel}"`);
+        },
+      }
+    );
+  };
 
   const getFilteredOrders = () => {
     return serviceOrders.filter((order: any) => {
@@ -145,6 +246,12 @@ export function ServiceBoardPage() {
     return filtered.filter((order: any) => order.status === status);
   };
 
+  const getEmployeeName = (employeeId?: string | null): string => {
+    if (!employeeId) return 'Chưa phân công';
+    const employee = employees.find((e: any) => e.id === employeeId);
+    return employee?.full_name || 'Không xác định';
+  };
+
   if (isLoading) {
     return (
       <div className="p-4 sm:p-6 md:p-8">
@@ -177,20 +284,42 @@ export function ServiceBoardPage() {
         onPriorityChange={setSelectedPriority}
       />
 
-      {/* Kanban Board */}
-      <div className={`gap-3 sm:gap-4 pb-4 ${isFullscreen ? `grid h-[calc(100vh-220px)]` : 'flex overflow-x-auto'}`} style={isFullscreen ? { gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` } : {}}>
-        {columns.map(column => (
-          <KanbanColumn
-            key={column.status}
-            label={column.label}
-            color={column.color}
-            orders={getOrdersByStatus(column.status)}
-            isFullscreen={isFullscreen}
-            employees={employees}
-            onOrderClick={(orderId) => navigate(`/service-orders/${orderId}`)}
-          />
-        ))}
-      </div>
+      {/* Kanban Board with DnD */}
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCorners}
+        onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
+      >
+        <div className={`gap-3 sm:gap-4 pb-4 ${isFullscreen ? `grid h-[calc(100vh-220px)]` : 'flex overflow-x-auto'}`} style={isFullscreen ? { gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))` } : {}}>
+          {columns.map(column => (
+            <KanbanColumn
+              key={column.status}
+              status={column.status}
+              label={column.label}
+              color={column.color}
+              orders={getOrdersByStatus(column.status)}
+              isFullscreen={isFullscreen}
+              employees={employees}
+              onOrderClick={(orderId) => navigate(`/service-orders/${orderId}`)}
+            />
+          ))}
+        </div>
+
+        {/* Drag Overlay - shows the card being dragged */}
+        <DragOverlay>
+          {activeOrder ? (
+            <div className="w-72 sm:w-80 opacity-90">
+              <ServiceOrderCard
+                order={activeOrder}
+                isFullscreen={isFullscreen}
+                employeeName={getEmployeeName(activeOrder.assigned_employee_id)}
+                onClick={() => {}}
+              />
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
     </div>
   );
 }

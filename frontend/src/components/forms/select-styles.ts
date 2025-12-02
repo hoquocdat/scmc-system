@@ -3,10 +3,11 @@ export const selectStyles = {
   control: (base: any, state: any) => ({
     ...base,
     minHeight: '36px',
-    borderColor: state.isFocused ? 'hsl(var(--ring))' : 'hsl(var(--input))',
+    // borderColor: state.isFocused ? 'hsl(var(--ring))' : 'hsl(var(--input))',
     boxShadow: state.isFocused ? '0 0 0 1px hsl(var(--ring))' : 'none',
     '&:hover': {
-      borderColor: 'hsl(var(--input))',
+      borderColor: 'hsl(var(--input))/20',
+      boxShadow: '0 0 0 1px hsl(var(--ring))',
     },
     backgroundColor: 'transparent',
   }),

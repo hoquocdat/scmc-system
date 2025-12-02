@@ -28,6 +28,7 @@ import { PosModule } from './pos/pos.module';
 import { ProductCategoriesModule } from './product-categories/product-categories.module';
 import { AttributeDefinitionsModule } from './attribute-definitions/attribute-definitions.module';
 import { PermissionsModule } from './permissions/permissions.module';
+import { AiModule } from './ai/ai.module';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { PermissionsModule } from './permissions/permissions.module';
     ProductCategoriesModule,
     AttributeDefinitionsModule,
     PermissionsModule,
+    AiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

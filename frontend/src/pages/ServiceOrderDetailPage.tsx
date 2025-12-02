@@ -285,7 +285,13 @@ export function ServiceOrderDetailPage() {
 
             {/* Tasks Tab */}
             <TabsContent value="tasks">
-              <ServiceItemsManager serviceOrderId={order.id} />
+              <ServiceItemsManager
+                serviceOrderId={order.id}
+                customerDemand={order.customer_demand}
+                bikeBrand={order.bikes?.brand}
+                bikeModel={order.bikes?.model}
+                bikeYear={order.bikes?.year}
+              />
             </TabsContent>
 
             {/* Parts Tab */}

@@ -134,6 +134,8 @@ export function ServiceOrdersPage() {
         estimated_completion_date: data.estimated_completion_date
           ? new Date(data.estimated_completion_date).toISOString()
           : undefined,
+        // Include AI-generated tasks if any
+        generated_tasks: data.generated_tasks,
       };
       return apiClient.serviceOrders.create(payload);
     },

@@ -1,8 +1,11 @@
+import { useDroppable } from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable';
 import { Badge } from '@/components/ui/badge';
-import { ServiceOrderCard } from './ServiceOrderCard';
-import type { ServiceOrder, UserProfile } from '@/types';
+import { DraggableServiceOrderCard } from './DraggableServiceOrderCard';
+import type { ServiceOrder, UserProfile, ServiceStatus } from '@/types';
 
 interface KanbanColumnProps {
+  status: ServiceStatus;
   label: string;
   color: string;
   orders: ServiceOrder[];
@@ -12,6 +15,7 @@ interface KanbanColumnProps {
 }
 
 export function KanbanColumn({
+  status,
   label,
   color,
   orders,
@@ -19,6 +23,14 @@ export function KanbanColumn({
   employees,
   onOrderClick,
 }: KanbanColumnProps) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: status,
+    data: {
+      type: 'column',
+      status,
+    },
+  });
+
   const getEmployeeName = (employeeId?: string | null): string => {
     if (!employeeId) return 'Chưa phân công';
     const employee = employees.find(e => e.id === employeeId);
@@ -39,23 +51,33 @@ export function KanbanColumn({
         </div>
       </div>
 
-      {/* Column Content */}
-      <div className={`bg-gray-50 rounded-b-lg space-y-2 sm:space-y-3 overflow-y-auto ${isFullscreen ? 'h-[calc(100vh-280px)] p-2' : 'min-h-[400px] sm:min-h-[500px] p-2 sm:p-3'}`}>
-        {orders.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            Không có đơn nào
-          </p>
-        ) : (
-          orders.map(order => (
-            <ServiceOrderCard
-              key={order.id}
-              order={order}
-              isFullscreen={isFullscreen}
-              employeeName={getEmployeeName(order.assigned_employee_id)}
-              onClick={() => onOrderClick(order.id)}
-            />
-          ))
-        )}
+      {/* Column Content - Droppable Area */}
+      <div
+        ref={setNodeRef}
+        className={`bg-gray-50 rounded-b-lg space-y-2 sm:space-y-3 overflow-y-auto transition-colors ${
+          isOver ? 'bg-primary/10 ring-2 ring-primary/30' : ''
+        } ${isFullscreen ? 'h-[calc(100vh-280px)] p-2' : 'min-h-[400px] sm:min-h-[500px] p-2 sm:p-3'}`}
+      >
+        <SortableContext
+          items={orders.map(o => o.id)}
+          strategy={verticalListSortingStrategy}
+        >
+          {orders.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              Kéo thả đơn vào đây
+            </p>
+          ) : (
+            orders.map(order => (
+              <DraggableServiceOrderCard
+                key={order.id}
+                order={order}
+                isFullscreen={isFullscreen}
+                employeeName={getEmployeeName(order.assigned_employee_id)}
+                onClick={() => onOrderClick(order.id)}
+              />
+            ))
+          )}
+        </SortableContext>
       </div>
     </div>
   );

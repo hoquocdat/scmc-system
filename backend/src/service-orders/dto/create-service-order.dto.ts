@@ -1,4 +1,13 @@
-import { IsString, IsOptional, IsEnum, IsNumber, Min, IsArray } from 'class-validator';
+import { IsString, IsOptional, IsEnum, IsNumber, Min, IsArray, ValidateNested } from 'class-validator';
+import { Type } from 'class-transformer';
+
+export class GeneratedTaskDto {
+  @IsString()
+  name: string;
+
+  @IsString()
+  description: string;
+}
 
 export enum ServiceStatus {
   PENDING = 'pending',
@@ -60,4 +69,10 @@ export class CreateServiceOrderDto {
   @IsNumber()
   @Min(0)
   estimated_cost?: number;
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => GeneratedTaskDto)
+  generated_tasks?: GeneratedTaskDto[];
 }

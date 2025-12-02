@@ -307,29 +307,33 @@ export function ProductFormPage() {
   }
 
   return (
-    <div className="p-4 sm:p-6 md:p-8">
-      {/* Header */}
-      <div className="mb-4 sm:mb-6 md:mb-8">
-        <div className="flex items-center gap-4 mb-4">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => navigate('/inventory/products')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
-              {isEditMode ? 'Chỉnh sửa sản phẩm' : 'Tạo sản phẩm mới'}
-            </h1>
-            <p className="text-sm sm:text-base text-muted-foreground">
-              {isEditMode ? 'Cập nhật thông tin sản phẩm' : 'Thêm sản phẩm mới vào kho'}
-            </p>
+    <div className="flex flex-col h-full">
+      {/* Sticky Page Header */}
+      <div className="sticky top-0 z-10 bg-background border-b">
+        <div className="flex items-center justify-between px-4 sm:px-6 md:px-8 py-4">
+          <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => navigate('/inventory/products')}
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
+                {isEditMode ? 'Chỉnh sửa sản phẩm' : 'Tạo sản phẩm mới'}
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                {isEditMode ? 'Cập nhật thông tin sản phẩm' : 'Thêm sản phẩm mới vào kho'}
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Only show tabs when creating new product */}
+      {/* Content */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
+        {/* Only show tabs when creating new product */}
       {!isEditMode ? (
         <Tabs defaultValue="simple" className="space-y-6">
           <TabsList className="grid w-full max-w-md grid-cols-2">
@@ -932,6 +936,7 @@ export function ProductFormPage() {
         </div>
       </form>
       )}
+      </div>
     </div>
   );
 }

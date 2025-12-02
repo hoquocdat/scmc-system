@@ -245,6 +245,27 @@ export class ServiceOrdersService {
       }
     }
 
+    // Create service items from AI-generated tasks
+    if (createServiceOrderDto.generated_tasks && createServiceOrderDto.generated_tasks.length > 0) {
+      const serviceItems = createServiceOrderDto.generated_tasks.map((task) => ({
+        service_order_id: serviceOrder.id,
+        name: task.name,
+        description: task.description,
+        status: 'pending' as const,
+        labor_cost: 0,
+        hours_worked: 0,
+      }));
+
+      try {
+        await this.prisma.service_items.createMany({
+          data: serviceItems,
+        });
+      } catch (error) {
+        console.error('Error creating service items from generated tasks:', error);
+        // Don't fail the entire operation, just log the error
+      }
+    }
+
     // Log activity
     await this.activityLogsService.logActivity({
       userId,

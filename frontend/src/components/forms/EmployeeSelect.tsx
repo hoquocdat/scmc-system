@@ -1,6 +1,6 @@
 import { Controller } from 'react-hook-form';
 import type { Control } from 'react-hook-form';
-import Select from 'react-select';
+import Select, { components } from 'react-select';
 import { Label } from '@/components/ui/label';
 import type { UserProfile } from '@/types';
 import { selectStyles } from './select-styles';
@@ -20,12 +20,14 @@ const EmployeeOption = (props: any) => {
 const EmployeeSingleValue = (props: any) => {
   const { data } = props;
   return (
-    <div className="flex items-center">
-      <div>
-        <div className="font-medium text-sm">{data.label}</div>
-        {data.phone && <div className="text-xs text-muted-foreground">{data.phone}</div>}
+    <components.SingleValue {...props}>
+      <div className="flex items-center" >
+        <div>
+          <div className="font-medium text-sm">{data.label}</div>
+          {data.phone && <div className="text-xs text-muted-foreground">{data.phone}</div>}
+        </div>
       </div>
-    </div>
+    </components.SingleValue>
   );
 };
 
