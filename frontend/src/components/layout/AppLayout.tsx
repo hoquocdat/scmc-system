@@ -184,6 +184,12 @@ export function AppLayout({ children }: AppLayoutProps) {
           roles: ['sales', 'manager'],
         },
         {
+          name: 'Đơn Đặt Hàng',
+          href: '/inventory/purchase-orders',
+          icon: ShoppingBag,
+          roles: ['manager'],
+        },
+        {
           name: 'Thuộc Tính',
           href: '/inventory/attributes',
           icon: Tag,
@@ -225,12 +231,6 @@ export function AppLayout({ children }: AppLayoutProps) {
           name: 'Điều Chỉnh Kho',
           href: '/inventory/adjustments',
           icon: ClipboardList,
-          roles: ['manager'],
-        },
-        {
-          name: 'Đơn Đặt Hàng',
-          href: '/inventory/purchase-orders',
-          icon: ShoppingBag,
           roles: ['manager'],
         },
       ],

@@ -48,7 +48,7 @@ const productSchema = z.object({
   sale_price_end_date: optionalDate,
   reorder_point: optionalNumber,
   reorder_quantity: optionalNumber,
-  product_type: z.string().optional(),
+  product_type: z.enum(['physical', 'service', 'digital']).default('physical'),
   is_active: z.boolean().default(true),
   is_featured: z.boolean().default(false),
   weight: optionalNumber,
@@ -77,6 +77,7 @@ export function ProductFormPage() {
     handleSubmit,
     setValue,
     watch,
+    reset,
     formState: { errors },
   } = useForm({
     resolver: zodResolver(productSchema),
@@ -113,6 +114,24 @@ export function ProductFormPage() {
     queryFn: suppliersApi.getAll,
   });
 
+  // Reset form when switching between create and edit modes
+  useEffect(() => {
+    if (!isEditMode) {
+      // Reset all state for create mode
+      setImages([]);
+      setUploadingFiles([]);
+      setAttributes({});
+      reset({
+        is_active: true,
+        is_featured: false,
+        reorder_point: 10,
+        reorder_quantity: 50,
+        product_type: 'physical',
+      });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, isEditMode]);
+
   // Populate form with product data
   useEffect(() => {
     if (product) {
@@ -120,7 +139,7 @@ export function ProductFormPage() {
       setValue('sku', product.sku);
       setValue('name', product.name);
       setValue('description', product.description || '');
-      setValue('product_type', product.product_type || '');
+      setValue('product_type', (product.product_type as 'physical' | 'service' | 'digital') || 'physical');
 
       // Set price fields
       setValue('cost_price', product.cost_price ? Number(product.cost_price) : undefined as any);
@@ -311,6 +330,35 @@ export function ProductFormPage() {
               </p>
             </div>
           </div>
+          {isEditMode && (
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => navigate('/inventory/products')}
+                disabled={isSubmitting}
+              >
+                Hủy
+              </Button>
+              <Button
+                type="submit"
+                form="edit-product-form"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Đang lưu...
+                  </>
+                ) : (
+                  <>
+                    <Save className="mr-2 h-4 w-4" />
+                    Cập nhật sản phẩm
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
         </div>
       </div>
 
@@ -357,17 +405,16 @@ export function ProductFormPage() {
                   <div className="space-y-2">
                     <Label htmlFor="product_type">Loại sản phẩm</Label>
                     <Select
-                      value={watch('product_type') || ''}
-                      onValueChange={(value) => setValue('product_type', value)}
+                      value={watch('product_type') || 'physical'}
+                      onValueChange={(value) => setValue('product_type', value as 'physical' | 'service' | 'digital')}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Chọn loại" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="part">Phụ tùng xe máy</SelectItem>
-                        <SelectItem value="accessory">Phụ kiện</SelectItem>
-                        <SelectItem value="apparel">Quần áo</SelectItem>
-                        <SelectItem value="consumable">Vật tư tiêu hao</SelectItem>
+                        <SelectItem value="physical">Hàng hóa vật lý</SelectItem>
+                        <SelectItem value="service">Dịch vụ</SelectItem>
+                        <SelectItem value="digital">Sản phẩm số</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -614,15 +661,16 @@ export function ProductFormPage() {
                 <div className="space-y-2">
                   <Label htmlFor="category_id">Danh mục</Label>
                   <Select
-                    value={watch('category_id') ?? ''}
-                    onValueChange={(value) => setValue('category_id', value || undefined)}
+                    value={watch('category_id') || undefined}
+                    onValueChange={(value) => setValue('category_id', value === '_none' ? undefined : value)}
                   >
                     <SelectTrigger id="category_id">
                       <SelectValue placeholder="Chọn danh mục" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="_none">-- Không chọn --</SelectItem>
                       {categories
-                        .filter((cat) => cat.is_active)
+                        .filter((cat) => cat.is_active || cat.id === watch('category_id'))
                         .sort((a, b) => a.display_order - b.display_order)
                         .map((category) => (
                           <SelectItem key={category.id} value={category.id}>
@@ -635,15 +683,16 @@ export function ProductFormPage() {
                 <div className="space-y-2">
                   <Label htmlFor="brand_id">Thương hiệu</Label>
                   <Select
-                    value={watch('brand_id') ?? ''}
-                    onValueChange={(value) => setValue('brand_id', value || undefined)}
+                    value={watch('brand_id') || undefined}
+                    onValueChange={(value) => setValue('brand_id', value === '_none' ? undefined : value)}
                   >
                     <SelectTrigger id="brand_id">
                       <SelectValue placeholder="Chọn thương hiệu" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="_none">-- Không chọn --</SelectItem>
                       {brands
-                        .filter((brand) => brand.is_active)
+                        .filter((brand) => brand.is_active || brand.id === watch('brand_id'))
                         .map((brand) => (
                           <SelectItem key={brand.id} value={brand.id}>
                             {brand.name}
@@ -655,15 +704,16 @@ export function ProductFormPage() {
                 <div className="space-y-2">
                   <Label htmlFor="supplier_id">Nhà cung cấp</Label>
                   <Select
-                    value={watch('supplier_id') ?? ''}
-                    onValueChange={(value) => setValue('supplier_id', value || undefined)}
+                    value={watch('supplier_id') || undefined}
+                    onValueChange={(value) => setValue('supplier_id', value === '_none' ? undefined : value)}
                   >
                     <SelectTrigger id="supplier_id">
                       <SelectValue placeholder="Chọn nhà cung cấp" />
                     </SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="_none">-- Không chọn --</SelectItem>
                       {suppliers
-                        .filter((supplier) => supplier.is_active)
+                        .filter((supplier) => supplier.is_active || supplier.id === watch('supplier_id'))
                         .map((supplier) => (
                           <SelectItem key={supplier.id} value={supplier.id}>
                             {supplier.name}
@@ -715,7 +765,7 @@ export function ProductFormPage() {
         </Tabs>
       ) : (
         // Edit mode - show simple form only
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form id="edit-product-form" onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Information */}
           <div className="lg:col-span-2 space-y-6">
@@ -815,42 +865,139 @@ export function ProductFormPage() {
                 />
               </CardContent>
             </Card>
+
+            {/* Product Images */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Hình ảnh sản phẩm</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Thêm tối đa 10 hình ảnh cho sản phẩm
+                  </p>
+                  <ImageUploadButton
+                    onUpload={handleImageUpload}
+                    maxFiles={10}
+                    maxSizeMB={5}
+                  />
+                </div>
+
+                {(images.length > 0 || uploadingFiles.length > 0) && (
+                  <PhotoGallery
+                    images={images}
+                    uploadingFiles={uploadingFiles}
+                    altPrefix="Sản phẩm"
+                  />
+                )}
+
+                {images.length === 0 && uploadingFiles.length === 0 && (
+                  <div className="text-center py-8 text-muted-foreground border-2 border-dashed rounded-lg">
+                    <p className="text-sm">Chưa có hình ảnh nào</p>
+                    <p className="text-xs mt-1">Nhấp "Add Photos" để thêm hình ảnh</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar */}
           <div className="space-y-6">
-            {/* Actions */}
+            {/* Status */}
             <Card>
               <CardHeader>
-                <CardTitle>Thao tác</CardTitle>
+                <CardTitle>Trạng thái</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-3">
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Đang lưu...
-                    </>
-                  ) : (
-                    <>
-                      <Save className="mr-2 h-4 w-4" />
-                      Cập nhật sản phẩm
-                    </>
-                  )}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => navigate('/inventory/products')}
-                  disabled={isSubmitting}
-                  className="w-full"
-                >
-                  Hủy
-                </Button>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="edit-is_active">Đang hoạt động</Label>
+                  <Switch
+                    id="edit-is_active"
+                    checked={watch('is_active')}
+                    onCheckedChange={(checked) => setValue('is_active', checked)}
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="edit-is_featured">Nổi bật</Label>
+                  <Switch
+                    id="edit-is_featured"
+                    checked={watch('is_featured')}
+                    onCheckedChange={(checked) => setValue('is_featured', checked)}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Organization - Category, Brand, Supplier */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Phân loại</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="edit-category_id">Danh mục</Label>
+                  <Select
+                    value={watch('category_id') || undefined}
+                    onValueChange={(value) => setValue('category_id', value === '_none' ? undefined : value)}
+                  >
+                    <SelectTrigger id="edit-category_id">
+                      <SelectValue placeholder="Chọn danh mục" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">-- Không chọn --</SelectItem>
+                      {categories
+                        .filter((cat) => cat.is_active || cat.id === watch('category_id'))
+                        .sort((a, b) => a.display_order - b.display_order)
+                        .map((category) => (
+                          <SelectItem key={category.id} value={category.id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-brand_id">Thương hiệu</Label>
+                  <Select
+                    value={watch('brand_id') || undefined}
+                    onValueChange={(value) => setValue('brand_id', value === '_none' ? undefined : value)}
+                  >
+                    <SelectTrigger id="edit-brand_id">
+                      <SelectValue placeholder="Chọn thương hiệu" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">-- Không chọn --</SelectItem>
+                      {brands
+                        .filter((brand) => brand.is_active || brand.id === watch('brand_id'))
+                        .map((brand) => (
+                          <SelectItem key={brand.id} value={brand.id}>
+                            {brand.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="edit-supplier_id">Nhà cung cấp</Label>
+                  <Select
+                    value={watch('supplier_id') || undefined}
+                    onValueChange={(value) => setValue('supplier_id', value === '_none' ? undefined : value)}
+                  >
+                    <SelectTrigger id="edit-supplier_id">
+                      <SelectValue placeholder="Chọn nhà cung cấp" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_none">-- Không chọn --</SelectItem>
+                      {suppliers
+                        .filter((supplier) => supplier.is_active || supplier.id === watch('supplier_id'))
+                        .map((supplier) => (
+                          <SelectItem key={supplier.id} value={supplier.id}>
+                            {supplier.name}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </CardContent>
             </Card>
           </div>
