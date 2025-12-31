@@ -23,6 +23,7 @@ import { suppliersApi } from '@/lib/api/suppliers';
 import { ImageUploadButton, type UploadFile } from '@/components/common/ImageUploadButton';
 import { PhotoGallery } from '@/components/common/PhotoGallery';
 import { MasterProductForm } from '@/components/products/MasterProductForm';
+import { ProductAttributesEditor } from '@/components/products/ProductAttributesEditor';
 
 // Helper for optional number fields that handles NaN from empty inputs
 const optionalNumber = z.number().min(0).optional().or(z.nan().transform(() => undefined));
@@ -69,9 +70,7 @@ export function ProductFormPage() {
   const [uploadingFiles, setUploadingFiles] = useState<UploadFile[]>([]);
 
   // Attributes state for editing
-  const [attributes, setAttributes] = useState<Record<string, string>>({});
-  const [newAttrKey, setNewAttrKey] = useState('');
-  const [newAttrValue, setNewAttrValue] = useState('');
+  const [attributes, setAttributes] = useState<Record<string, any>>({});
 
   const {
     register,
@@ -277,22 +276,6 @@ export function ProductFormPage() {
     }
   };
 
-  // Handle attribute management
-  const handleAddAttribute = () => {
-    if (!newAttrKey.trim() || !newAttrValue.trim()) {
-      toast.error('Vui lòng nhập tên và giá trị thuộc tính');
-      return;
-    }
-    setAttributes({ ...attributes, [newAttrKey.trim()]: newAttrValue.trim() });
-    setNewAttrKey('');
-    setNewAttrValue('');
-  };
-
-  const handleRemoveAttribute = (key: string) => {
-    const newAttrs = { ...attributes };
-    delete newAttrs[key];
-    setAttributes(newAttrs);
-  };
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
 
@@ -824,74 +807,12 @@ export function ProductFormPage() {
                   Thuộc tính sản phẩm
                 </CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                {/* Existing attributes */}
-                {Object.keys(attributes).length > 0 && (
-                  <div className="space-y-2">
-                    <Label>Thuộc tính hiện tại</Label>
-                    <div className="flex flex-wrap gap-2">
-                      {Object.entries(attributes).map(([key, value]) => (
-                        <div
-                          key={key}
-                          className="flex items-center gap-1 px-3 py-1 bg-secondary rounded-md"
-                        >
-                          <span className="text-sm">
-                            <span className="font-medium">{key}:</span> {value}
-                          </span>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-5 w-5 p-0 hover:bg-destructive/20"
-                            onClick={() => handleRemoveAttribute(key)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* Add new attribute */}
-                <div className="space-y-2">
-                  <Label>Thêm thuộc tính mới</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Tên (vd: màu sắc)"
-                      value={newAttrKey}
-                      onChange={(e) => setNewAttrKey(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddAttribute();
-                        }
-                      }}
-                    />
-                    <Input
-                      placeholder="Giá trị (vd: đỏ)"
-                      value={newAttrValue}
-                      onChange={(e) => setNewAttrValue(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddAttribute();
-                        }
-                      }}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={handleAddAttribute}
-                    >
-                      <Plus className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    Nhập tên và giá trị thuộc tính, sau đó nhấn + hoặc Enter
-                  </p>
-                </div>
+              <CardContent>
+                <ProductAttributesEditor
+                  value={attributes}
+                  onChange={setAttributes}
+                  categoryId={watch('category_id')}
+                />
               </CardContent>
             </Card>
           </div>

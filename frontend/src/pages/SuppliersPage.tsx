@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useNavigate } from 'react-router-dom';
 import { apiClient } from '../lib/api-client';
 import type { Supplier } from '../types';
 import { Button } from '@/components/ui/button';
@@ -47,6 +48,7 @@ interface SupplierFormData {
 }
 
 export function SuppliersPage() {
+  const navigate = useNavigate();
   const [suppliers, setSuppliers] = useState<Supplier[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSheetOpen, setIsSheetOpen] = useState(false);
@@ -168,7 +170,17 @@ export function SuppliersPage() {
           </Button>
         );
       },
-      cell: ({ row }) => <div className="font-medium">{row.getValue('name')}</div>,
+      cell: ({ row }) => {
+        const supplier = row.original;
+        return (
+          <div
+            className="font-medium text-blue-600 hover:underline cursor-pointer"
+            onClick={() => navigate(`/suppliers/${supplier.id}`)}
+          >
+            {row.getValue('name')}
+          </div>
+        );
+      },
     },
     {
       accessorKey: 'contact_person',
@@ -191,6 +203,13 @@ export function SuppliersPage() {
         const supplier = row.original;
         return (
           <div className="flex gap-2 justify-end">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate(`/suppliers/${supplier.id}`)}
+            >
+              View Details
+            </Button>
             <Button
               variant="outline"
               size="sm"

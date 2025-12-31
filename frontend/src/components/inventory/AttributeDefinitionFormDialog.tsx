@@ -172,6 +172,31 @@ export function AttributeDefinitionFormDialog({
             />
           </div>
 
+          <div className="space-y-2">
+            <Label htmlFor="help_text">Văn bản trợ giúp</Label>
+            <Textarea
+              id="help_text"
+              {...register('help_text')}
+              placeholder="Hướng dẫn cho người dùng khi nhập thuộc tính này..."
+              rows={2}
+            />
+            <p className="text-xs text-muted-foreground">
+              Hiển thị dưới trường nhập để hướng dẫn người dùng
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="icon">Biểu tượng (Icon)</Label>
+            <Input
+              id="icon"
+              {...register('icon')}
+              placeholder="palette, ruler, package..."
+            />
+            <p className="text-xs text-muted-foreground">
+              Tên icon từ thư viện Lucide React (ví dụ: palette, ruler, package)
+            </p>
+          </div>
+
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="input_type">Loại input</Label>

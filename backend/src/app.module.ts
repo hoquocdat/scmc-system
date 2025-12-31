@@ -29,6 +29,9 @@ import { ProductCategoriesModule } from './product-categories/product-categories
 import { AttributeDefinitionsModule } from './attribute-definitions/attribute-definitions.module';
 import { PermissionsModule } from './permissions/permissions.module';
 import { AiModule } from './ai/ai.module';
+import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
+import { SupplierPaymentsModule } from './supplier-payments/supplier-payments.module';
+import { SupplierReturnsModule } from './supplier-returns/supplier-returns.module';
 
 @Module({
   imports: [
@@ -52,6 +55,9 @@ import { AiModule } from './ai/ai.module';
     ActivityLogsModule,
     BrandsModule,
     SuppliersModule,
+    PurchaseOrdersModule,
+    SupplierPaymentsModule,
+    SupplierReturnsModule,
     ServiceItemsModule,
     ServicePartsModule,
     ModelsModule,

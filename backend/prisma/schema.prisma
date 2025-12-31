@@ -293,18 +293,21 @@ model service_parts {
 
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model suppliers {
-  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name           String
-  contact_person String?
-  phone          String?
-  email          String?
-  address        String?
-  notes          String?
-  is_active      Boolean?   @default(true)
-  created_at     DateTime?  @default(now()) @db.Timestamptz(6)
-  updated_at     DateTime?  @default(now()) @db.Timestamptz(6)
-  parts          parts[]
-  products       products[]
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String
+  contact_person    String?
+  phone             String?
+  email             String?
+  address           String?
+  notes             String?
+  is_active         Boolean?            @default(true)
+  created_at        DateTime?           @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime?           @default(now()) @db.Timestamptz(6)
+  parts             parts[]
+  products          products[]
+  purchase_orders   purchase_orders[]
+  supplier_payments supplier_payments[]
+  supplier_returns  supplier_returns[]
 
   @@index([is_active], map: "idx_suppliers_is_active")
   @@index([name], map: "idx_suppliers_name")
@@ -335,6 +338,11 @@ model user_profiles {
   permission_audit_log_permission_audit_log_performed_byTouser_profiles permission_audit_log[]    @relation("permission_audit_log_performed_byTouser_profiles")
   permission_audit_log_permission_audit_log_user_idTouser_profiles      permission_audit_log[]    @relation("permission_audit_log_user_idTouser_profiles")
   pos_sessions                                                          pos_sessions[]
+  purchase_orders_purchase_orders_approved_byTouser_profiles            purchase_orders[]         @relation("purchase_orders_approved_byTouser_profiles")
+  purchase_orders_purchase_orders_created_by_idTouser_profiles          purchase_orders[]         @relation("purchase_orders_created_by_idTouser_profiles")
+  purchase_orders_purchase_orders_rejected_byTouser_profiles            purchase_orders[]         @relation("purchase_orders_rejected_byTouser_profiles")
+  purchase_orders_purchase_orders_submitted_byTouser_profiles           purchase_orders[]         @relation("purchase_orders_submitted_byTouser_profiles")
+  purchase_orders_purchase_orders_updated_by_idTouser_profiles          purchase_orders[]         @relation("purchase_orders_updated_by_idTouser_profiles")
   sales_order_payments                                                  sales_order_payments[]
   sales_orders_sales_orders_created_byTouser_profiles                   sales_orders[]            @relation("sales_orders_created_byTouser_profiles")
   sales_orders_sales_orders_processed_byTouser_profiles                 sales_orders[]            @relation("sales_orders_processed_byTouser_profiles")
@@ -344,6 +352,9 @@ model user_profiles {
   service_orders_assigned_employee                                      service_orders[]          @relation("assigned_employee")
   service_orders_service_orders_created_by_idTouser_profiles            service_orders[]          @relation("service_orders_created_by_idTouser_profiles")
   service_orders_service_orders_updated_by_idTouser_profiles            service_orders[]          @relation("service_orders_updated_by_idTouser_profiles")
+  supplier_payments                                                     supplier_payments[]
+  supplier_returns_supplier_returns_approved_by_idTouser_profiles       supplier_returns[]        @relation("supplier_returns_approved_by_idTouser_profiles")
+  supplier_returns_supplier_returns_created_by_idTouser_profiles        supplier_returns[]        @relation("supplier_returns_created_by_idTouser_profiles")
   transfer_orders_transfer_orders_received_byTouser_profiles            transfer_orders[]         @relation("transfer_orders_received_byTouser_profiles")
   transfer_orders_transfer_orders_requested_byTouser_profiles           transfer_orders[]         @relation("transfer_orders_requested_byTouser_profiles")
   transfer_orders_transfer_orders_shipped_byTouser_profiles             transfer_orders[]         @relation("transfer_orders_shipped_byTouser_profiles")
@@ -486,7 +497,9 @@ model product_variants {
   inventory              inventory[]
   inventory_transactions inventory_transactions[]
   products               products                 @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  purchase_order_items   purchase_order_items[]
   sales_order_items      sales_order_items[]
+  supplier_return_items  supplier_return_items[]
   transfer_order_items   transfer_order_items[]
 
   @@index([is_active], map: "idx_product_variants_active")
@@ -533,7 +546,9 @@ model products {
   products                products?                @relation("productsToproducts", fields: [master_product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   other_products          products[]               @relation("productsToproducts")
   suppliers               suppliers?               @relation(fields: [supplier_id], references: [id], onUpdate: NoAction)
+  purchase_order_items    purchase_order_items[]
   sales_order_items       sales_order_items[]
+  supplier_return_items   supplier_return_items[]
   transfer_order_items    transfer_order_items[]
 
   @@index([is_active], map: "idx_products_active")
@@ -898,6 +913,188 @@ model ai_usage_logs {
   @@schema("public")
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model purchase_order_items {
+  id                    String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  purchase_order_id     String                  @db.Uuid
+  product_id            String?                 @db.Uuid
+  product_variant_id    String?                 @db.Uuid
+  product_name          String                  @db.VarChar(255)
+  product_sku           String?                 @db.VarChar(100)
+  variant_name          String?                 @db.VarChar(255)
+  quantity_ordered      Int
+  quantity_received     Int?                    @default(0)
+  quantity_returned     Int?                    @default(0)
+  unit_cost             Decimal                 @db.Decimal(10, 2)
+  total_cost            Decimal                 @db.Decimal(10, 2)
+  notes                 String?
+  created_at            DateTime?               @default(now()) @db.Timestamptz(6)
+  updated_at            DateTime?               @default(now()) @db.Timestamptz(6)
+  products              products?               @relation(fields: [product_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  product_variants      product_variants?       @relation(fields: [product_variant_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  purchase_orders       purchase_orders         @relation(fields: [purchase_order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  supplier_return_items supplier_return_items[]
+
+  @@index([purchase_order_id], map: "idx_purchase_order_items_po")
+  @@index([product_id], map: "idx_purchase_order_items_product")
+  @@index([product_variant_id], map: "idx_purchase_order_items_variant")
+  @@schema("public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model purchase_orders {
+  id                                                         String                         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  order_number                                               String                         @unique @db.VarChar(50)
+  supplier_id                                                String                         @db.Uuid
+  status                                                     purchase_order_status          @default(draft)
+  payment_status                                             purchase_order_payment_status  @default(unpaid)
+  subtotal                                                   Decimal                        @default(0) @db.Decimal(10, 2)
+  tax_amount                                                 Decimal?                       @default(0) @db.Decimal(10, 2)
+  shipping_cost                                              Decimal?                       @default(0) @db.Decimal(10, 2)
+  discount_amount                                            Decimal?                       @default(0) @db.Decimal(10, 2)
+  total_amount                                               Decimal                        @default(0) @db.Decimal(10, 2)
+  paid_amount                                                Decimal                        @default(0) @db.Decimal(10, 2)
+  order_date                                                 DateTime?                      @default(now()) @db.Timestamptz(6)
+  expected_delivery_date                                     DateTime?                      @db.Timestamptz(6)
+  actual_delivery_date                                       DateTime?                      @db.Timestamptz(6)
+  submitted_at                                               DateTime?                      @db.Timestamptz(6)
+  submitted_by                                               String?                        @db.Uuid
+  approved_at                                                DateTime?                      @db.Timestamptz(6)
+  approved_by                                                String?                        @db.Uuid
+  rejected_at                                                DateTime?                      @db.Timestamptz(6)
+  rejected_by                                                String?                        @db.Uuid
+  rejection_reason                                           String?
+  stock_updated                                              Boolean?                       @default(false)
+  stock_updated_at                                           DateTime?                      @db.Timestamptz(6)
+  notes                                                      String?
+  internal_notes                                             String?
+  created_by_id                                              String?                        @db.Uuid
+  updated_by_id                                              String?                        @db.Uuid
+  created_at                                                 DateTime?                      @default(now()) @db.Timestamptz(6)
+  updated_at                                                 DateTime?                      @default(now()) @db.Timestamptz(6)
+  purchase_order_items                                       purchase_order_items[]
+  user_profiles_purchase_orders_approved_byTouser_profiles   user_profiles?                 @relation("purchase_orders_approved_byTouser_profiles", fields: [approved_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_profiles_purchase_orders_created_by_idTouser_profiles user_profiles?                 @relation("purchase_orders_created_by_idTouser_profiles", fields: [created_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_profiles_purchase_orders_rejected_byTouser_profiles   user_profiles?                 @relation("purchase_orders_rejected_byTouser_profiles", fields: [rejected_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_profiles_purchase_orders_submitted_byTouser_profiles  user_profiles?                 @relation("purchase_orders_submitted_byTouser_profiles", fields: [submitted_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  suppliers                                                  suppliers                      @relation(fields: [supplier_id], references: [id], onUpdate: NoAction)
+  user_profiles_purchase_orders_updated_by_idTouser_profiles user_profiles?                 @relation("purchase_orders_updated_by_idTouser_profiles", fields: [updated_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  supplier_payment_allocations                               supplier_payment_allocations[]
+  supplier_returns                                           supplier_returns[]
+
+  @@index([approved_by], map: "idx_purchase_orders_approved_by")
+  @@index([created_by_id], map: "idx_purchase_orders_created_by")
+  @@index([order_date(sort: Desc)], map: "idx_purchase_orders_order_date")
+  @@index([order_number], map: "idx_purchase_orders_order_number")
+  @@index([payment_status], map: "idx_purchase_orders_payment_status")
+  @@index([status], map: "idx_purchase_orders_status")
+  @@index([supplier_id], map: "idx_purchase_orders_supplier")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model supplier_payment_allocations {
+  id                  String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  supplier_payment_id String            @db.Uuid
+  purchase_order_id   String            @db.Uuid
+  amount_allocated    Decimal           @db.Decimal(10, 2)
+  created_at          DateTime?         @default(now()) @db.Timestamptz(6)
+  purchase_orders     purchase_orders   @relation(fields: [purchase_order_id], references: [id], onUpdate: NoAction)
+  supplier_payments   supplier_payments @relation(fields: [supplier_payment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([supplier_payment_id], map: "idx_supplier_payment_allocations_payment")
+  @@index([purchase_order_id], map: "idx_supplier_payment_allocations_po")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model supplier_payments {
+  id                           String                         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  supplier_id                  String                         @db.Uuid
+  payment_number               String                         @unique @db.VarChar(50)
+  amount                       Decimal                        @db.Decimal(10, 2)
+  payment_method               payment_method
+  payment_date                 DateTime?                      @default(now()) @db.Timestamptz(6)
+  transaction_id               String?                        @db.VarChar(255)
+  reference_number             String?                        @db.VarChar(100)
+  notes                        String?
+  created_by_id                String?                        @db.Uuid
+  created_at                   DateTime?                      @default(now()) @db.Timestamptz(6)
+  updated_at                   DateTime?                      @default(now()) @db.Timestamptz(6)
+  supplier_payment_allocations supplier_payment_allocations[]
+  user_profiles                user_profiles?                 @relation(fields: [created_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  suppliers                    suppliers                      @relation(fields: [supplier_id], references: [id], onUpdate: NoAction)
+
+  @@index([created_by_id], map: "idx_supplier_payments_created_by")
+  @@index([payment_date(sort: Desc)], map: "idx_supplier_payments_date")
+  @@index([payment_number], map: "idx_supplier_payments_number")
+  @@index([supplier_id], map: "idx_supplier_payments_supplier")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model supplier_return_items {
+  id                     String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  supplier_return_id     String               @db.Uuid
+  purchase_order_item_id String               @db.Uuid
+  product_id             String?              @db.Uuid
+  product_variant_id     String?              @db.Uuid
+  quantity_returned      Int
+  unit_cost              Decimal              @db.Decimal(10, 2)
+  total_cost             Decimal              @db.Decimal(10, 2)
+  reason                 String?
+  created_at             DateTime?            @default(now()) @db.Timestamptz(6)
+  products               products?            @relation(fields: [product_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  product_variants       product_variants?    @relation(fields: [product_variant_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  purchase_order_items   purchase_order_items @relation(fields: [purchase_order_item_id], references: [id], onUpdate: NoAction)
+  supplier_returns       supplier_returns     @relation(fields: [supplier_return_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([purchase_order_item_id], map: "idx_supplier_return_items_po_item")
+  @@index([product_id], map: "idx_supplier_return_items_product")
+  @@index([supplier_return_id], map: "idx_supplier_return_items_return")
+  @@index([product_variant_id], map: "idx_supplier_return_items_variant")
+  @@schema("public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model supplier_returns {
+  id                                                           String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  return_number                                                String                  @unique @db.VarChar(50)
+  supplier_id                                                  String                  @db.Uuid
+  purchase_order_id                                            String                  @db.Uuid
+  return_date                                                  DateTime?               @default(now()) @db.Timestamptz(6)
+  total_return_amount                                          Decimal                 @default(0) @db.Decimal(10, 2)
+  reason                                                       String?
+  notes                                                        String?
+  status                                                       String?                 @default("pending") @db.VarChar(50)
+  created_by_id                                                String?                 @db.Uuid
+  approved_by_id                                               String?                 @db.Uuid
+  created_at                                                   DateTime?               @default(now()) @db.Timestamptz(6)
+  updated_at                                                   DateTime?               @default(now()) @db.Timestamptz(6)
+  supplier_return_items                                        supplier_return_items[]
+  user_profiles_supplier_returns_approved_by_idTouser_profiles user_profiles?          @relation("supplier_returns_approved_by_idTouser_profiles", fields: [approved_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_profiles_supplier_returns_created_by_idTouser_profiles  user_profiles?          @relation("supplier_returns_created_by_idTouser_profiles", fields: [created_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  purchase_orders                                              purchase_orders         @relation(fields: [purchase_order_id], references: [id], onUpdate: NoAction)
+  suppliers                                                    suppliers               @relation(fields: [supplier_id], references: [id], onUpdate: NoAction)
+
+  @@index([return_date(sort: Desc)], map: "idx_supplier_returns_date")
+  @@index([return_number], map: "idx_supplier_returns_number")
+  @@index([purchase_order_id], map: "idx_supplier_returns_po")
+  @@index([status], map: "idx_supplier_returns_status")
+  @@index([supplier_id], map: "idx_supplier_returns_supplier")
+  @@schema("public")
+}
+
 enum owner_type {
   individual
   company
@@ -960,6 +1157,32 @@ enum image_entity_type {
   part
   comment
   service_item
+
+  @@schema("public")
+}
+
+enum purchase_order_payment_status {
+  unpaid
+  partially_paid
+  paid
+
+  @@schema("public")
+}
+
+enum purchase_order_status {
+  draft
+  pending_approval
+  approved
+  rejected
+  cancelled
+
+  @@schema("public")
+}
+
+enum supplier_transaction_type {
+  purchase
+  return
+  payment
 
   @@schema("public")
 }

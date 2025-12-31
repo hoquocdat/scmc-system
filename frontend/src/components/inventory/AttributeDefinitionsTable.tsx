@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { MoreHorizontal, Pencil, Trash2, Tag } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, Tag, Check, X as XIcon, Eye, EyeOff, HelpCircle } from 'lucide-react';
 import { attributeDefinitionsApi, type AttributeDefinition } from '@/lib/api/attribute-definitions';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Table,
   TableBody,
@@ -16,8 +17,15 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { AttributeDefinitionFormDialog } from './AttributeDefinitionFormDialog';
 import { toast } from 'sonner';
 
@@ -34,6 +42,7 @@ export function AttributeDefinitionsTable({
 }: AttributeDefinitionsTableProps) {
   const queryClient = useQueryClient();
   const [editingAttribute, setEditingAttribute] = useState<AttributeDefinition | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => attributeDefinitionsApi.delete(id),
@@ -47,9 +56,87 @@ export function AttributeDefinitionsTable({
     },
   });
 
+  const toggleActiveMutation = useMutation({
+    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
+      attributeDefinitionsApi.update(id, { is_active: isActive }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['attributeDefinitions'] });
+      onRefresh();
+    },
+    onError: () => {
+      toast.error('Có lỗi xảy ra');
+    },
+  });
+
   const handleDelete = (attribute: AttributeDefinition) => {
     if (confirm(`Bạn có chắc muốn xóa thuộc tính "${attribute.name}"?`)) {
       deleteMutation.mutate(attribute.id);
+    }
+  };
+
+  const handleToggleActive = (attribute: AttributeDefinition) => {
+    const newState = !attribute.is_active;
+    toggleActiveMutation.mutate(
+      { id: attribute.id, isActive: newState },
+      {
+        onSuccess: () => {
+          toast.success(
+            newState
+              ? `Đã kích hoạt "${attribute.name}"`
+              : `Đã vô hiệu hóa "${attribute.name}"`
+          );
+        },
+      }
+    );
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedIds(new Set(data.map((attr) => attr.id)));
+    } else {
+      setSelectedIds(new Set());
+    }
+  };
+
+  const handleSelectOne = (id: string, checked: boolean) => {
+    const newSelected = new Set(selectedIds);
+    if (checked) {
+      newSelected.add(id);
+    } else {
+      newSelected.delete(id);
+    }
+    setSelectedIds(newSelected);
+  };
+
+  const handleBulkActivate = async () => {
+    const promises = Array.from(selectedIds).map((id) =>
+      attributeDefinitionsApi.update(id, { is_active: true })
+    );
+
+    try {
+      await Promise.all(promises);
+      toast.success(`Đã kích hoạt ${selectedIds.size} thuộc tính`);
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ['attributeDefinitions'] });
+      onRefresh();
+    } catch (error) {
+      toast.error('Có lỗi xảy ra');
+    }
+  };
+
+  const handleBulkDeactivate = async () => {
+    const promises = Array.from(selectedIds).map((id) =>
+      attributeDefinitionsApi.update(id, { is_active: false })
+    );
+
+    try {
+      await Promise.all(promises);
+      toast.success(`Đã vô hiệu hóa ${selectedIds.size} thuộc tính`);
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ['attributeDefinitions'] });
+      onRefresh();
+    } catch (error) {
+      toast.error('Có lỗi xảy ra');
     }
   };
 
@@ -74,11 +161,57 @@ export function AttributeDefinitionsTable({
   }
 
   return (
-    <>
+    <TooltipProvider>
+      {/* Bulk Actions Toolbar */}
+      {selectedIds.size > 0 && (
+        <div className="mb-4 flex items-center justify-between rounded-lg border bg-muted/50 p-3">
+          <div className="flex items-center gap-2">
+            <Check className="h-4 w-4 text-primary" />
+            <span className="text-sm font-medium">
+              Đã chọn {selectedIds.size} thuộc tính
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBulkActivate}
+              className="gap-2"
+            >
+              <Eye className="h-4 w-4" />
+              Kích hoạt
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleBulkDeactivate}
+              className="gap-2"
+            >
+              <EyeOff className="h-4 w-4" />
+              Vô hiệu hóa
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setSelectedIds(new Set())}
+            >
+              Bỏ chọn
+            </Button>
+          </div>
+        </div>
+      )}
+
       <div className="rounded-md border">
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[50px]">
+                <Checkbox
+                  checked={data.length > 0 && selectedIds.size === data.length}
+                  onCheckedChange={handleSelectAll}
+                  aria-label="Chọn tất cả"
+                />
+              </TableHead>
               <TableHead>Tên</TableHead>
               <TableHead>Slug</TableHead>
               <TableHead>Loại input</TableHead>
@@ -93,7 +226,7 @@ export function AttributeDefinitionsTable({
           <TableBody>
             {data.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="text-center py-8">
+                <TableCell colSpan={10} className="text-center py-8">
                   <div className="flex flex-col items-center gap-2">
                     <Tag className="h-8 w-8 text-muted-foreground" />
                     <p className="text-muted-foreground">
@@ -105,8 +238,29 @@ export function AttributeDefinitionsTable({
             ) : (
               data.map((attribute) => (
                 <TableRow key={attribute.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedIds.has(attribute.id)}
+                      onCheckedChange={(checked) =>
+                        handleSelectOne(attribute.id, checked as boolean)
+                      }
+                      aria-label={`Chọn ${attribute.name}`}
+                    />
+                  </TableCell>
                   <TableCell className="font-medium">
-                    {attribute.name}
+                    <div className="flex items-center gap-2">
+                      {attribute.name}
+                      {attribute.help_text && (
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="text-xs">{attribute.help_text}</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     <code className="text-sm bg-muted px-2 py-1 rounded">
@@ -159,6 +313,20 @@ export function AttributeDefinitionsTable({
                           <Pencil className="mr-2 h-4 w-4" />
                           Sửa
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleToggleActive(attribute)}>
+                          {attribute.is_active ? (
+                            <>
+                              <EyeOff className="mr-2 h-4 w-4" />
+                              Vô hiệu hóa
+                            </>
+                          ) : (
+                            <>
+                              <Eye className="mr-2 h-4 w-4" />
+                              Kích hoạt
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() => handleDelete(attribute)}
                           className="text-destructive"
@@ -188,6 +356,6 @@ export function AttributeDefinitionsTable({
           }}
         />
       )}
-    </>
+    </TooltipProvider>
   );
 }

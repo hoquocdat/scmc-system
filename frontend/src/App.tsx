@@ -21,8 +21,13 @@ import { ProductFormPage } from './pages/inventory/ProductFormPage';
 import { BrandsPage } from './pages/inventory/BrandsPage';
 import { ProductCategoriesPage } from './pages/inventory/ProductCategoriesPage';
 import { ProductCategoryFormPage } from './pages/inventory/ProductCategoryFormPage';
+import { AttributeDefinitionsPage } from './pages/inventory/AttributeDefinitionsPage';
 import { StockLevelsPage } from './pages/inventory/StockLevelsPage';
 import { StockAdjustmentsPage } from './pages/inventory/StockAdjustmentsPage';
+import { PurchaseOrdersPage } from './pages/inventory/PurchaseOrdersPage';
+import { PurchaseOrderFormPage } from './pages/inventory/PurchaseOrderFormPage';
+import { PurchaseOrderDetailsPage } from './pages/inventory/PurchaseOrderDetailsPage';
+import { SupplierDetailsPage } from './pages/inventory/SupplierDetailsPage';
 import { SalesOrdersPage } from './pages/sales/SalesOrdersPage';
 import { POSPage } from './pages/pos/POSPage';
 import { RolesPage } from './pages/settings/RolesPage';
@@ -150,6 +155,66 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <SuppliersPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/suppliers/:id"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <SupplierDetailsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/purchase-orders"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <PurchaseOrdersPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/purchase-orders/new"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <PurchaseOrderFormPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/purchase-orders/:id/edit"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <PurchaseOrderFormPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/purchase-orders/:id"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <PurchaseOrderDetailsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/attributes"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <AttributeDefinitionsPage />
               </AppLayout>
             </ProtectedRoute>
           }
