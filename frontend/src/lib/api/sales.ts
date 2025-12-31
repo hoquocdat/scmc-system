@@ -1,5 +1,11 @@
 import { apiClient } from './client';
 
+export type OrderStatus = 'draft' | 'pending' | 'confirmed' | 'processing' | 'ready' | 'completed' | 'cancelled';
+export type PaymentStatus = 'unpaid' | 'partial' | 'paid' | 'refunded';
+export type SalesChannel = 'retail_store' | 'workshop' | 'online' | 'phone';
+export type DiscountType = 'fixed' | 'percent';
+export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'ewallet_momo' | 'ewallet_zalopay' | 'ewallet_vnpay' | 'bank_transfer';
+
 export interface SalesOrder {
   id: string;
   order_number: string;
@@ -7,21 +13,51 @@ export interface SalesOrder {
   customer_name: string;
   customer_phone?: string;
   customer_email?: string;
-  channel: 'retail_store' | 'workshop' | 'online' | 'phone';
-  location_id: string;
-  status: 'pending' | 'confirmed' | 'processing' | 'ready' | 'completed' | 'cancelled';
-  payment_status: 'unpaid' | 'partial' | 'paid' | 'refunded';
+  channel: SalesChannel;
+  location_id?: string;
+  status: OrderStatus;
+  payment_status: PaymentStatus;
   subtotal: number;
+  discount_type?: DiscountType;
+  discount_percent?: number;
   discount_amount: number;
   tax_amount: number;
   shipping_cost?: number;
   total_amount: number;
-  customer_address?: string;
-  delivery_city?: string;
-  delivery_district?: string;
+  paid_amount?: number;
+  shipping_address?: string;
+  shipping_city?: string;
+  shipping_method?: string;
+  tracking_number?: string;
+  order_date?: string;
+  payment_date?: string;
+  shipped_date?: string;
+  delivered_date?: string;
   notes?: string;
+  internal_notes?: string;
+  created_by?: string;
+  processed_by?: string;
   created_at: string;
   updated_at: string;
+  customers?: {
+    id: string;
+    full_name: string;
+    phone?: string;
+    email?: string;
+  };
+  stock_locations?: {
+    id: string;
+    name: string;
+    code: string;
+  };
+  user_profiles_sales_orders_created_byTouser_profiles?: {
+    id: string;
+    full_name: string;
+  };
+  user_profiles_sales_orders_processed_byTouser_profiles?: {
+    id: string;
+    full_name: string;
+  };
   sales_order_items?: SalesOrderItem[];
   sales_order_payments?: SalesOrderPayment[];
 }
@@ -31,34 +67,55 @@ export interface SalesOrderItem {
   sales_order_id: string;
   product_id: string;
   product_variant_id?: string;
+  product_name?: string;
+  product_sku?: string;
+  variant_name?: string;
   quantity: number;
   unit_price: number;
   discount_amount?: number;
   tax_amount?: number;
-  total_price: number;
+  total_amount: number;
   notes?: string;
   products?: {
     id: string;
-    sku: string;
+    sku?: string;
     name: string;
+    base_price?: number;
+  };
+  product_variants?: {
+    id: string;
+    sku?: string;
+    name: string;
+    price?: number;
   };
 }
 
 export interface SalesOrderPayment {
   id: string;
   sales_order_id: string;
-  payment_method: string;
+  payment_method: PaymentMethod;
   amount: number;
-  payment_reference?: string;
+  payment_date?: string;
+  transaction_id?: string;
+  authorization_code?: string;
+  amount_tendered?: number;
+  change_given?: number;
+  status?: string;
   notes?: string;
+  received_by?: string;
   created_at: string;
+  user_profiles?: {
+    id: string;
+    full_name: string;
+  };
 }
 
 export interface SalesOrderQueryParams {
   search?: string;
   customer_id?: string;
   location_id?: string;
-  sales_staff_id?: string;
+  created_by?: string;
+  processed_by?: string;
   status?: string;
   payment_status?: string;
   channel?: string;
@@ -80,43 +137,71 @@ export interface SalesOrdersResponse {
   };
 }
 
+export interface CreateSalesOrderItemDto {
+  product_id: string;
+  product_variant_id?: string;
+  quantity: number;
+  unit_price: number;
+  discount_amount?: number;
+  tax_amount?: number;
+  notes?: string;
+}
+
 export interface CreateSalesOrderDto {
   customer_id?: string;
   customer_name: string;
   customer_phone?: string;
   customer_email?: string;
-  channel: string;
-  location_id: string;
-  status?: string;
-  payment_status?: string;
-  items: {
-    product_id: string;
-    product_variant_id?: string;
-    quantity: number;
-    unit_price: number;
-    discount_amount?: number;
-    tax_amount?: number;
-    notes?: string;
-  }[];
+  channel: SalesChannel;
+  location_id?: string;
+  status?: OrderStatus;
+  payment_status?: PaymentStatus;
+  items: CreateSalesOrderItemDto[];
   subtotal?: number;
+  discount_type?: DiscountType;
+  discount_percent?: number;
   discount_amount?: number;
   tax_amount?: number;
   shipping_cost?: number;
   total_amount?: number;
-  customer_address?: string;
-  delivery_city?: string;
-  delivery_district?: string;
+  shipping_address?: string;
+  shipping_city?: string;
   notes?: string;
-  sales_staff_id?: string;
+  created_by?: string;
 }
 
 export interface CreatePaymentDto {
   sales_order_id: string;
-  payment_method: string;
+  payment_method: PaymentMethod;
   amount: number;
-  payment_reference?: string;
+  transaction_id?: string;
+  authorization_code?: string;
+  amount_tendered?: number;
+  change_given?: number;
   notes?: string;
-  processed_by?: string;
+  received_by?: string;
+}
+
+export interface SalesStatistics {
+  totalOrders: number;
+  completedOrders: number;
+  totalRevenue: number;
+  totalDiscounts: number;
+}
+
+export interface EmployeeReportItem {
+  employee_id: string;
+  employee_name: string;
+  order_count: number;
+  total_revenue: number;
+  total_discount: number;
+}
+
+export interface ChannelReportItem {
+  channel: string;
+  order_count: number;
+  total_revenue: number;
+  total_discount: number;
 }
 
 export const salesApi = {
@@ -144,6 +229,18 @@ export const salesApi = {
     return response.data;
   },
 
+  // Confirm sales order (draft -> confirmed)
+  confirm: async (id: string): Promise<SalesOrder> => {
+    const response = await apiClient.post(`/sales/${id}/confirm`);
+    return response.data;
+  },
+
+  // Update sales order status
+  updateStatus: async (id: string, status: OrderStatus): Promise<SalesOrder> => {
+    const response = await apiClient.post(`/sales/${id}/status`, { status });
+    return response.data;
+  },
+
   // Cancel sales order
   cancel: async (id: string): Promise<SalesOrder> => {
     const response = await apiClient.post(`/sales/${id}/cancel`);
@@ -151,8 +248,72 @@ export const salesApi = {
   },
 
   // Add payment
-  addPayment: async (data: CreatePaymentDto) => {
+  addPayment: async (data: CreatePaymentDto): Promise<SalesOrderPayment> => {
     const response = await apiClient.post('/sales/payments', data);
     return response.data;
   },
+
+  // Get statistics
+  getStatistics: async (params?: {
+    from_date?: string;
+    to_date?: string;
+    created_by?: string;
+    channel?: string;
+  }): Promise<SalesStatistics> => {
+    const response = await apiClient.get('/sales/statistics', { params });
+    return response.data;
+  },
+
+  // Get report by employee
+  getReportByEmployee: async (params?: {
+    from_date?: string;
+    to_date?: string;
+  }): Promise<EmployeeReportItem[]> => {
+    const response = await apiClient.get('/sales/reports/by-employee', { params });
+    return response.data;
+  },
+
+  // Get report by channel
+  getReportByChannel: async (params?: {
+    from_date?: string;
+    to_date?: string;
+  }): Promise<ChannelReportItem[]> => {
+    const response = await apiClient.get('/sales/reports/by-channel', { params });
+    return response.data;
+  },
+};
+
+// Helper constants for UI
+export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
+  draft: 'Nháp',
+  pending: 'Chờ xác nhận',
+  confirmed: 'Đã xác nhận',
+  processing: 'Đang xử lý',
+  ready: 'Sẵn sàng',
+  completed: 'Hoàn thành',
+  cancelled: 'Đã hủy',
+};
+
+export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
+  unpaid: 'Chưa thanh toán',
+  partial: 'Thanh toán một phần',
+  paid: 'Đã thanh toán',
+  refunded: 'Đã hoàn tiền',
+};
+
+export const SALES_CHANNEL_LABELS: Record<SalesChannel, string> = {
+  retail_store: 'Cửa hàng',
+  workshop: 'Xưởng',
+  online: 'Trực tuyến',
+  phone: 'Điện thoại',
+};
+
+export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
+  cash: 'Tiền mặt',
+  card: 'Thẻ',
+  transfer: 'Chuyển khoản',
+  ewallet_momo: 'MoMo',
+  ewallet_zalopay: 'ZaloPay',
+  ewallet_vnpay: 'VNPay',
+  bank_transfer: 'Chuyển khoản ngân hàng',
 };

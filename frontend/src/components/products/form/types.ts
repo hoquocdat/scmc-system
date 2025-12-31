@@ -32,7 +32,7 @@ export const productSchema = z.object({
   dimensions_height: optionalNumber,
 });
 
-export type ProductFormData = z.infer<typeof productSchema>;
+export type ProductFormData = z.input<typeof productSchema>;
 
 export interface ProductFormProps {
   register: any;

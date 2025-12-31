@@ -31,8 +31,10 @@ interface ProductAttributesEditorProps {
 export function ProductAttributesEditor({
   value = {},
   onChange,
-  categoryId,
+  categoryId: _categoryId,
 }: ProductAttributesEditorProps) {
+  // categoryId reserved for future category-specific attribute filtering
+  void _categoryId;
   const [attributes, setAttributes] = useState<Record<string, any>>(value);
 
   // Fetch active attribute definitions

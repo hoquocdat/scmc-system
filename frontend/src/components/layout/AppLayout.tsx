@@ -253,6 +253,12 @@ export function AppLayout({ children }: AppLayoutProps) {
           icon: FileText,
           roles: ['sales', 'manager'],
         },
+        {
+          name: 'Báo Cáo',
+          href: '/sales/reports',
+          icon: BarChart,
+          roles: ['sales', 'manager'],
+        },
       ],
     },
     {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { MoreHorizontal, Pencil, Trash2, Tag, Check, X as XIcon, Eye, EyeOff, HelpCircle } from 'lucide-react';
+import { MoreHorizontal, Pencil, Trash2, Tag, Check, Eye, EyeOff, HelpCircle } from 'lucide-react';
 import { attributeDefinitionsApi, type AttributeDefinition } from '@/lib/api/attribute-definitions';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';

@@ -21,12 +21,18 @@ export enum SalesChannel {
 }
 
 export enum OrderStatus {
+  DRAFT = 'draft',
   PENDING = 'pending',
   CONFIRMED = 'confirmed',
   PROCESSING = 'processing',
   READY = 'ready',
   COMPLETED = 'completed',
   CANCELLED = 'cancelled',
+}
+
+export enum DiscountType {
+  FIXED = 'fixed',
+  PERCENT = 'percent',
 }
 
 export enum PaymentStatus {
@@ -109,7 +115,7 @@ export class CreateSalesOrderDto {
   @IsNotEmpty()
   location_id: string;
 
-  @ApiPropertyOptional({ description: 'Order status', enum: OrderStatus, default: OrderStatus.PENDING })
+  @ApiPropertyOptional({ description: 'Order status', enum: OrderStatus, default: OrderStatus.DRAFT })
   @IsEnum(OrderStatus)
   @IsOptional()
   status?: OrderStatus;
@@ -130,6 +136,17 @@ export class CreateSalesOrderDto {
   @IsOptional()
   @Min(0)
   subtotal?: number;
+
+  @ApiPropertyOptional({ description: 'Discount type', enum: DiscountType, default: DiscountType.FIXED })
+  @IsEnum(DiscountType)
+  @IsOptional()
+  discount_type?: DiscountType;
+
+  @ApiPropertyOptional({ description: 'Discount percentage (if discount_type is percent)' })
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  discount_percent?: number;
 
   @ApiPropertyOptional({ description: 'Total discount amount' })
   @IsNumber()

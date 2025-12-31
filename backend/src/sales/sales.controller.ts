@@ -8,9 +8,10 @@ import {
   Query,
   UseGuards,
   ParseUUIDPipe,
+  Request,
 } from '@nestjs/common';
 import { SalesService } from './sales.service';
-import { CreateSalesOrderDto } from './dto/create-sales-order.dto';
+import { CreateSalesOrderDto, OrderStatus } from './dto/create-sales-order.dto';
 import { UpdateSalesOrderDto } from './dto/update-sales-order.dto';
 import { SalesOrderQueryDto } from './dto/sales-order-query.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
@@ -23,6 +24,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiParam,
+  ApiQuery,
 } from '@nestjs/swagger';
 
 @ApiTags('sales')
@@ -49,6 +51,60 @@ export class SalesController {
     return this.salesService.findAll(query);
   }
 
+  @Get('statistics')
+  @Roles('manager', 'store_manager', 'finance')
+  @ApiOperation({ summary: 'Get sales statistics' })
+  @ApiQuery({ name: 'from_date', required: false, description: 'Filter from date (ISO 8601)' })
+  @ApiQuery({ name: 'to_date', required: false, description: 'Filter to date (ISO 8601)' })
+  @ApiQuery({ name: 'created_by', required: false, description: 'Filter by employee ID' })
+  @ApiQuery({ name: 'channel', required: false, description: 'Filter by sales channel' })
+  @ApiResponse({ status: 200, description: 'Statistics retrieved successfully' })
+  getStatistics(
+    @Query('from_date') fromDate?: string,
+    @Query('to_date') toDate?: string,
+    @Query('created_by') createdBy?: string,
+    @Query('channel') channel?: string,
+  ) {
+    return this.salesService.getStatistics({
+      from_date: fromDate,
+      to_date: toDate,
+      created_by: createdBy,
+      channel,
+    });
+  }
+
+  @Get('reports/by-employee')
+  @Roles('manager', 'store_manager', 'finance')
+  @ApiOperation({ summary: 'Get sales report by employee' })
+  @ApiQuery({ name: 'from_date', required: false, description: 'Filter from date (ISO 8601)' })
+  @ApiQuery({ name: 'to_date', required: false, description: 'Filter to date (ISO 8601)' })
+  @ApiResponse({ status: 200, description: 'Report retrieved successfully' })
+  getReportByEmployee(
+    @Query('from_date') fromDate?: string,
+    @Query('to_date') toDate?: string,
+  ) {
+    return this.salesService.getReportByEmployee({
+      from_date: fromDate,
+      to_date: toDate,
+    });
+  }
+
+  @Get('reports/by-channel')
+  @Roles('manager', 'store_manager', 'finance')
+  @ApiOperation({ summary: 'Get sales report by channel' })
+  @ApiQuery({ name: 'from_date', required: false, description: 'Filter from date (ISO 8601)' })
+  @ApiQuery({ name: 'to_date', required: false, description: 'Filter to date (ISO 8601)' })
+  @ApiResponse({ status: 200, description: 'Report retrieved successfully' })
+  getReportByChannel(
+    @Query('from_date') fromDate?: string,
+    @Query('to_date') toDate?: string,
+  ) {
+    return this.salesService.getReportByChannel({
+      from_date: fromDate,
+      to_date: toDate,
+    });
+  }
+
   @Get(':id')
   @Roles('manager', 'store_manager', 'sales_associate', 'finance')
   @ApiOperation({ summary: 'Get a single sales order by ID' })
@@ -70,6 +126,32 @@ export class SalesController {
     @Body() updateSalesOrderDto: UpdateSalesOrderDto,
   ) {
     return this.salesService.update(id, updateSalesOrderDto);
+  }
+
+  @Post(':id/confirm')
+  @Roles('manager', 'store_manager', 'sales_associate')
+  @ApiOperation({ summary: 'Confirm a draft sales order' })
+  @ApiParam({ name: 'id', description: 'Sales Order UUID' })
+  @ApiResponse({ status: 200, description: 'Sales order confirmed successfully' })
+  @ApiResponse({ status: 400, description: 'Cannot confirm order' })
+  @ApiResponse({ status: 404, description: 'Sales order not found' })
+  confirm(@Param('id', ParseUUIDPipe) id: string, @Request() req: any) {
+    return this.salesService.confirm(id, req.user?.id);
+  }
+
+  @Post(':id/status')
+  @Roles('manager', 'store_manager', 'sales_associate')
+  @ApiOperation({ summary: 'Update sales order status' })
+  @ApiParam({ name: 'id', description: 'Sales Order UUID' })
+  @ApiResponse({ status: 200, description: 'Status updated successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid status transition' })
+  @ApiResponse({ status: 404, description: 'Sales order not found' })
+  updateStatus(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body('status') status: OrderStatus,
+    @Request() req: any,
+  ) {
+    return this.salesService.updateStatus(id, status, req.user?.id);
   }
 
   @Post(':id/cancel')

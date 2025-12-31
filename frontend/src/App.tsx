@@ -29,6 +29,9 @@ import { PurchaseOrderFormPage } from './pages/inventory/PurchaseOrderFormPage';
 import { PurchaseOrderDetailsPage } from './pages/inventory/PurchaseOrderDetailsPage';
 import { SupplierDetailsPage } from './pages/inventory/SupplierDetailsPage';
 import { SalesOrdersPage } from './pages/sales/SalesOrdersPage';
+import { SalesOrderFormPage } from './pages/sales/SalesOrderFormPage';
+import { SalesOrderDetailPage } from './pages/sales/SalesOrderDetailPage';
+import { SalesReportsPage } from './pages/sales/SalesReportsPage';
 import { POSPage } from './pages/pos/POSPage';
 import { RolesPage } from './pages/settings/RolesPage';
 import { RoleDetailPage } from './pages/settings/RoleDetailPage';
@@ -365,6 +368,36 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <SalesOrdersPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sales/orders/new"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <SalesOrderFormPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sales/orders/:id"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <SalesOrderDetailPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sales/reports"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <SalesReportsPage />
               </AppLayout>
             </ProtectedRoute>
           }

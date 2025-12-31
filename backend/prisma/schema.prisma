@@ -76,25 +76,26 @@ model brands {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model customers {
-  id                                                   String           @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  full_name                                            String           @db.VarChar(255)
-  phone                                                String           @unique(map: "customers_phone_unique_idx") @db.VarChar(20)
-  email                                                String?          @db.VarChar(255)
-  id_number                                            String?          @db.VarChar(50)
+  id                                                   String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  full_name                                            String                 @db.VarChar(255)
+  phone                                                String                 @unique(map: "customers_phone_unique_idx") @db.VarChar(20)
+  email                                                String?                @db.VarChar(255)
+  id_number                                            String?                @db.VarChar(50)
   address                                              String?
   notes                                                String?
-  created_at                                           DateTime?        @default(now()) @db.Timestamptz(6)
-  updated_at                                           DateTime?        @default(now()) @db.Timestamptz(6)
-  birthday                                             DateTime?        @db.Date
-  facebook                                             String?          @db.VarChar(255)
-  instagram                                            String?          @db.VarChar(255)
-  salesperson_id                                       String?          @db.Uuid
-  created_by_id                                        String?          @db.Uuid
-  updated_by_id                                        String?          @db.Uuid
+  created_at                                           DateTime?              @default(now()) @db.Timestamptz(6)
+  updated_at                                           DateTime?              @default(now()) @db.Timestamptz(6)
+  birthday                                             DateTime?              @db.Date
+  facebook                                             String?                @db.VarChar(255)
+  instagram                                            String?                @db.VarChar(255)
+  salesperson_id                                       String?                @db.Uuid
+  created_by_id                                        String?                @db.Uuid
+  updated_by_id                                        String?                @db.Uuid
   bikes                                                bikes[]
-  user_profiles_customers_created_by_idTouser_profiles user_profiles?   @relation("customers_created_by_idTouser_profiles", fields: [created_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  salesperson                                          user_profiles?   @relation("customer_salesperson", fields: [salesperson_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  user_profiles_customers_updated_by_idTouser_profiles user_profiles?   @relation("customers_updated_by_idTouser_profiles", fields: [updated_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customer_receivables                                 customer_receivables[]
+  user_profiles_customers_created_by_idTouser_profiles user_profiles?         @relation("customers_created_by_idTouser_profiles", fields: [created_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  salesperson                                          user_profiles?         @relation("customer_salesperson", fields: [salesperson_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_profiles_customers_updated_by_idTouser_profiles user_profiles?         @relation("customers_updated_by_idTouser_profiles", fields: [updated_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   sales_orders                                         sales_orders[]
   service_orders                                       service_orders[]
 
@@ -645,6 +646,9 @@ model sales_orders {
   processed_by                                           String?                @db.Uuid
   created_at                                             DateTime?              @default(now()) @db.Timestamptz(6)
   updated_at                                             DateTime?              @default(now()) @db.Timestamptz(6)
+  discount_type                                          String?                @default("fixed") @db.VarChar(20)
+  discount_percent                                       Decimal?               @default(0) @db.Decimal(5, 2)
+  customer_receivables                                   customer_receivables?
   sales_order_items                                      sales_order_items[]
   sales_order_payments                                   sales_order_payments[]
   user_profiles_sales_orders_created_byTouser_profiles   user_profiles?         @relation("sales_orders_created_byTouser_profiles", fields: [created_by], references: [id], onUpdate: NoAction)
@@ -1092,6 +1096,26 @@ model supplier_returns {
   @@index([purchase_order_id], map: "idx_supplier_returns_po")
   @@index([status], map: "idx_supplier_returns_status")
   @@index([supplier_id], map: "idx_supplier_returns_supplier")
+  @@schema("public")
+}
+
+model customer_receivables {
+  id              String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customer_id     String       @db.Uuid
+  sales_order_id  String       @unique @db.Uuid
+  original_amount Decimal      @db.Decimal(10, 2)
+  paid_amount     Decimal?     @default(0) @db.Decimal(10, 2)
+  balance         Decimal      @db.Decimal(10, 2)
+  status          String?      @default("unpaid") @db.VarChar(20)
+  due_date        DateTime?    @db.Timestamptz(6)
+  created_at      DateTime?    @default(now()) @db.Timestamptz(6)
+  updated_at      DateTime?    @default(now()) @db.Timestamptz(6)
+  customers       customers    @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  sales_orders    sales_orders @relation(fields: [sales_order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([customer_id], map: "idx_customer_receivables_customer")
+  @@index([due_date], map: "idx_customer_receivables_due_date")
+  @@index([status], map: "idx_customer_receivables_status")
   @@schema("public")
 }
 

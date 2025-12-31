@@ -68,11 +68,12 @@ export function PurchaseOrderFormDialog({
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [selectedVariantId, setSelectedVariantId] = useState<string>('');
 
+  // _errors reserved for future form validation display
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors: _errors },
   } = useForm<FormData>({
     defaultValues: {
       supplier_id: '',

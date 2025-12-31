@@ -52,11 +52,12 @@ export function CreateSupplierReturnDialog({
   const [returnItems, setReturnItems] = useState<{ [key: string]: { quantity: number; reason: string } }>({});
   const queryClient = useQueryClient();
 
+  // _errors reserved for future form validation display
   const {
     register,
     handleSubmit,
     reset,
-    formState: { errors },
+    formState: { errors: _errors },
   } = useForm<FormData>({
     defaultValues: {
       purchase_order_id: '',

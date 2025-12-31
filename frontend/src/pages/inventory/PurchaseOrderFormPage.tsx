@@ -29,7 +29,7 @@ export function PurchaseOrderFormPage() {
   // Fetch existing purchase order if in edit mode
   const { data: existingPO, isLoading: isLoadingPO } = useQuery({
     queryKey: ['purchaseOrder', id],
-    queryFn: () => purchaseOrdersApi.getById(id!),
+    queryFn: () => purchaseOrdersApi.getOne(id!),
     enabled: isEditMode,
   });
 

@@ -66,13 +66,14 @@ export function RecordSupplierPaymentDialog({
   const [selectedPOs, setSelectedPOs] = useState<{ [key: string]: number }>({});
   const queryClient = useQueryClient();
 
+  // _errors reserved for future form validation display
   const {
     register,
     handleSubmit,
     watch,
     reset,
     setValue,
-    formState: { errors },
+    formState: { errors: _errors },
   } = useForm<FormData>({
     defaultValues: {
       amount: 0,
@@ -84,7 +85,8 @@ export function RecordSupplierPaymentDialog({
     },
   });
 
-  const paymentAmount = watch('amount');
+  const _paymentAmount = watch('amount');
+  void _paymentAmount; // Reserved for future validation
   const selectedMethod = watch('payment_method');
 
   // Fetch outstanding purchase orders
@@ -219,7 +221,7 @@ export function RecordSupplierPaymentDialog({
                 min: { value: 0.01, message: 'Số tiền phải lớn hơn 0' },
               })}
             />
-            {errors.amount && <p className="text-sm text-red-500">{errors.amount.message}</p>}
+            {_errors.amount && <p className="text-sm text-red-500">{_errors.amount.message}</p>}
           </div>
 
           {/* Payment Method */}

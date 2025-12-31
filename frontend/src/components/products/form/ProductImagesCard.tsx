@@ -5,7 +5,7 @@ import { PhotoGallery } from '@/components/common/PhotoGallery';
 interface ProductImagesCardProps {
   images: string[];
   uploadingFiles: UploadFile[];
-  onUpload: (files: File[]) => void;
+  onUpload: (files: File[]) => Promise<void>;
   maxFiles?: number;
   maxSizeMB?: number;
 }
