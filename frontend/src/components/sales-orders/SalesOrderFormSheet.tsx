@@ -38,7 +38,7 @@ import {
 } from '@/lib/api/sales';
 import { customersApi } from '@/lib/api/customers';
 import { productsApi } from '@/lib/api/products';
-import { stockLocationsApi } from '@/lib/api/stock-locations';
+import { storesApi } from '@/lib/api/stores';
 import { toast } from 'sonner';
 import { Plus, Trash2, Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
@@ -55,7 +55,7 @@ interface FormData {
   customer_phone: string;
   customer_email: string;
   channel: SalesChannel;
-  location_id: string;
+  store_id: string;
   discount_type: DiscountType;
   discount_percent: number;
   discount_amount: number;
@@ -81,7 +81,7 @@ export function SalesOrderFormSheet({
   const [selectedProductId, setSelectedProductId] = useState<string>('');
   const [selectedVariantId, setSelectedVariantId] = useState<string>('');
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>('');
-  const [selectedLocationId, setSelectedLocationId] = useState<string>('');
+  const [selectedStoreId, setSelectedStoreId] = useState<string>('');
   const [selectedChannel, setSelectedChannel] = useState<SalesChannel>('retail_store');
   const [discountType, setDiscountType] = useState<DiscountType>('fixed');
 
@@ -99,7 +99,7 @@ export function SalesOrderFormSheet({
       customer_phone: '',
       customer_email: '',
       channel: 'retail_store',
-      location_id: '',
+      store_id: '',
       discount_type: 'fixed',
       discount_percent: 0,
       discount_amount: 0,
@@ -139,15 +139,15 @@ export function SalesOrderFormSheet({
     queryFn: () => productsApi.getAll(),
   });
 
-  // Fetch locations
-  const { data: locationsData, isLoading: isLoadingLocations } = useQuery({
-    queryKey: ['stock-locations'],
-    queryFn: stockLocationsApi.getAll,
+  // Fetch stores
+  const { data: storesData, isLoading: isLoadingStores } = useQuery({
+    queryKey: ['stores'],
+    queryFn: storesApi.getAll,
   });
 
   const customers = customersData?.data || [];
   const products = productsResponse?.data || [];
-  const locations = locationsData || [];
+  const stores = storesData || [];
   const selectedProduct = products.find((p) => p.id === selectedProductId);
 
   // Calculate subtotal
@@ -193,8 +193,8 @@ export function SalesOrderFormSheet({
       return;
     }
 
-    if (!selectedLocationId) {
-      toast.error('Vui lòng chọn chi nhánh');
+    if (!selectedStoreId) {
+      toast.error('Vui lòng chọn cửa hàng');
       return;
     }
 
@@ -204,7 +204,7 @@ export function SalesOrderFormSheet({
       customer_phone: data.customer_phone || undefined,
       customer_email: data.customer_email || undefined,
       channel: selectedChannel,
-      location_id: selectedLocationId,
+      store_id: selectedStoreId,
       discount_type: discountType,
       discount_percent: discountType === 'percent' ? discountPercent : undefined,
       discount_amount: calculatedDiscountAmount,
@@ -265,7 +265,7 @@ export function SalesOrderFormSheet({
     setSelectedProductId('');
     setSelectedVariantId('');
     setSelectedCustomerId('');
-    setSelectedLocationId('');
+    setSelectedStoreId('');
     setSelectedChannel('retail_store');
     setDiscountType('fixed');
     onOpenChange(false);
@@ -300,26 +300,26 @@ export function SalesOrderFormSheet({
         </SheetHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="px-6 py-6 space-y-6">
-          {/* Location Selection */}
+          {/* Store Selection */}
           <div className="space-y-2">
             <Label>
-              Chi nhánh <span className="text-red-500">*</span>
+              Cửa hàng <span className="text-red-500">*</span>
             </Label>
-            <Select value={selectedLocationId} onValueChange={setSelectedLocationId}>
+            <Select value={selectedStoreId} onValueChange={setSelectedStoreId}>
               <SelectTrigger>
-                <SelectValue placeholder="Chọn chi nhánh" />
+                <SelectValue placeholder="Chọn cửa hàng" />
               </SelectTrigger>
               <SelectContent>
-                {isLoadingLocations ? (
+                {isLoadingStores ? (
                   <SelectItem value="loading" disabled>Đang tải...</SelectItem>
-                ) : locations.length > 0 ? (
-                  locations.filter((l) => l.is_active).map((location) => (
-                    <SelectItem key={location.id} value={location.id}>
-                      {location.name}
+                ) : stores.length > 0 ? (
+                  stores.filter((s) => s.is_active).map((store) => (
+                    <SelectItem key={store.id} value={store.id}>
+                      {store.name}
                     </SelectItem>
                   ))
                 ) : (
-                  <SelectItem value="none" disabled>Không có chi nhánh</SelectItem>
+                  <SelectItem value="none" disabled>Không có cửa hàng</SelectItem>
                 )}
               </SelectContent>
             </Select>

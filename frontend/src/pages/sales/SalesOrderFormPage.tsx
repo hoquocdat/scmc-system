@@ -19,10 +19,12 @@ import {
   SalesOrderNotesCard,
   type SalesOrderItem,
 } from '@/components/sales-orders/form';
+import { useStoreStore } from '@/store/storeStore';
 
 export function SalesOrderFormPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { selectedStoreId } = useStoreStore();
 
   const [items, setItems] = useState<SalesOrderItem[]>([]);
   const [notes, setNotes] = useState('');
@@ -135,6 +137,11 @@ export function SalesOrderFormPage() {
 
   // Submit form
   const handleSubmit = () => {
+    if (!selectedStoreId) {
+      toast.error('Vui lòng chọn cửa hàng làm việc trước khi tạo đơn hàng');
+      return;
+    }
+
     if (!customerName.trim()) {
       toast.error('Vui lòng nhập tên khách hàng');
       return;
@@ -151,6 +158,7 @@ export function SalesOrderFormPage() {
       customer_phone: customerPhone || undefined,
       customer_email: customerEmail || undefined,
       channel: selectedChannel,
+      store_id: selectedStoreId,
       discount_type: discountType,
       discount_percent: discountType === 'percent' ? discountPercent : undefined,
       discount_amount: calculatedDiscount,

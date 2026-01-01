@@ -252,6 +252,7 @@ model service_orders {
   created_by_id                                             String?                   @db.Uuid
   customer_demand                                           String?
   updated_by_id                                             String?                   @db.Uuid
+  store_id                                                  String?                   @db.Uuid
   payments                                                  payments[]
   service_items                                             service_items[]
   service_order_comments                                    service_order_comments[]
@@ -260,6 +261,7 @@ model service_orders {
   bikes                                                     bikes                     @relation(fields: [motorcycle_id], references: [id], onUpdate: NoAction, map: "service_orders_bike_id_fkey")
   user_profiles_service_orders_created_by_idTouser_profiles user_profiles?            @relation("service_orders_created_by_idTouser_profiles", fields: [created_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   customers                                                 customers                 @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
+  stores                                                    stores?                   @relation(fields: [store_id], references: [id], onUpdate: NoAction)
   user_profiles_service_orders_updated_by_idTouser_profiles user_profiles?            @relation("service_orders_updated_by_idTouser_profiles", fields: [updated_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   service_parts                                             service_parts[]
 
@@ -270,6 +272,7 @@ model service_orders {
   @@index([order_number], map: "idx_service_orders_order_number")
   @@index([status], map: "idx_service_orders_status")
   @@index([updated_by_id], map: "idx_service_orders_updated_by")
+  @@index([store_id], map: "idx_service_orders_store")
   @@schema("public")
 }
 
@@ -648,6 +651,7 @@ model sales_orders {
   updated_at                                             DateTime?              @default(now()) @db.Timestamptz(6)
   discount_type                                          String?                @default("fixed") @db.VarChar(20)
   discount_percent                                       Decimal?               @default(0) @db.Decimal(5, 2)
+  store_id                                               String?                @db.Uuid
   customer_receivables                                   customer_receivables?
   sales_order_items                                      sales_order_items[]
   sales_order_payments                                   sales_order_payments[]
@@ -655,6 +659,7 @@ model sales_orders {
   customers                                              customers?             @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
   stock_locations                                        stock_locations?       @relation(fields: [location_id], references: [id], onUpdate: NoAction)
   user_profiles_sales_orders_processed_byTouser_profiles user_profiles?         @relation("sales_orders_processed_byTouser_profiles", fields: [processed_by], references: [id], onUpdate: NoAction)
+  stores                                                 stores?                @relation(fields: [store_id], references: [id], onUpdate: NoAction)
 
   @@index([channel], map: "idx_sales_orders_channel")
   @@index([customer_id], map: "idx_sales_orders_customer")
@@ -664,6 +669,7 @@ model sales_orders {
   @@index([order_date(sort: Desc)], map: "idx_sales_orders_order_date")
   @@index([payment_status], map: "idx_sales_orders_payment_status")
   @@index([status], map: "idx_sales_orders_status")
+  @@index([store_id], map: "idx_sales_orders_store")
   @@schema("public")
 }
 
@@ -682,6 +688,7 @@ model stock_locations {
   inventory_transactions                                            inventory_transactions[]
   pos_sessions                                                      pos_sessions[]
   sales_orders                                                      sales_orders[]
+  stores                                                            stores[]
   transfer_orders_transfer_orders_from_location_idTostock_locations transfer_orders[]        @relation("transfer_orders_from_location_idTostock_locations")
   transfer_orders_transfer_orders_to_location_idTostock_locations   transfer_orders[]        @relation("transfer_orders_to_location_idTostock_locations")
 
@@ -1116,6 +1123,28 @@ model customer_receivables {
   @@index([customer_id], map: "idx_customer_receivables_customer")
   @@index([due_date], map: "idx_customer_receivables_due_date")
   @@index([status], map: "idx_customer_receivables_status")
+  @@schema("public")
+}
+
+model stores {
+  id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String           @db.VarChar(100)
+  code                 String           @unique @db.VarChar(20)
+  address              String?
+  city                 String?          @db.VarChar(100)
+  phone                String?          @db.VarChar(20)
+  email                String?          @db.VarChar(255)
+  is_active            Boolean          @default(true)
+  is_default           Boolean          @default(false)
+  default_warehouse_id String?          @db.Uuid
+  created_at           DateTime         @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime         @default(now()) @db.Timestamptz(6)
+  sales_orders         sales_orders[]
+  service_orders       service_orders[]
+  stock_locations      stock_locations? @relation(fields: [default_warehouse_id], references: [id], onUpdate: NoAction)
+
+  @@index([code], map: "idx_stores_code")
+  @@index([is_active], map: "idx_stores_is_active")
   @@schema("public")
 }
 

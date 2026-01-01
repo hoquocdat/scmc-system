@@ -1,6 +1,5 @@
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
-import Cookies from 'js-cookie';
+import { persist } from 'zustand/middleware';
 
 interface LocationState {
   selectedLocationId: string | null;
@@ -8,21 +7,6 @@ interface LocationState {
   setLocation: (id: string, name: string) => void;
   clearLocation: () => void;
 }
-
-// Custom cookie storage for zustand persist
-const cookieStorage = {
-  getItem: (name: string) => {
-    const value = Cookies.get(name);
-    return value ?? null;
-  },
-  setItem: (name: string, value: string) => {
-    // Cookie expires in 30 days
-    Cookies.set(name, value, { expires: 30, sameSite: 'lax' });
-  },
-  removeItem: (name: string) => {
-    Cookies.remove(name);
-  },
-};
 
 export const useLocationStore = create<LocationState>()(
   persist(
@@ -38,7 +22,6 @@ export const useLocationStore = create<LocationState>()(
     }),
     {
       name: 'scmc-location',
-      storage: createJSONStorage(() => cookieStorage),
     }
   )
 );

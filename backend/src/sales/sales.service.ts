@@ -85,9 +85,9 @@ export class SalesService {
         shipping_address: orderData.shipping_address,
         shipping_city: orderData.shipping_city,
         notes: orderData.notes,
-        stock_locations: orderData.location_id
+        stores: orderData.store_id
           ? {
-              connect: { id: orderData.location_id },
+              connect: { id: orderData.store_id },
             }
           : undefined,
       };
@@ -109,10 +109,13 @@ export class SalesService {
           data,
           include: {
             customers: true,
-            stock_locations: true,
+            stores: true,
             user_profiles_sales_orders_created_byTouser_profiles: true,
           },
         });
+
+        // Get warehouse ID from store for inventory transactions
+        const warehouseId = newOrder.stores?.default_warehouse_id;
 
         // Create order items
         const orderItems = await Promise.all(
@@ -155,8 +158,9 @@ export class SalesService {
           }),
         );
 
-        // Create inventory transactions for each item (SALE type)
-        if (orderData.location_id) {
+        // Create inventory transactions for each item (SALE type) using store's default warehouse
+        if (warehouseId) {
+          const stockLocationId = warehouseId;
           await Promise.all(
             items.map((item) => {
               const transactionData: Prisma.inventory_transactionsCreateInput =
@@ -165,7 +169,7 @@ export class SalesService {
                   quantity: -Math.abs(item.quantity),
                   reference_id: newOrder.id,
                   reference_type: 'sales_order',
-                  stock_locations: { connect: { id: orderData.location_id } },
+                  stock_locations: { connect: { id: stockLocationId } },
                   products: { connect: { id: item.product_id } },
                 };
 
@@ -223,7 +227,7 @@ export class SalesService {
     }
 
     if (filters.customer_id) where.customer_id = filters.customer_id;
-    if (filters.location_id) where.location_id = filters.location_id;
+    if (filters.store_id) where.store_id = filters.store_id;
     if (filters.created_by) where.created_by = filters.created_by;
     if (filters.processed_by) where.processed_by = filters.processed_by;
     if (filters.status) where.status = filters.status;
@@ -244,7 +248,7 @@ export class SalesService {
         orderBy: { [sort_by]: sort_order },
         include: {
           customers: true,
-          stock_locations: true,
+          stores: true,
           user_profiles_sales_orders_created_byTouser_profiles: true,
           user_profiles_sales_orders_processed_byTouser_profiles: true,
           sales_order_items: {
@@ -275,7 +279,7 @@ export class SalesService {
       where: { id },
       include: {
         customers: true,
-        stock_locations: true,
+        stores: true,
         user_profiles_sales_orders_created_byTouser_profiles: true,
         user_profiles_sales_orders_processed_byTouser_profiles: true,
         sales_order_items: {
@@ -326,11 +330,7 @@ export class SalesService {
         data.customers = { connect: { id: updateSalesOrderDto.customer_id } };
       }
 
-      if (updateSalesOrderDto.location_id) {
-        data.stock_locations = {
-          connect: { id: updateSalesOrderDto.location_id },
-        };
-      }
+      // Store update is handled via store_id field directly
 
       if (updateSalesOrderDto.created_by) {
         data.user_profiles_sales_orders_created_byTouser_profiles = {
@@ -343,7 +343,7 @@ export class SalesService {
         data,
         include: {
           customers: true,
-          stock_locations: true,
+          stores: true,
           user_profiles_sales_orders_created_byTouser_profiles: true,
           user_profiles_sales_orders_processed_byTouser_profiles: true,
           sales_order_items: {
@@ -376,6 +376,9 @@ export class SalesService {
         throw new ConflictException('Cannot cancel a completed order');
       }
 
+      // Get warehouse ID from store for inventory transactions
+      const warehouseId = order.stores?.default_warehouse_id;
+
       // Cancel the order and create RETURN inventory transactions
       const cancelledOrder = await this.prisma.$transaction(async (tx) => {
         // Update order status
@@ -394,8 +397,8 @@ export class SalesService {
           },
         });
 
-        // Create RETURN transactions for inventory items
-        if (order.location_id) {
+        // Create RETURN transactions for inventory items using store's warehouse
+        if (warehouseId) {
           for (const item of updated.sales_order_items) {
             await tx.inventory_transactions.create({
               data: {
@@ -403,7 +406,7 @@ export class SalesService {
                 quantity: Math.abs(item.quantity),
                 reference_id: order.id,
                 reference_type: 'sales_order_cancellation',
-                stock_locations: { connect: { id: order.location_id } },
+                stock_locations: { connect: { id: warehouseId } },
                 products: { connect: { id: item.product_id! } },
                 product_variants: item.product_variant_id
                   ? { connect: { id: item.product_variant_id } }
@@ -514,6 +517,9 @@ export class SalesService {
         throw new ConflictException('Only draft orders can be confirmed');
       }
 
+      // Get warehouse ID from store for inventory transactions
+      const warehouseId = order.stores?.default_warehouse_id;
+
       // Confirm the order and create inventory transactions
       const confirmedOrder = await this.prisma.$transaction(async (tx) => {
         // Update order status
@@ -534,8 +540,8 @@ export class SalesService {
           },
         });
 
-        // Create inventory SALE transactions for each item
-        if (order.location_id) {
+        // Create inventory SALE transactions for each item using store's warehouse
+        if (warehouseId) {
           for (const item of updated.sales_order_items) {
             await tx.inventory_transactions.create({
               data: {
@@ -543,7 +549,7 @@ export class SalesService {
                 quantity: -Math.abs(item.quantity),
                 reference_id: order.id,
                 reference_type: 'sales_order',
-                stock_locations: { connect: { id: order.location_id } },
+                stock_locations: { connect: { id: warehouseId } },
                 products: { connect: { id: item.product_id! } },
                 product_variants: item.product_variant_id
                   ? { connect: { id: item.product_variant_id } }
@@ -612,7 +618,7 @@ export class SalesService {
         },
         include: {
           customers: true,
-          stock_locations: true,
+          stores: true,
           user_profiles_sales_orders_created_byTouser_profiles: true,
           user_profiles_sales_orders_processed_byTouser_profiles: true,
           sales_order_items: {

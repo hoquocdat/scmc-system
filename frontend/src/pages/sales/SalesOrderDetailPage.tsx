@@ -41,6 +41,7 @@ import {
   PAYMENT_METHOD_LABELS,
 } from '@/lib/api/sales';
 import { PaymentDialog } from '@/components/sales-orders/PaymentDialog';
+import { InvoicePreviewModal } from '@/components/sales-orders/InvoicePreviewModal';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -61,6 +62,7 @@ export function SalesOrderDetailPage() {
   const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
 
   // Fetch sales order
   const { data: order, isLoading } = useQuery({
@@ -189,7 +191,7 @@ export function SalesOrderDetailPage() {
               Thanh toán
             </Button>
           )}
-          <Button variant="outline">
+          <Button variant="outline" onClick={() => setIsInvoiceModalOpen(true)}>
             <Printer className="mr-2 h-4 w-4" />
             In hóa đơn
           </Button>
@@ -238,8 +240,8 @@ export function SalesOrderDetailPage() {
               <span className="font-medium">{SALES_CHANNEL_LABELS[order.channel]}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-sm text-muted-foreground">Chi nhánh</span>
-              <span className="font-medium">{order.stock_locations?.name || '-'}</span>
+              <span className="text-sm text-muted-foreground">Cửa hàng</span>
+              <span className="font-medium">{order.stores?.name || '-'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-sm text-muted-foreground">Ngày tạo</span>
@@ -497,6 +499,13 @@ export function SalesOrderDetailPage() {
         onSuccess={() => {
           queryClient.invalidateQueries({ queryKey: ['sales-order', id] });
         }}
+      />
+
+      {/* Invoice Preview Modal */}
+      <InvoicePreviewModal
+        open={isInvoiceModalOpen}
+        onOpenChange={setIsInvoiceModalOpen}
+        order={order}
       />
     </div>
   );

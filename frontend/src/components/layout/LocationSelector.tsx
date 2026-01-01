@@ -9,7 +9,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { stockLocationsApi, type StockLocation } from '@/lib/api/stock-locations';
+import { stockLocationsApi } from '@/lib/api/stock-locations';
 import { useLocationStore } from '@/store/locationStore';
 import { useEffect } from 'react';
 
@@ -17,26 +17,25 @@ export function LocationSelector() {
   const { selectedLocationId, selectedLocationName, setLocation } = useLocationStore();
 
   // Fetch all locations
-  const { data: locations = [], isLoading } = useQuery({
+  const { data: locations = [], isLoading, isSuccess } = useQuery({
     queryKey: ['stock-locations'],
     queryFn: () => stockLocationsApi.getAll(),
   });
 
+  const activeLocations = locations.filter((loc) => loc.is_active);
+
   // Auto-select default location if none selected
   useEffect(() => {
-    if (!selectedLocationId && locations.length > 0) {
+    if (isSuccess && !selectedLocationId && activeLocations.length > 0) {
       // Find default location or use first active one
-      const defaultLocation = locations.find((loc) => loc.is_default && loc.is_active);
-      const firstActiveLocation = locations.find((loc) => loc.is_active);
-      const locationToSelect = defaultLocation || firstActiveLocation;
+      const defaultLocation = activeLocations.find((loc) => loc.is_default);
+      const locationToSelect = defaultLocation || activeLocations[0];
 
       if (locationToSelect) {
         setLocation(locationToSelect.id, locationToSelect.name);
       }
     }
-  }, [selectedLocationId, locations, setLocation]);
-
-  const activeLocations = locations.filter((loc) => loc.is_active);
+  }, [isSuccess, selectedLocationId, activeLocations, setLocation]);
 
   if (isLoading) {
     return (
@@ -48,7 +47,12 @@ export function LocationSelector() {
   }
 
   if (activeLocations.length === 0) {
-    return null;
+    return (
+      <Button variant="ghost" size="sm" disabled className="gap-2">
+        <MapPin className="h-4 w-4" />
+        <span className="hidden sm:inline text-destructive">Chưa có chi nhánh</span>
+      </Button>
+    );
   }
 
   return (

@@ -110,10 +110,10 @@ export class CreateSalesOrderDto {
   @IsNotEmpty()
   channel: SalesChannel;
 
-  @ApiProperty({ description: 'Location UUID where sale is made' })
+  @ApiProperty({ description: 'Store UUID where sale is made' })
   @IsUUID()
   @IsNotEmpty()
-  location_id: string;
+  store_id: string;
 
   @ApiPropertyOptional({ description: 'Order status', enum: OrderStatus, default: OrderStatus.DRAFT })
   @IsEnum(OrderStatus)

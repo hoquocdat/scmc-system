@@ -54,6 +54,7 @@ import {
   FileSpreadsheet,
   ShoppingBag,
 } from 'lucide-react';
+import { StoreSelector } from './StoreSelector';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -696,6 +697,7 @@ export function AppLayout({ children }: AppLayoutProps) {
             </Breadcrumb>
           </div>
           <div className="flex items-center gap-2 sm:gap-3 md:gap-4 shrink-0">
+            <StoreSelector />
             <span className="text-xs sm:text-sm text-muted-foreground hidden md:block">
               Welcome, <span className="font-medium">{user?.full_name}</span>
             </span>

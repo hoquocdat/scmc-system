@@ -32,6 +32,8 @@ import { AiModule } from './ai/ai.module';
 import { PurchaseOrdersModule } from './purchase-orders/purchase-orders.module';
 import { SupplierPaymentsModule } from './supplier-payments/supplier-payments.module';
 import { SupplierReturnsModule } from './supplier-returns/supplier-returns.module';
+import { StockLocationsModule } from './stock-locations/stock-locations.module';
+import { StoresModule } from './stores/stores.module';
 
 @Module({
   imports: [
@@ -71,6 +73,8 @@ import { SupplierReturnsModule } from './supplier-returns/supplier-returns.modul
     AttributeDefinitionsModule,
     PermissionsModule,
     AiModule,
+    StockLocationsModule,
+    StoresModule,
   ],
   controllers: [AppController],
   providers: [AppService],

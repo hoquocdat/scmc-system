@@ -14,10 +14,10 @@ export class SalesOrderQueryDto {
   @IsOptional()
   customer_id?: string;
 
-  @ApiPropertyOptional({ description: 'Filter by location ID' })
+  @ApiPropertyOptional({ description: 'Filter by store ID' })
   @IsUUID()
   @IsOptional()
-  location_id?: string;
+  store_id?: string;
 
   @ApiPropertyOptional({ description: 'Filter by created_by user ID' })
   @IsUUID()

@@ -14,7 +14,7 @@ export interface SalesOrder {
   customer_phone?: string;
   customer_email?: string;
   channel: SalesChannel;
-  location_id?: string;
+  store_id?: string;
   status: OrderStatus;
   payment_status: PaymentStatus;
   subtotal: number;
@@ -45,7 +45,7 @@ export interface SalesOrder {
     phone?: string;
     email?: string;
   };
-  stock_locations?: {
+  stores?: {
     id: string;
     name: string;
     code: string;
@@ -113,7 +113,7 @@ export interface SalesOrderPayment {
 export interface SalesOrderQueryParams {
   search?: string;
   customer_id?: string;
-  location_id?: string;
+  store_id?: string;
   created_by?: string;
   processed_by?: string;
   status?: string;
@@ -153,7 +153,7 @@ export interface CreateSalesOrderDto {
   customer_phone?: string;
   customer_email?: string;
   channel: SalesChannel;
-  location_id?: string;
+  store_id: string;
   status?: OrderStatus;
   payment_status?: PaymentStatus;
   items: CreateSalesOrderItemDto[];
