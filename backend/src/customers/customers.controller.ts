@@ -90,4 +90,28 @@ export class CustomersController {
   async remove(@Param('id') id: string) {
     return this.customersService.remove(id);
   }
+
+  @Get(':id/receivables')
+  @ApiOperation({ summary: 'Get customer receivables (công nợ)' })
+  @ApiParam({ name: 'id', description: 'Customer UUID' })
+  @ApiResponse({ status: 200, description: 'Returns customer receivables with summary' })
+  @ApiResponse({ status: 404, description: 'Customer not found' })
+  async getReceivables(@Param('id') id: string) {
+    return this.customersService.getReceivables(id);
+  }
+
+  @Get(':id/orders')
+  @ApiOperation({ summary: 'Get customer order history' })
+  @ApiParam({ name: 'id', description: 'Customer UUID' })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 10)' })
+  @ApiResponse({ status: 200, description: 'Returns paginated list of customer orders' })
+  @ApiResponse({ status: 404, description: 'Customer not found' })
+  async getOrders(
+    @Param('id') id: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+  ) {
+    return this.customersService.getOrders(id, page || 1, limit || 10);
+  }
 }

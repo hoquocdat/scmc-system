@@ -46,6 +46,71 @@ export interface CreateCustomerDto {
 
 export interface UpdateCustomerDto extends Partial<CreateCustomerDto> {}
 
+export interface CustomerReceivable {
+  id: string;
+  customer_id: string;
+  sales_order_id: string;
+  original_amount: number;
+  paid_amount: number;
+  balance: number;
+  status: 'unpaid' | 'partial' | 'paid';
+  due_date?: string;
+  created_at: string;
+  updated_at: string;
+  sales_orders?: {
+    id: string;
+    order_number: string;
+    total_amount: number;
+    created_at: string;
+  };
+}
+
+export interface CustomerReceivablesResponse {
+  receivables: CustomerReceivable[];
+  summary: {
+    total_original: number;
+    total_paid: number;
+    total_balance: number;
+  };
+}
+
+export interface CustomerOrder {
+  id: string;
+  order_number: string;
+  customer_name: string;
+  status: string;
+  payment_status: string;
+  total_amount: number;
+  paid_amount?: number;
+  created_at: string;
+  stores?: {
+    id: string;
+    name: string;
+    code: string;
+  };
+  sales_order_items?: {
+    id: string;
+    quantity: number;
+    unit_price: number;
+    total_amount: number;
+    products?: {
+      id: string;
+      name: string;
+      sku?: string;
+    };
+  }[];
+}
+
+export interface CustomerOrdersResponse {
+  data: CustomerOrder[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
 export const customersApi = {
   // Get all customers with filtering
   getAll: async (params?: CustomerQueryParams): Promise<CustomersResponse> => {
@@ -74,5 +139,20 @@ export const customersApi = {
   // Delete customer
   delete: async (id: string): Promise<void> => {
     await apiClient.delete(`/customers/${id}`);
+  },
+
+  // Get customer receivables (công nợ)
+  getReceivables: async (id: string): Promise<CustomerReceivablesResponse> => {
+    const response = await apiClient.get(`/customers/${id}/receivables`);
+    return response.data;
+  },
+
+  // Get customer order history
+  getOrders: async (
+    id: string,
+    params?: { page?: number; limit?: number }
+  ): Promise<CustomerOrdersResponse> => {
+    const response = await apiClient.get(`/customers/${id}/orders`, { params });
+    return response.data;
   },
 };

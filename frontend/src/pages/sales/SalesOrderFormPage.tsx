@@ -15,6 +15,7 @@ import { ProductSearchInput } from '@/components/inventory/purchase-orders/Produ
 import {
   SalesOrderItemsTable,
   CustomerSelectCard,
+  CustomerDetailsCard,
   SalesOrderTotalsCard,
   SalesOrderNotesCard,
   type SalesOrderItem,
@@ -232,6 +233,11 @@ export function SalesOrderFormPage() {
             onChannelChange={setSelectedChannel}
             isLoading={isLoadingCustomers}
           />
+
+          {/* Customer Details - Receivables & Order History */}
+          {selectedCustomerId && (
+            <CustomerDetailsCard customerId={selectedCustomerId} />
+          )}
 
           <SalesOrderTotalsCard
             subtotal={subtotal}

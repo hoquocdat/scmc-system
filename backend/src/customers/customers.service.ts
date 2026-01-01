@@ -173,4 +173,92 @@ export class CustomersService {
 
     return { message: 'Customer deleted successfully' };
   }
+
+  async getReceivables(id: string) {
+    // First check if customer exists
+    await this.findOne(id);
+
+    const receivables = await this.prisma.customer_receivables.findMany({
+      where: { customer_id: id },
+      include: {
+        sales_orders: {
+          select: {
+            id: true,
+            order_number: true,
+            total_amount: true,
+            created_at: true,
+          },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+    });
+
+    // Calculate totals
+    const summary = receivables.reduce(
+      (acc, r) => ({
+        total_original: acc.total_original + Number(r.original_amount || 0),
+        total_paid: acc.total_paid + Number(r.paid_amount || 0),
+        total_balance: acc.total_balance + Number(r.balance || 0),
+      }),
+      { total_original: 0, total_paid: 0, total_balance: 0 },
+    );
+
+    return {
+      receivables,
+      summary,
+    };
+  }
+
+  async getOrders(id: string, page: number = 1, limit: number = 10) {
+    // First check if customer exists
+    await this.findOne(id);
+
+    const offset = (page - 1) * limit;
+
+    const [orders, total] = await Promise.all([
+      this.prisma.sales_orders.findMany({
+        where: { customer_id: id },
+        include: {
+          stores: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+            },
+          },
+          sales_order_items: {
+            select: {
+              id: true,
+              quantity: true,
+              unit_price: true,
+              total_amount: true,
+              products: {
+                select: {
+                  id: true,
+                  name: true,
+                  sku: true,
+                },
+              },
+            },
+          },
+        },
+        orderBy: { created_at: 'desc' },
+        skip: offset,
+        take: limit,
+      }),
+      this.prisma.sales_orders.count({
+        where: { customer_id: id },
+      }),
+    ]);
+
+    return {
+      data: orders,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
+  }
 }

@@ -11,6 +11,8 @@ import { useUrlTabs } from '@/hooks/useUrlTabs';
 import { CustomerInfoTab } from '@/components/customers/CustomerInfoTab';
 import { CustomerBikesTab } from '@/components/customers/CustomerBikesTab';
 import { CustomerServiceHistoryTab } from '@/components/customers/CustomerServiceHistoryTab';
+import { CustomerReceivablesTab } from '@/components/customers/CustomerReceivablesTab';
+import { CustomerSalesOrdersTab } from '@/components/customers/CustomerSalesOrdersTab';
 import { CustomerEditSheet } from '@/components/customers/CustomerEditSheet';
 import { AddBikeSheet } from '@/components/customers/AddBikeSheet';
 
@@ -113,8 +115,16 @@ export function CustomerDetailPage() {
         <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <TabsList className="inline-flex w-auto min-w-full sm:min-w-0">
             <TabsTrigger value="info" className="whitespace-nowrap">
-              <span className="hidden sm:inline">Thông Tin Khách Hàng</span>
-              <span className="sm:hidden">Thông Tin</span>
+              <span className="hidden sm:inline">Thông Tin</span>
+              <span className="sm:hidden">Info</span>
+            </TabsTrigger>
+            <TabsTrigger value="receivables" className="whitespace-nowrap">
+              <span className="hidden sm:inline">Công Nợ</span>
+              <span className="sm:hidden">Nợ</span>
+            </TabsTrigger>
+            <TabsTrigger value="orders" className="whitespace-nowrap">
+              <span className="hidden sm:inline">Đơn Hàng</span>
+              <span className="sm:hidden">Đơn</span>
             </TabsTrigger>
             <TabsTrigger value="bikes" className="whitespace-nowrap">
               <span className="hidden sm:inline">Xe Sở Hữu</span>
@@ -122,7 +132,7 @@ export function CustomerDetailPage() {
             </TabsTrigger>
             <TabsTrigger value="service-history" className="whitespace-nowrap">
               <span className="hidden sm:inline">Lịch Sử Dịch Vụ</span>
-              <span className="sm:hidden">Lịch Sử</span>
+              <span className="sm:hidden">Dịch Vụ</span>
             </TabsTrigger>
           </TabsList>
         </div>
@@ -130,6 +140,16 @@ export function CustomerDetailPage() {
         {/* Customer Info Tab */}
         <TabsContent value="info">
           <CustomerInfoTab customer={customer} />
+        </TabsContent>
+
+        {/* Receivables Tab */}
+        <TabsContent value="receivables">
+          <CustomerReceivablesTab customerId={id!} />
+        </TabsContent>
+
+        {/* Sales Orders Tab */}
+        <TabsContent value="orders">
+          <CustomerSalesOrdersTab customerId={id!} />
         </TabsContent>
 
         {/* Bikes Tab */}
