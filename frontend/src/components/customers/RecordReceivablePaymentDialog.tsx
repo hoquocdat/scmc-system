@@ -91,7 +91,6 @@ export function RecordReceivablePaymentDialog({
     },
   });
 
-  const amount = watch('amount');
   const paymentMethod = watch('payment_method');
 
   const recordPaymentMutation = useMutation({

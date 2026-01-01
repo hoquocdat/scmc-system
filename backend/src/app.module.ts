@@ -34,6 +34,7 @@ import { SupplierPaymentsModule } from './supplier-payments/supplier-payments.mo
 import { SupplierReturnsModule } from './supplier-returns/supplier-returns.module';
 import { StockLocationsModule } from './stock-locations/stock-locations.module';
 import { StoresModule } from './stores/stores.module';
+import { LoyaltyModule } from './loyalty/loyalty.module';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { StoresModule } from './stores/stores.module';
     AiModule,
     StockLocationsModule,
     StoresModule,
+    LoyaltyModule,
   ],
   controllers: [AppController],
   providers: [AppService],

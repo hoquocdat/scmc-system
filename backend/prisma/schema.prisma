@@ -92,6 +92,7 @@ model customers {
   created_by_id                                        String?                @db.Uuid
   updated_by_id                                        String?                @db.Uuid
   bikes                                                bikes[]
+  customer_loyalty                                     customer_loyalty?
   customer_receivables                                 customer_receivables[]
   user_profiles_customers_created_by_idTouser_profiles user_profiles?         @relation("customers_created_by_idTouser_profiles", fields: [created_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   salesperson                                          user_profiles?         @relation("customer_salesperson", fields: [salesperson_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
@@ -321,51 +322,53 @@ model suppliers {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model user_profiles {
-  id                                                                    String                    @id @db.Uuid
+  id                                                                    String                       @id @db.Uuid
   role                                                                  user_role
-  full_name                                                             String                    @db.VarChar(255)
-  phone                                                                 String?                   @db.VarChar(20)
-  email                                                                 String?                   @db.VarChar(255)
-  is_active                                                             Boolean?                  @default(true)
-  created_at                                                            DateTime?                 @default(now()) @db.Timestamptz(6)
-  updated_at                                                            DateTime?                 @default(now()) @db.Timestamptz(6)
+  full_name                                                             String                       @db.VarChar(255)
+  phone                                                                 String?                      @db.VarChar(20)
+  email                                                                 String?                      @db.VarChar(255)
+  is_active                                                             Boolean?                     @default(true)
+  created_at                                                            DateTime?                    @default(now()) @db.Timestamptz(6)
+  updated_at                                                            DateTime?                    @default(now()) @db.Timestamptz(6)
   activity_logs                                                         activity_logs[]
   ai_usage_logs                                                         ai_usage_logs[]
-  bikes_bikes_created_by_idTouser_profiles                              bikes[]                   @relation("bikes_created_by_idTouser_profiles")
-  bikes_bikes_updated_by_idTouser_profiles                              bikes[]                   @relation("bikes_updated_by_idTouser_profiles")
-  customers_customers_created_by_idTouser_profiles                      customers[]               @relation("customers_created_by_idTouser_profiles")
-  customers_salesperson                                                 customers[]               @relation("customer_salesperson")
-  customers_customers_updated_by_idTouser_profiles                      customers[]               @relation("customers_updated_by_idTouser_profiles")
+  bikes_bikes_created_by_idTouser_profiles                              bikes[]                      @relation("bikes_created_by_idTouser_profiles")
+  bikes_bikes_updated_by_idTouser_profiles                              bikes[]                      @relation("bikes_updated_by_idTouser_profiles")
+  customers_customers_created_by_idTouser_profiles                      customers[]                  @relation("customers_created_by_idTouser_profiles")
+  customers_salesperson                                                 customers[]                  @relation("customer_salesperson")
+  customers_customers_updated_by_idTouser_profiles                      customers[]                  @relation("customers_updated_by_idTouser_profiles")
   images                                                                images[]
   inventory_transactions                                                inventory_transactions[]
+  loyalty_point_transactions                                            loyalty_point_transactions[]
+  loyalty_rule_versions                                                 loyalty_rule_versions[]
   payments                                                              payments[]
-  permission_audit_log_permission_audit_log_performed_byTouser_profiles permission_audit_log[]    @relation("permission_audit_log_performed_byTouser_profiles")
-  permission_audit_log_permission_audit_log_user_idTouser_profiles      permission_audit_log[]    @relation("permission_audit_log_user_idTouser_profiles")
+  permission_audit_log_permission_audit_log_performed_byTouser_profiles permission_audit_log[]       @relation("permission_audit_log_performed_byTouser_profiles")
+  permission_audit_log_permission_audit_log_user_idTouser_profiles      permission_audit_log[]       @relation("permission_audit_log_user_idTouser_profiles")
   pos_sessions                                                          pos_sessions[]
-  purchase_orders_purchase_orders_approved_byTouser_profiles            purchase_orders[]         @relation("purchase_orders_approved_byTouser_profiles")
-  purchase_orders_purchase_orders_created_by_idTouser_profiles          purchase_orders[]         @relation("purchase_orders_created_by_idTouser_profiles")
-  purchase_orders_purchase_orders_rejected_byTouser_profiles            purchase_orders[]         @relation("purchase_orders_rejected_byTouser_profiles")
-  purchase_orders_purchase_orders_submitted_byTouser_profiles           purchase_orders[]         @relation("purchase_orders_submitted_byTouser_profiles")
-  purchase_orders_purchase_orders_updated_by_idTouser_profiles          purchase_orders[]         @relation("purchase_orders_updated_by_idTouser_profiles")
+  purchase_orders_purchase_orders_approved_byTouser_profiles            purchase_orders[]            @relation("purchase_orders_approved_byTouser_profiles")
+  purchase_orders_purchase_orders_created_by_idTouser_profiles          purchase_orders[]            @relation("purchase_orders_created_by_idTouser_profiles")
+  purchase_orders_purchase_orders_rejected_byTouser_profiles            purchase_orders[]            @relation("purchase_orders_rejected_byTouser_profiles")
+  purchase_orders_purchase_orders_submitted_byTouser_profiles           purchase_orders[]            @relation("purchase_orders_submitted_byTouser_profiles")
+  purchase_orders_purchase_orders_updated_by_idTouser_profiles          purchase_orders[]            @relation("purchase_orders_updated_by_idTouser_profiles")
   sales_order_payments                                                  sales_order_payments[]
-  sales_orders_sales_orders_created_byTouser_profiles                   sales_orders[]            @relation("sales_orders_created_byTouser_profiles")
-  sales_orders_sales_orders_processed_byTouser_profiles                 sales_orders[]            @relation("sales_orders_processed_byTouser_profiles")
+  sales_orders_sales_orders_created_byTouser_profiles                   sales_orders[]               @relation("sales_orders_created_byTouser_profiles")
+  sales_orders_sales_orders_processed_byTouser_profiles                 sales_orders[]               @relation("sales_orders_processed_byTouser_profiles")
   service_items                                                         service_items[]
   service_order_comments                                                service_order_comments[]
   service_order_employees                                               service_order_employees[]
-  service_orders_assigned_employee                                      service_orders[]          @relation("assigned_employee")
-  service_orders_service_orders_created_by_idTouser_profiles            service_orders[]          @relation("service_orders_created_by_idTouser_profiles")
-  service_orders_service_orders_updated_by_idTouser_profiles            service_orders[]          @relation("service_orders_updated_by_idTouser_profiles")
+  service_orders_assigned_employee                                      service_orders[]             @relation("assigned_employee")
+  service_orders_service_orders_created_by_idTouser_profiles            service_orders[]             @relation("service_orders_created_by_idTouser_profiles")
+  service_orders_service_orders_updated_by_idTouser_profiles            service_orders[]             @relation("service_orders_updated_by_idTouser_profiles")
   supplier_payments                                                     supplier_payments[]
-  supplier_returns_supplier_returns_approved_by_idTouser_profiles       supplier_returns[]        @relation("supplier_returns_approved_by_idTouser_profiles")
-  supplier_returns_supplier_returns_created_by_idTouser_profiles        supplier_returns[]        @relation("supplier_returns_created_by_idTouser_profiles")
-  transfer_orders_transfer_orders_received_byTouser_profiles            transfer_orders[]         @relation("transfer_orders_received_byTouser_profiles")
-  transfer_orders_transfer_orders_requested_byTouser_profiles           transfer_orders[]         @relation("transfer_orders_requested_byTouser_profiles")
-  transfer_orders_transfer_orders_shipped_byTouser_profiles             transfer_orders[]         @relation("transfer_orders_shipped_byTouser_profiles")
-  user_permissions_user_permissions_assigned_byTouser_profiles          user_permissions[]        @relation("user_permissions_assigned_byTouser_profiles")
-  user_permissions_user_permissions_user_idTouser_profiles              user_permissions[]        @relation("user_permissions_user_idTouser_profiles")
-  user_roles_user_roles_assigned_byTouser_profiles                      user_roles[]              @relation("user_roles_assigned_byTouser_profiles")
-  user_roles_user_roles_user_idTouser_profiles                          user_roles[]              @relation("user_roles_user_idTouser_profiles")
+  supplier_returns_supplier_returns_approved_by_idTouser_profiles       supplier_returns[]           @relation("supplier_returns_approved_by_idTouser_profiles")
+  supplier_returns_supplier_returns_created_by_idTouser_profiles        supplier_returns[]           @relation("supplier_returns_created_by_idTouser_profiles")
+  transfer_orders_transfer_orders_received_byTouser_profiles            transfer_orders[]            @relation("transfer_orders_received_byTouser_profiles")
+  transfer_orders_transfer_orders_requested_byTouser_profiles           transfer_orders[]            @relation("transfer_orders_requested_byTouser_profiles")
+  transfer_orders_transfer_orders_shipped_byTouser_profiles             transfer_orders[]            @relation("transfer_orders_shipped_byTouser_profiles")
+  user_permissions_user_permissions_assigned_byTouser_profiles          user_permissions[]           @relation("user_permissions_assigned_byTouser_profiles")
+  user_permissions_user_permissions_user_idTouser_profiles              user_permissions[]           @relation("user_permissions_user_idTouser_profiles")
+  user_roles_user_roles_assigned_byTouser_profiles                      user_roles[]                 @relation("user_roles_assigned_byTouser_profiles")
+  user_roles_user_roles_user_idTouser_profiles                          user_roles[]                 @relation("user_roles_user_idTouser_profiles")
 
   @@schema("public")
 }
@@ -652,6 +655,9 @@ model sales_orders {
   discount_type                                          String?                @default("fixed") @db.VarChar(20)
   discount_percent                                       Decimal?               @default(0) @db.Decimal(5, 2)
   store_id                                               String?                @db.Uuid
+  loyalty_points_redeemed                                Int?                   @default(0)
+  loyalty_discount_amount                                Decimal?               @default(0) @db.Decimal(10, 2)
+  loyalty_points_earned                                  Int?                   @default(0)
   customer_receivables                                   customer_receivables?
   sales_order_items                                      sales_order_items[]
   sales_order_payments                                   sales_order_payments[]
@@ -1145,6 +1151,127 @@ model stores {
 
   @@index([code], map: "idx_stores_code")
   @@index([is_active], map: "idx_stores_is_active")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model customer_loyalty {
+  id                         String                       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customer_id                String                       @unique @db.Uuid
+  current_tier_id            String?                      @db.Uuid
+  points_balance             Int                          @default(0)
+  points_earned_lifetime     Int                          @default(0)
+  points_redeemed_lifetime   Int                          @default(0)
+  total_spend                Decimal?                     @default(0) @db.Decimal(12, 2)
+  tier_updated_at            DateTime?                    @db.Timestamptz(6)
+  created_at                 DateTime?                    @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime?                    @default(now()) @db.Timestamptz(6)
+  loyalty_tiers              loyalty_tiers?               @relation(fields: [current_tier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customers                  customers                    @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  loyalty_point_transactions loyalty_point_transactions[]
+  loyalty_tier_history       loyalty_tier_history[]
+
+  @@index([points_balance], map: "idx_customer_loyalty_balance")
+  @@index([customer_id], map: "idx_customer_loyalty_customer")
+  @@index([current_tier_id], map: "idx_customer_loyalty_tier")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model loyalty_point_transactions {
+  id                               String                       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customer_loyalty_id              String                       @db.Uuid
+  transaction_type                 String                       @db.VarChar(20)
+  points                           Int
+  points_balance_after             Int
+  reference_type                   String?                      @db.VarChar(50)
+  reference_id                     String?                      @db.Uuid
+  rule_version_id                  String?                      @db.Uuid
+  order_amount                     Decimal?                     @db.Decimal(12, 2)
+  reversed_transaction_id          String?                      @db.Uuid
+  reason                           String?
+  created_by                       String?                      @db.Uuid
+  created_at                       DateTime?                    @default(now()) @db.Timestamptz(6)
+  user_profiles                    user_profiles?               @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customer_loyalty                 customer_loyalty             @relation(fields: [customer_loyalty_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  loyalty_point_transactions       loyalty_point_transactions?  @relation("loyalty_point_transactionsToloyalty_point_transactions", fields: [reversed_transaction_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  other_loyalty_point_transactions loyalty_point_transactions[] @relation("loyalty_point_transactionsToloyalty_point_transactions")
+  loyalty_rule_versions            loyalty_rule_versions?       @relation(fields: [rule_version_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  loyalty_tier_history             loyalty_tier_history[]
+
+  @@index([created_at(sort: Desc)], map: "idx_loyalty_tx_created")
+  @@index([customer_loyalty_id], map: "idx_loyalty_tx_customer")
+  @@index([reference_type, reference_id], map: "idx_loyalty_tx_reference")
+  @@index([transaction_type], map: "idx_loyalty_tx_type")
+  @@schema("public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model loyalty_rule_versions {
+  id                         String                       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  version_number             Int                          @unique
+  points_per_currency        Decimal                      @db.Decimal(10, 6)
+  earning_round_mode         String?                      @default("floor") @db.VarChar(20)
+  redemption_rate            Decimal                      @db.Decimal(10, 2)
+  max_redemption_percent     Decimal?                     @default(50.00) @db.Decimal(5, 2)
+  min_redemption_points      Int?                         @default(100)
+  allow_tier_downgrade       Boolean?                     @default(false)
+  tier_evaluation_basis      String?                      @default("lifetime_points") @db.VarChar(20)
+  is_active                  Boolean?                     @default(true)
+  effective_from             DateTime                     @default(now()) @db.Timestamptz(6)
+  effective_to               DateTime?                    @db.Timestamptz(6)
+  notes                      String?
+  created_by                 String?                      @db.Uuid
+  created_at                 DateTime?                    @default(now()) @db.Timestamptz(6)
+  loyalty_point_transactions loyalty_point_transactions[]
+  user_profiles              user_profiles?               @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([is_active], map: "idx_loyalty_rules_active")
+  @@index([effective_from, effective_to], map: "idx_loyalty_rules_effective")
+  @@schema("public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model loyalty_tier_history {
+  id                                                            String                      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customer_loyalty_id                                           String                      @db.Uuid
+  old_tier_id                                                   String?                     @db.Uuid
+  new_tier_id                                                   String?                     @db.Uuid
+  change_reason                                                 String?                     @db.VarChar(100)
+  triggered_by_transaction_id                                   String?                     @db.Uuid
+  created_at                                                    DateTime?                   @default(now()) @db.Timestamptz(6)
+  customer_loyalty                                              customer_loyalty            @relation(fields: [customer_loyalty_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  loyalty_tiers_loyalty_tier_history_new_tier_idToloyalty_tiers loyalty_tiers?              @relation("loyalty_tier_history_new_tier_idToloyalty_tiers", fields: [new_tier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  loyalty_tiers_loyalty_tier_history_old_tier_idToloyalty_tiers loyalty_tiers?              @relation("loyalty_tier_history_old_tier_idToloyalty_tiers", fields: [old_tier_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  loyalty_point_transactions                                    loyalty_point_transactions? @relation(fields: [triggered_by_transaction_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([created_at(sort: Desc)], map: "idx_tier_history_created")
+  @@index([customer_loyalty_id], map: "idx_tier_history_customer")
+  @@schema("public")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model loyalty_tiers {
+  id                                                                   String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  code                                                                 String                 @unique @db.VarChar(50)
+  name                                                                 String                 @db.VarChar(100)
+  display_order                                                        Int                    @default(0)
+  min_points                                                           Int                    @default(0)
+  min_total_spend                                                      Decimal?               @default(0) @db.Decimal(12, 2)
+  points_multiplier                                                    Decimal?               @default(1.00) @db.Decimal(5, 2)
+  benefits                                                             Json?
+  is_active                                                            Boolean?               @default(true)
+  created_at                                                           DateTime?              @default(now()) @db.Timestamptz(6)
+  updated_at                                                           DateTime?              @default(now()) @db.Timestamptz(6)
+  customer_loyalty                                                     customer_loyalty[]
+  loyalty_tier_history_loyalty_tier_history_new_tier_idToloyalty_tiers loyalty_tier_history[] @relation("loyalty_tier_history_new_tier_idToloyalty_tiers")
+  loyalty_tier_history_loyalty_tier_history_old_tier_idToloyalty_tiers loyalty_tier_history[] @relation("loyalty_tier_history_old_tier_idToloyalty_tiers")
+
+  @@index([is_active], map: "idx_loyalty_tiers_active")
+  @@index([code], map: "idx_loyalty_tiers_code")
+  @@index([display_order], map: "idx_loyalty_tiers_order")
   @@schema("public")
 }
 

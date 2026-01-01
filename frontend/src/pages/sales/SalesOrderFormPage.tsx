@@ -7,7 +7,6 @@ import { toast } from 'sonner';
 import {
   salesApi,
   type CreateSalesOrderDto,
-  type SalesChannel,
   type DiscountType,
   type SalesOrder,
 } from '@/lib/api/sales';
@@ -22,6 +21,7 @@ import {
   SalesOrderNotesCard,
   type SalesOrderItem,
 } from '@/components/sales-orders/form';
+import { PointRedemptionInput } from '@/components/loyalty/PointRedemptionInput';
 import { useStoreStore } from '@/store/storeStore';
 
 export function SalesOrderFormPage() {
@@ -35,13 +35,16 @@ export function SalesOrderFormPage() {
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerEmail, setCustomerEmail] = useState('');
-  const [selectedChannel, setSelectedChannel] = useState<SalesChannel>('retail_store');
   const [discountType, setDiscountType] = useState<DiscountType>('fixed');
   const [discountPercent, setDiscountPercent] = useState(0);
   const [discountAmount, setDiscountAmount] = useState(0);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [createdOrder, setCreatedOrder] = useState<SalesOrder | null>(null);
   const [isCreatingWithPayment, setIsCreatingWithPayment] = useState(false);
+
+  // Loyalty redemption state
+  const [pointsToRedeem, setPointsToRedeem] = useState(0);
+  const [loyaltyDiscountAmount, setLoyaltyDiscountAmount] = useState(0);
 
   // Fetch customers
   const { data: customersData, isLoading: isLoadingCustomers } = useQuery({
@@ -162,6 +165,12 @@ export function SalesOrderFormPage() {
     ? (subtotal * discountPercent) / 100
     : discountAmount;
 
+  // Handler for loyalty redemption changes
+  const handleRedemptionChange = (points: number, discount: number) => {
+    setPointsToRedeem(points);
+    setLoyaltyDiscountAmount(discount);
+  };
+
   // Build DTO helper
   const buildCreateDto = (): CreateSalesOrderDto | null => {
     if (!selectedStoreId) {
@@ -184,12 +193,15 @@ export function SalesOrderFormPage() {
       customer_name: customerName,
       customer_phone: customerPhone || undefined,
       customer_email: customerEmail || undefined,
-      channel: selectedChannel,
+      channel: 'retail_store',
       store_id: selectedStoreId,
       discount_type: discountType,
       discount_percent: discountType === 'percent' ? discountPercent : undefined,
       discount_amount: calculatedDiscount,
       notes: notes || undefined,
+      // Loyalty redemption fields
+      points_to_redeem: pointsToRedeem > 0 ? pointsToRedeem : undefined,
+      loyalty_discount_amount: loyaltyDiscountAmount > 0 ? loyaltyDiscountAmount : undefined,
       items: items.map(({ tempId, product_name, product_sku, variant_name, ...item }) => ({
         product_id: item.product_id,
         product_variant_id: item.product_variant_id,
@@ -296,18 +308,17 @@ export function SalesOrderFormPage() {
             onCustomerChange={setSelectedCustomerId}
             customerName={customerName}
             customerPhone={customerPhone}
-            customerEmail={customerEmail}
-            onCustomerNameChange={setCustomerName}
-            onCustomerPhoneChange={setCustomerPhone}
-            onCustomerEmailChange={setCustomerEmail}
-            selectedChannel={selectedChannel}
-            onChannelChange={setSelectedChannel}
             isLoading={isLoadingCustomers}
           />
 
-          {/* Customer Details - Receivables & Order History */}
-          {selectedCustomerId && (
-            <CustomerDetailsCard customerId={selectedCustomerId} />
+          {/* Loyalty Points Redemption */}
+          {selectedCustomerId && subtotal > 0 && (
+            <PointRedemptionInput
+              customerId={selectedCustomerId}
+              orderAmount={subtotal - calculatedDiscount}
+              onRedemptionChange={handleRedemptionChange}
+              disabled={isLoading}
+            />
           )}
 
           <SalesOrderTotalsCard
@@ -318,6 +329,8 @@ export function SalesOrderFormPage() {
             onDiscountTypeChange={setDiscountType}
             onDiscountPercentChange={setDiscountPercent}
             onDiscountAmountChange={setDiscountAmount}
+            loyaltyDiscount={loyaltyDiscountAmount}
+            loyaltyPointsUsed={pointsToRedeem}
           />
 
           <SalesOrderNotesCard

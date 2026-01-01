@@ -13,6 +13,7 @@ import { CustomerBikesTab } from '@/components/customers/CustomerBikesTab';
 import { CustomerServiceHistoryTab } from '@/components/customers/CustomerServiceHistoryTab';
 import { CustomerReceivablesTab } from '@/components/customers/CustomerReceivablesTab';
 import { CustomerSalesOrdersTab } from '@/components/customers/CustomerSalesOrdersTab';
+import { CustomerLoyaltyTab } from '@/components/customers/CustomerLoyaltyTab';
 import { CustomerEditSheet } from '@/components/customers/CustomerEditSheet';
 import { AddBikeSheet } from '@/components/customers/AddBikeSheet';
 
@@ -118,6 +119,10 @@ export function CustomerDetailPage() {
               <span className="hidden sm:inline">Thông Tin</span>
               <span className="sm:hidden">Info</span>
             </TabsTrigger>
+            <TabsTrigger value="loyalty" className="whitespace-nowrap">
+              <span className="hidden sm:inline">Điểm Thưởng</span>
+              <span className="sm:hidden">Điểm</span>
+            </TabsTrigger>
             <TabsTrigger value="receivables" className="whitespace-nowrap">
               <span className="hidden sm:inline">Công Nợ</span>
               <span className="sm:hidden">Nợ</span>
@@ -140,6 +145,11 @@ export function CustomerDetailPage() {
         {/* Customer Info Tab */}
         <TabsContent value="info">
           <CustomerInfoTab customer={customer} />
+        </TabsContent>
+
+        {/* Loyalty Tab */}
+        <TabsContent value="loyalty">
+          <CustomerLoyaltyTab customerId={id!} />
         </TabsContent>
 
         {/* Receivables Tab */}

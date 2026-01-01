@@ -192,4 +192,17 @@ export class CreateSalesOrderDto {
   @IsUUID()
   @IsOptional()
   created_by?: string;
+
+  // Loyalty program fields
+  @ApiPropertyOptional({ description: 'Points to redeem for discount' })
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  points_to_redeem?: number;
+
+  @ApiPropertyOptional({ description: 'Loyalty discount amount (calculated from points)' })
+  @IsNumber()
+  @IsOptional()
+  @Min(0)
+  loyalty_discount_amount?: number;
 }

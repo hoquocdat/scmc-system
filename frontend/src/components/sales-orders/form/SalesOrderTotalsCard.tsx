@@ -3,6 +3,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { type DiscountType } from '@/lib/api/sales';
+import { Gift } from 'lucide-react';
 
 interface SalesOrderTotalsCardProps {
   subtotal: number;
@@ -12,6 +13,8 @@ interface SalesOrderTotalsCardProps {
   onDiscountTypeChange: (type: DiscountType) => void;
   onDiscountPercentChange: (percent: number) => void;
   onDiscountAmountChange: (amount: number) => void;
+  loyaltyDiscount?: number;
+  loyaltyPointsUsed?: number;
 }
 
 export function SalesOrderTotalsCard({
@@ -22,11 +25,13 @@ export function SalesOrderTotalsCard({
   onDiscountTypeChange,
   onDiscountPercentChange,
   onDiscountAmountChange,
+  loyaltyDiscount = 0,
+  loyaltyPointsUsed = 0,
 }: SalesOrderTotalsCardProps) {
   const calculatedDiscount = discountType === 'percent'
     ? (subtotal * discountPercent) / 100
     : discountAmount;
-  const total = subtotal - calculatedDiscount;
+  const total = subtotal - calculatedDiscount - loyaltyDiscount;
 
   return (
     <Card className="p-4">
@@ -79,6 +84,16 @@ export function SalesOrderTotalsCard({
           <Label className="text-sm">Giảm giá</Label>
           <div className="font-medium">-{calculatedDiscount.toLocaleString('vi-VN')}</div>
         </div>
+
+        {loyaltyDiscount > 0 && (
+          <div className="flex justify-between items-center text-green-600">
+            <Label className="text-sm flex items-center gap-1">
+              <Gift className="h-3 w-3" />
+              Điểm thưởng ({loyaltyPointsUsed.toLocaleString()} điểm)
+            </Label>
+            <div className="font-medium">-{loyaltyDiscount.toLocaleString('vi-VN')}</div>
+          </div>
+        )}
 
         <div className="flex justify-between items-center pt-3 border-t">
           <Label className="font-semibold">Khách cần trả</Label>

@@ -97,7 +97,7 @@ export function PaymentDialog({
   const amount = watch('amount');
   const amountTendered = watch('amount_tendered');
   const changeGiven = selectedMethod === 'cash' ? Math.max(0, amountTendered - amount) : 0;
-  const isTransfer = selectedMethod === 'transfer' || selectedMethod === 'bank_transfer';
+  const isTransfer = selectedMethod === 'bank_transfer';
 
   // Generate VietQR URL when transfer is selected
   const vietQRUrl = useMemo(() => {

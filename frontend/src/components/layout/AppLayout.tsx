@@ -53,6 +53,7 @@ import {
   Shield,
   FileSpreadsheet,
   ShoppingBag,
+  Gift,
 } from 'lucide-react';
 import { StoreSelector } from './StoreSelector';
 
@@ -286,6 +287,12 @@ export function AppLayout({ children }: AppLayoutProps) {
       icon: Settings,
       roles: ['superadmin', 'manager'],
       children: [
+        {
+          name: 'Khách Hàng Thân Thiết',
+          href: '/settings/loyalty',
+          icon: Gift,
+          roles: ['superadmin', 'manager'],
+        },
         {
           name: 'Vai Trò',
           href: '/settings/roles',

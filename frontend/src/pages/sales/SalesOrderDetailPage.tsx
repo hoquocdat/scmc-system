@@ -12,6 +12,8 @@ import {
   Truck,
   Trash2,
   Plus,
+  Gift,
+  Star,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -46,6 +48,7 @@ import {
 import { PaymentDialog } from '@/components/sales-orders/PaymentDialog';
 import { InvoicePreviewModal } from '@/components/sales-orders/InvoicePreviewModal';
 import { ProductSearchInput } from '@/components/inventory/purchase-orders/ProductSearchInput';
+import { CustomerLoyaltyCard } from '@/components/loyalty/CustomerLoyaltyCard';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -280,6 +283,12 @@ export function SalesOrderDetailPage() {
                 <p className="font-medium">{order.customer_email}</p>
               </div>
             )}
+            {/* Loyalty Status */}
+            {order.customer_id && (
+              <div className="pt-2 border-t mt-2">
+                <CustomerLoyaltyCard customerId={order.customer_id} compact />
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -461,6 +470,20 @@ export function SalesOrderDetailPage() {
               </span>
             </div>
           )}
+          {Number(order.loyalty_discount_amount) > 0 && (
+            <div className="flex justify-between">
+              <span className="text-muted-foreground flex items-center gap-1">
+                <Gift className="h-3 w-3" />
+                Giảm từ điểm thưởng
+                {order.loyalty_points_redeemed && (
+                  <span className="ml-1">({order.loyalty_points_redeemed.toLocaleString()} điểm)</span>
+                )}
+              </span>
+              <span className="font-medium text-red-500">
+                -{formatCurrency(order.loyalty_discount_amount)}
+              </span>
+            </div>
+          )}
           {Number(order.tax_amount) > 0 && (
             <div className="flex justify-between">
               <span className="text-muted-foreground">Thuế</span>
@@ -489,6 +512,18 @@ export function SalesOrderDetailPage() {
               {formatCurrency(remainingAmount)}
             </span>
           </div>
+          {/* Loyalty Points Earned */}
+          {order.loyalty_points_earned && order.loyalty_points_earned > 0 && (
+            <div className="flex justify-between border-t pt-2 mt-2">
+              <span className="text-muted-foreground flex items-center gap-1">
+                <Star className="h-3 w-3 text-yellow-500" />
+                Điểm thưởng tích lũy
+              </span>
+              <span className="font-medium text-green-600">
+                +{order.loyalty_points_earned.toLocaleString()} điểm
+              </span>
+            </div>
+          )}
         </CardContent>
       </Card>
 

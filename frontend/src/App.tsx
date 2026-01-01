@@ -36,6 +36,7 @@ import { POSPage } from './pages/pos/POSPage';
 import { RolesPage } from './pages/settings/RolesPage';
 import { RoleDetailPage } from './pages/settings/RoleDetailPage';
 import { PermissionAuditPage } from './pages/settings/PermissionAuditPage';
+import { LoyaltySettingsPage } from './pages/settings/LoyaltySettingsPage';
 import { EmployeeEditPage } from './pages/EmployeeEditPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
@@ -448,6 +449,16 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <PermissionAuditPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings/loyalty"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <LoyaltySettingsPage />
               </AppLayout>
             </ProtectedRoute>
           }

@@ -39,6 +39,10 @@ export interface SalesOrder {
   processed_by?: string;
   created_at: string;
   updated_at: string;
+  // Loyalty fields
+  loyalty_points_redeemed?: number;
+  loyalty_discount_amount?: number;
+  loyalty_points_earned?: number;
   customers?: {
     id: string;
     full_name: string;
@@ -168,6 +172,9 @@ export interface CreateSalesOrderDto {
   shipping_city?: string;
   notes?: string;
   created_by?: string;
+  // Loyalty program fields
+  points_to_redeem?: number;
+  loyalty_discount_amount?: number;
 }
 
 export interface CreatePaymentDto {

@@ -8,7 +8,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { type SalesChannel, SALES_CHANNEL_LABELS } from '@/lib/api/sales';
 
 interface Customer {
   id: string;
@@ -22,12 +21,6 @@ interface CustomerSelectCardProps {
   onCustomerChange: (customerId: string) => void;
   customerName: string;
   customerPhone: string;
-  customerEmail: string;
-  onCustomerNameChange: (name: string) => void;
-  onCustomerPhoneChange: (phone: string) => void;
-  onCustomerEmailChange: (email: string) => void;
-  selectedChannel: SalesChannel;
-  onChannelChange: (channel: SalesChannel) => void;
   isLoading?: boolean;
 }
 
@@ -37,44 +30,21 @@ export function CustomerSelectCard({
   onCustomerChange,
   customerName,
   customerPhone,
-  customerEmail,
-  onCustomerNameChange,
-  onCustomerPhoneChange,
-  onCustomerEmailChange,
-  selectedChannel,
-  onChannelChange,
   isLoading,
 }: CustomerSelectCardProps) {
   return (
     <Card className="p-4">
       <div className="space-y-4">
         <div className="space-y-2">
-          <Label>Kênh bán hàng *</Label>
-          <Select value={selectedChannel} onValueChange={(v) => onChannelChange(v as SalesChannel)}>
-            <SelectTrigger>
-              <SelectValue placeholder="Chọn kênh bán hàng" />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(SALES_CHANNEL_LABELS).map(([value, label]) => (
-                <SelectItem key={value} value={value}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-2">
-          <Label>Khách hàng</Label>
+          <Label>Khách hàng *</Label>
           <Select
-            value={selectedCustomerId || 'walk-in'}
-            onValueChange={(value) => onCustomerChange(value === 'walk-in' ? '' : value)}
+            value={selectedCustomerId || ''}
+            onValueChange={onCustomerChange}
           >
             <SelectTrigger>
               <SelectValue placeholder="Chọn khách hàng" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="walk-in">Khách vãng lai</SelectItem>
               {isLoading ? (
                 <SelectItem value="loading" disabled>Đang tải...</SelectItem>
               ) : customers.length > 0 ? (
@@ -88,14 +58,18 @@ export function CustomerSelectCard({
               )}
             </SelectContent>
           </Select>
+          <p className="text-xs text-muted-foreground">
+            Vui lòng chọn khách hàng hoặc tạo mới nếu chưa có
+          </p>
         </div>
 
         <div className="space-y-2">
-          <Label>Tên khách hàng *</Label>
+          <Label>Tên khách hàng</Label>
           <Input
             value={customerName}
-            onChange={(e) => onCustomerNameChange(e.target.value)}
-            placeholder="Nhập tên khách hàng"
+            readOnly
+            disabled
+            className="bg-muted"
           />
         </div>
 
@@ -103,18 +77,9 @@ export function CustomerSelectCard({
           <Label>Số điện thoại</Label>
           <Input
             value={customerPhone}
-            onChange={(e) => onCustomerPhoneChange(e.target.value)}
-            placeholder="Nhập số điện thoại"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Email</Label>
-          <Input
-            type="email"
-            value={customerEmail}
-            onChange={(e) => onCustomerEmailChange(e.target.value)}
-            placeholder="Nhập email"
+            readOnly
+            disabled
+            className="bg-muted"
           />
         </div>
       </div>
