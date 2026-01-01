@@ -4,7 +4,7 @@ export type OrderStatus = 'draft' | 'pending' | 'confirmed' | 'processing' | 're
 export type PaymentStatus = 'unpaid' | 'partial' | 'paid' | 'refunded';
 export type SalesChannel = 'retail_store' | 'workshop' | 'online' | 'phone';
 export type DiscountType = 'fixed' | 'percent';
-export type PaymentMethod = 'cash' | 'card' | 'transfer' | 'ewallet_momo' | 'ewallet_zalopay' | 'ewallet_vnpay' | 'bank_transfer';
+export type PaymentMethod = 'cash' | 'card' | 'bank_transfer' | 'ewallet_momo' | 'ewallet_zalopay' | 'ewallet_vnpay';
 
 export interface SalesOrder {
   id: string;
@@ -182,6 +182,16 @@ export interface CreatePaymentDto {
   received_by?: string;
 }
 
+export interface AddOrderItemDto {
+  product_id: string;
+  product_variant_id?: string;
+  quantity: number;
+  unit_price: number;
+  discount_amount?: number;
+  tax_amount?: number;
+  notes?: string;
+}
+
 export interface SalesStatistics {
   totalOrders: number;
   completedOrders: number;
@@ -253,6 +263,17 @@ export const salesApi = {
     return response.data;
   },
 
+  // Add item to order (for unpaid orders)
+  addItem: async (orderId: string, data: AddOrderItemDto): Promise<SalesOrderItem> => {
+    const response = await apiClient.post(`/sales/${orderId}/items`, data);
+    return response.data;
+  },
+
+  // Remove item from order (for unpaid orders)
+  removeItem: async (orderId: string, itemId: string): Promise<void> => {
+    await apiClient.delete(`/sales/${orderId}/items/${itemId}`);
+  },
+
   // Get statistics
   getStatistics: async (params?: {
     from_date?: string;
@@ -268,6 +289,7 @@ export const salesApi = {
   getReportByEmployee: async (params?: {
     from_date?: string;
     to_date?: string;
+    employee_id?: string;
   }): Promise<EmployeeReportItem[]> => {
     const response = await apiClient.get('/sales/reports/by-employee', { params });
     return response.data;
@@ -277,8 +299,15 @@ export const salesApi = {
   getReportByChannel: async (params?: {
     from_date?: string;
     to_date?: string;
+    employee_id?: string;
   }): Promise<ChannelReportItem[]> => {
     const response = await apiClient.get('/sales/reports/by-channel', { params });
+    return response.data;
+  },
+
+  // Get employees who have created sales orders (for filters)
+  getSalesEmployees: async (): Promise<{ id: string; name: string }[]> => {
+    const response = await apiClient.get('/sales/reports/employees');
     return response.data;
   },
 };
@@ -311,9 +340,8 @@ export const SALES_CHANNEL_LABELS: Record<SalesChannel, string> = {
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   cash: 'Tiền mặt',
   card: 'Thẻ',
-  transfer: 'Chuyển khoản',
+  bank_transfer: 'Chuyển khoản',
   ewallet_momo: 'MoMo',
   ewallet_zalopay: 'ZaloPay',
   ewallet_vnpay: 'VNPay',
-  bank_transfer: 'Chuyển khoản ngân hàng',
 };

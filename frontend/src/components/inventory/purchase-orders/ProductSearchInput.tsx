@@ -20,12 +20,14 @@ interface ProductSearchInputProps {
   onProductSelect: (product: Product, variant?: ProductVariant) => void;
   placeholder?: string;
   debounceMs?: number;
+  disabled?: boolean;
 }
 
 export function ProductSearchInput({
   onProductSelect,
   placeholder = 'Tìm theo mã hàng (F3)',
   debounceMs = 2000,
+  disabled = false,
 }: ProductSearchInputProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedQuery, setDebouncedQuery] = useState('');
@@ -87,6 +89,7 @@ export function ProductSearchInput({
         }}
         onFocus={() => setShowSearchResults(true)}
         className="pl-9"
+        disabled={disabled}
       />
 
       {/* Search Results Dropdown */}

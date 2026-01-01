@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Loader2, CreditCard } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import {
@@ -9,7 +9,9 @@ import {
   type CreateSalesOrderDto,
   type SalesChannel,
   type DiscountType,
+  type SalesOrder,
 } from '@/lib/api/sales';
+import { PaymentDialog } from '@/components/sales-orders/PaymentDialog';
 import { customersApi } from '@/lib/api/customers';
 import { ProductSearchInput } from '@/components/inventory/purchase-orders/ProductSearchInput';
 import {
@@ -37,6 +39,9 @@ export function SalesOrderFormPage() {
   const [discountType, setDiscountType] = useState<DiscountType>('fixed');
   const [discountPercent, setDiscountPercent] = useState(0);
   const [discountAmount, setDiscountAmount] = useState(0);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [createdOrder, setCreatedOrder] = useState<SalesOrder | null>(null);
+  const [isCreatingWithPayment, setIsCreatingWithPayment] = useState(false);
 
   // Fetch customers
   const { data: customersData, isLoading: isLoadingCustomers } = useQuery({
@@ -68,6 +73,27 @@ export function SalesOrderFormPage() {
     },
     onError: (error: any) => {
       toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi tạo đơn hàng');
+    },
+  });
+
+  // Create and confirm mutation for payment flow
+  const createWithPaymentMutation = useMutation({
+    mutationFn: async (dto: CreateSalesOrderDto) => {
+      // Step 1: Create the order
+      const order = await salesApi.create(dto);
+      // Step 2: Confirm the order (triggers inventory deduction and receivables)
+      const confirmedOrder = await salesApi.confirm(order.id);
+      return confirmedOrder;
+    },
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ['sales-orders'] });
+      setCreatedOrder(response);
+      setIsPaymentDialogOpen(true);
+      setIsCreatingWithPayment(false);
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi tạo đơn hàng');
+      setIsCreatingWithPayment(false);
     },
   });
 
@@ -136,24 +162,24 @@ export function SalesOrderFormPage() {
     ? (subtotal * discountPercent) / 100
     : discountAmount;
 
-  // Submit form
-  const handleSubmit = () => {
+  // Build DTO helper
+  const buildCreateDto = (): CreateSalesOrderDto | null => {
     if (!selectedStoreId) {
       toast.error('Vui lòng chọn cửa hàng làm việc trước khi tạo đơn hàng');
-      return;
+      return null;
     }
 
     if (!customerName.trim()) {
       toast.error('Vui lòng nhập tên khách hàng');
-      return;
+      return null;
     }
 
     if (items.length === 0) {
       toast.error('Vui lòng thêm ít nhất một sản phẩm');
-      return;
+      return null;
     }
 
-    const createDto: CreateSalesOrderDto = {
+    return {
       customer_id: selectedCustomerId || undefined,
       customer_name: customerName,
       customer_phone: customerPhone || undefined,
@@ -172,11 +198,41 @@ export function SalesOrderFormPage() {
         notes: item.notes,
       })),
     };
+  };
 
+  // Submit form (save as draft)
+  const handleSubmit = () => {
+    const createDto = buildCreateDto();
+    if (!createDto) return;
     createMutation.mutate(createDto);
   };
 
-  const isLoading = createMutation.isPending;
+  // Submit form with payment
+  const handleSubmitWithPayment = () => {
+    const createDto = buildCreateDto();
+    if (!createDto) return;
+    setIsCreatingWithPayment(true);
+    createWithPaymentMutation.mutate(createDto);
+  };
+
+  // Handle payment success
+  const handlePaymentSuccess = () => {
+    if (createdOrder) {
+      toast.success('Đã tạo đơn hàng và thanh toán thành công');
+      navigate(`/sales/orders/${createdOrder.id}`);
+    }
+  };
+
+  // Handle payment dialog close
+  const handlePaymentDialogClose = (open: boolean) => {
+    setIsPaymentDialogOpen(open);
+    if (!open && createdOrder) {
+      // If dialog closed without completing payment, still navigate to order
+      navigate(`/sales/orders/${createdOrder.id}`);
+    }
+  };
+
+  const isLoading = createMutation.isPending || isCreatingWithPayment;
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
@@ -194,9 +250,24 @@ export function SalesOrderFormPage() {
               Tạo đơn hàng mới cho khách hàng
             </p>
           </div>
-          <Button onClick={handleSubmit} disabled={isLoading}>
-            {isLoading ? 'Đang lưu...' : 'Lưu đơn hàng'}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleSubmit} disabled={isLoading}>
+              {createMutation.isPending ? 'Đang lưu...' : 'Lưu nháp'}
+            </Button>
+            <Button onClick={handleSubmitWithPayment} disabled={isLoading}>
+              {isCreatingWithPayment ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Đang xử lý...
+                </>
+              ) : (
+                <>
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Thanh Toán
+                </>
+              )}
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -255,6 +326,14 @@ export function SalesOrderFormPage() {
           />
         </div>
       </div>
+
+      {/* Payment Dialog */}
+      <PaymentDialog
+        open={isPaymentDialogOpen}
+        onOpenChange={handlePaymentDialogClose}
+        order={createdOrder}
+        onSuccess={handlePaymentSuccess}
+      />
     </div>
   );
 }

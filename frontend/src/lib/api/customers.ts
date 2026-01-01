@@ -111,6 +111,55 @@ export interface CustomerOrdersResponse {
   };
 }
 
+export type ReceivablePaymentMethod =
+  | 'cash'
+  | 'card'
+  | 'bank_transfer'
+  | 'ewallet_momo'
+  | 'ewallet_zalopay'
+  | 'ewallet_vnpay';
+
+export interface RecordReceivablePaymentDto {
+  customer_id: string;
+  sales_order_id?: string; // Optional - if not provided, FIFO is used
+  amount: number;
+  payment_method: ReceivablePaymentMethod;
+  transaction_id?: string;
+  notes?: string;
+}
+
+export interface RecordReceivablePaymentResponse {
+  success: boolean;
+  message: string;
+  payment_details: {
+    order_number: string;
+    amount_applied: number;
+  }[];
+  updated_summary: {
+    total_original: number;
+    total_paid: number;
+    total_balance: number;
+  };
+}
+
+export interface ReceivablePaymentHistoryItem {
+  id: string;
+  payment_method: string;
+  amount: number;
+  transaction_id?: string;
+  notes?: string;
+  created_at: string;
+  sales_orders: {
+    id: string;
+    order_number: string;
+    total_amount: number;
+  };
+  user_profiles?: {
+    id: string;
+    full_name: string;
+  };
+}
+
 export const customersApi = {
   // Get all customers with filtering
   getAll: async (params?: CustomerQueryParams): Promise<CustomersResponse> => {
@@ -155,4 +204,34 @@ export const customersApi = {
     const response = await apiClient.get(`/customers/${id}/orders`, { params });
     return response.data;
   },
+
+  // Record a payment against customer receivables
+  recordReceivablePayment: async (
+    id: string,
+    data: Omit<RecordReceivablePaymentDto, 'customer_id'>
+  ): Promise<RecordReceivablePaymentResponse> => {
+    const response = await apiClient.post(`/customers/${id}/receivables/payment`, {
+      ...data,
+      customer_id: id,
+    });
+    return response.data;
+  },
+
+  // Get payment history for customer receivables
+  getReceivablePaymentHistory: async (
+    id: string
+  ): Promise<ReceivablePaymentHistoryItem[]> => {
+    const response = await apiClient.get(`/customers/${id}/receivables/payments`);
+    return response.data;
+  },
+};
+
+// Payment method labels for UI
+export const RECEIVABLE_PAYMENT_METHOD_LABELS: Record<ReceivablePaymentMethod, string> = {
+  cash: 'Tiền mặt',
+  card: 'Thẻ',
+  bank_transfer: 'Chuyển khoản',
+  ewallet_momo: 'MoMo',
+  ewallet_zalopay: 'ZaloPay',
+  ewallet_vnpay: 'VNPay',
 };

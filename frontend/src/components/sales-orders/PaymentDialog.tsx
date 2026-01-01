@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useForm } from 'react-hook-form';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   salesApi,
   type SalesOrder,
@@ -29,6 +30,24 @@ import {
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 import { formatCurrency } from '@/lib/utils';
+
+// VietQR Bank configuration - can be moved to env/settings later
+const VIETQR_CONFIG = {
+  bankId: '970422', // MB Bank code
+  accountNo: '0704195025899', // Bank account number
+  accountName: 'SAIGON CLASSIC MOTORCYCLES', // Account holder name
+  template: 'compact2', // QR template style
+};
+
+// Generate VietQR URL
+// VietQR API: https://img.vietqr.io/image/{bankId}-{accountNo}-{template}.png?amount={amount}&addInfo={description}&accountName={name}
+function generateVietQRUrl(amount: number, orderNumber: string): string {
+  const { bankId, accountNo, accountName, template } = VIETQR_CONFIG;
+  const description = encodeURIComponent(`TT DH ${orderNumber}`);
+  const encodedName = encodeURIComponent(accountName);
+
+  return `https://img.vietqr.io/image/${bankId}-${accountNo}-${template}.png?amount=${amount}&addInfo=${description}&accountName=${encodedName}`;
+}
 
 interface PaymentDialogProps {
   open: boolean;
@@ -78,6 +97,13 @@ export function PaymentDialog({
   const amount = watch('amount');
   const amountTendered = watch('amount_tendered');
   const changeGiven = selectedMethod === 'cash' ? Math.max(0, amountTendered - amount) : 0;
+  const isTransfer = selectedMethod === 'transfer' || selectedMethod === 'bank_transfer';
+
+  // Generate VietQR URL when transfer is selected
+  const vietQRUrl = useMemo(() => {
+    if (!order || !isTransfer) return null;
+    return generateVietQRUrl(amount || remainingAmount, order.order_number);
+  }, [order, isTransfer, amount, remainingAmount]);
 
   // Reset form when order changes
   useState(() => {
@@ -148,11 +174,12 @@ export function PaymentDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className={isTransfer ? 'sm:max-w-3xl' : 'sm:max-w-md'}>
         <DialogHeader>
           <DialogTitle>Thanh toán đơn hàng {order.order_number}</DialogTitle>
         </DialogHeader>
 
+        <div className={isTransfer ? 'grid grid-cols-1 sm:grid-cols-2 gap-6' : ''}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Order Summary */}
           <div className="rounded-md bg-muted p-4 space-y-2">
@@ -272,6 +299,30 @@ export function PaymentDialog({
             />
           </div>
         </form>
+
+        {/* VietQR Code Section - shown when transfer is selected */}
+        {isTransfer && vietQRUrl && (
+          <Card className="border-blue-200 bg-blue-50/50">
+            <CardContent className="p-4 flex flex-col items-center">
+              <h3 className="font-semibold text-blue-800 mb-3">Quét mã QR để thanh toán</h3>
+              <div className="bg-white p-2 rounded-lg shadow-sm">
+                <img
+                  src={vietQRUrl}
+                  alt="VietQR Code"
+                  className="w-48 h-48 object-contain"
+                />
+              </div>
+              <div className="mt-3 text-center space-y-1">
+                <p className="text-sm text-muted-foreground">Ngân hàng: <span className="font-medium text-foreground">MB Bank</span></p>
+                <p className="text-sm text-muted-foreground">STK: <span className="font-medium text-foreground">{VIETQR_CONFIG.accountNo}</span></p>
+                <p className="text-sm text-muted-foreground">Chủ TK: <span className="font-medium text-foreground">{VIETQR_CONFIG.accountName}</span></p>
+                <p className="text-sm text-muted-foreground">Số tiền: <span className="font-bold text-blue-600">{formatCurrency(amount || remainingAmount)}</span></p>
+                <p className="text-xs text-muted-foreground mt-2">Nội dung: TT DH {order.order_number}</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+        </div>
 
         <DialogFooter>
           <Button type="button" variant="outline" onClick={handleClose}>

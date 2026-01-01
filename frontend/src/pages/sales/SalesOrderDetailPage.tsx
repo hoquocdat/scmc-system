@@ -10,6 +10,8 @@ import {
   Clock,
   Package,
   Truck,
+  Trash2,
+  Plus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -35,6 +37,7 @@ import {
 import {
   salesApi,
   type OrderStatus,
+  type AddOrderItemDto,
   ORDER_STATUS_LABELS,
   PAYMENT_STATUS_LABELS,
   SALES_CHANNEL_LABELS,
@@ -42,6 +45,7 @@ import {
 } from '@/lib/api/sales';
 import { PaymentDialog } from '@/components/sales-orders/PaymentDialog';
 import { InvoicePreviewModal } from '@/components/sales-orders/InvoicePreviewModal';
+import { ProductSearchInput } from '@/components/inventory/purchase-orders/ProductSearchInput';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -112,6 +116,32 @@ export function SalesOrderDetailPage() {
     },
   });
 
+  // Add item mutation
+  const addItemMutation = useMutation({
+    mutationFn: (data: AddOrderItemDto) => salesApi.addItem(id!, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales-order', id] });
+      queryClient.invalidateQueries({ queryKey: ['sales-orders'] });
+      toast.success('Đã thêm sản phẩm vào đơn hàng');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi thêm sản phẩm');
+    },
+  });
+
+  // Remove item mutation
+  const removeItemMutation = useMutation({
+    mutationFn: (itemId: string) => salesApi.removeItem(id!, itemId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['sales-order', id] });
+      queryClient.invalidateQueries({ queryKey: ['sales-orders'] });
+      toast.success('Đã xóa sản phẩm khỏi đơn hàng');
+    },
+    onError: (error: any) => {
+      toast.error(error.response?.data?.message || 'Có lỗi xảy ra khi xóa sản phẩm');
+    },
+  });
+
   if (isLoading) {
     return (
       <div className="flex h-96 items-center justify-center">
@@ -141,6 +171,29 @@ export function SalesOrderDetailPage() {
     order.payment_status !== 'paid';
   const canCancel = ['draft', 'confirmed', 'processing'].includes(order.status);
   const remainingAmount = Number(order.total_amount) - Number(order.paid_amount || 0);
+
+  // Can modify order (add/remove items) only if unpaid/partial and in modifiable status
+  const canModifyItems =
+    ['draft', 'confirmed', 'processing'].includes(order.status) &&
+    order.payment_status !== 'paid';
+
+  // Handler for adding a product
+  const handleAddProduct = (product: any, variant?: any) => {
+    const itemData: AddOrderItemDto = {
+      product_id: product.id,
+      product_variant_id: variant?.id,
+      quantity: 1,
+      unit_price: Number(product.sale_price || product.retail_price || 0),
+    };
+    addItemMutation.mutate(itemData);
+  };
+
+  // Handler for removing an item
+  const handleRemoveItem = (itemId: string) => {
+    if (window.confirm('Bạn có chắc chắn muốn xóa sản phẩm này?')) {
+      removeItemMutation.mutate(itemId);
+    }
+  };
 
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-6">
@@ -293,10 +346,27 @@ export function SalesOrderDetailPage() {
 
       {/* Items Table */}
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between">
           <CardTitle>Sản phẩm</CardTitle>
+          {canModifyItems && (
+            <Badge variant="outline" className="text-blue-600 border-blue-600">
+              <Plus className="mr-1 h-3 w-3" />
+              Có thể chỉnh sửa
+            </Badge>
+          )}
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {/* Product Search - only show when order can be modified */}
+          {canModifyItems && (
+            <div className="border-b pb-4">
+              <ProductSearchInput
+                onProductSelect={handleAddProduct}
+                placeholder="Tìm và thêm sản phẩm..."
+                disabled={addItemMutation.isPending}
+              />
+            </div>
+          )}
+
           <Table>
             <TableHeader>
               <TableRow>
@@ -306,6 +376,7 @@ export function SalesOrderDetailPage() {
                 <TableHead className="text-right">Đơn giá</TableHead>
                 <TableHead className="text-right">Giảm giá</TableHead>
                 <TableHead className="text-right">Thành tiền</TableHead>
+                {canModifyItems && <TableHead className="w-10"></TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -336,10 +407,28 @@ export function SalesOrderDetailPage() {
                   <TableCell className="text-right font-medium">
                     {formatCurrency(item.total_amount)}
                   </TableCell>
+                  {canModifyItems && (
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => handleRemoveItem(item.id)}
+                        disabled={removeItemMutation.isPending || (order.sales_order_items?.length || 0) <= 1}
+                        title={
+                          (order.sales_order_items?.length || 0) <= 1
+                            ? 'Không thể xóa sản phẩm cuối cùng'
+                            : 'Xóa sản phẩm'
+                        }
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  )}
                 </TableRow>
               )) || (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">
+                  <TableCell colSpan={canModifyItems ? 7 : 6} className="text-center">
                     Không có sản phẩm
                   </TableCell>
                 </TableRow>

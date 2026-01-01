@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -10,6 +10,8 @@ import {
   DollarSign,
   ShoppingCart,
   Percent,
+  Filter,
+  X,
 } from 'lucide-react';
 import {
   salesApi,
@@ -20,6 +22,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   Tabs,
   TabsContent,
@@ -34,11 +43,20 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetFooter,
+} from '@/components/ui/sheet';
+import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
 import { Progress } from '@/components/ui/progress';
 
 export function SalesReportsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [filterSheetOpen, setFilterSheetOpen] = useState(false);
 
   // Get date range from URL or use defaults (current month)
   const today = new Date();
@@ -47,12 +65,23 @@ export function SalesReportsPage() {
   const filters = useMemo(() => ({
     from_date: searchParams.get('from_date') || firstDayOfMonth.toISOString().split('T')[0],
     to_date: searchParams.get('to_date') || today.toISOString().split('T')[0],
+    employee_id: searchParams.get('employee_id') || undefined,
   }), [searchParams]);
+
+  // Fetch employees for filter dropdown (using sales endpoint)
+  const { data: employees } = useQuery({
+    queryKey: ['sales-employees'],
+    queryFn: () => salesApi.getSalesEmployees(),
+  });
 
   // Fetch statistics
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['sales-statistics', filters],
-    queryFn: () => salesApi.getStatistics(filters),
+    queryFn: () => salesApi.getStatistics({
+      from_date: filters.from_date,
+      to_date: filters.to_date,
+      created_by: filters.employee_id,
+    }),
   });
 
   // Fetch employee report
@@ -78,10 +107,35 @@ export function SalesReportsPage() {
     return Math.max(...channelReport.map(c => c.total_revenue));
   }, [channelReport]);
 
+  // Count active filters
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (filters.employee_id) count++;
+    return count;
+  }, [filters]);
+
   // Handle date change
   const handleDateChange = (key: 'from_date' | 'to_date', value: string) => {
     const newParams = new URLSearchParams(searchParams);
     newParams.set(key, value);
+    setSearchParams(newParams);
+  };
+
+  // Handle employee filter change
+  const handleEmployeeChange = (value: string) => {
+    const newParams = new URLSearchParams(searchParams);
+    if (value === 'all') {
+      newParams.delete('employee_id');
+    } else {
+      newParams.set('employee_id', value);
+    }
+    setSearchParams(newParams);
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('employee_id');
     setSearchParams(newParams);
   };
 
@@ -112,6 +166,13 @@ export function SalesReportsPage() {
     setSearchParams(newParams);
   };
 
+  // Get selected employee name
+  const selectedEmployeeName = useMemo(() => {
+    if (!filters.employee_id || !employees) return null;
+    const emp = employees.find(e => e.id === filters.employee_id);
+    return emp?.name || null;
+  }, [filters.employee_id, employees]);
+
   return (
     <div className="p-4 sm:p-6 md:p-8">
       {/* Header */}
@@ -127,102 +188,102 @@ export function SalesReportsPage() {
         </div>
       </div>
 
-      {/* Date Filter */}
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2">
-            <Calendar className="h-4 w-4" />
-            Khoảng thời gian
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex items-center gap-2">
-              <Label htmlFor="from_date">Từ ngày</Label>
-              <Input
-                id="from_date"
-                type="date"
-                value={filters.from_date}
-                onChange={(e) => handleDateChange('from_date', e.target.value)}
-                className="w-40"
-              />
-            </div>
-            <div className="flex items-center gap-2">
-              <Label htmlFor="to_date">Đến ngày</Label>
-              <Input
-                id="to_date"
-                type="date"
-                value={filters.to_date}
-                onChange={(e) => handleDateChange('to_date', e.target.value)}
-                className="w-40"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => setDatePreset('today')}>
-                Hôm nay
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setDatePreset('week')}>
-                7 ngày
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setDatePreset('month')}>
-                Tháng này
-              </Button>
-              <Button variant="outline" size="sm" onClick={() => setDatePreset('quarter')}>
-                Quý này
-              </Button>
+      {/* Toolbar */}
+      <div className="flex flex-wrap items-center gap-3 mb-4">
+        {/* Date range display */}
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Calendar className="h-4 w-4" />
+          <span>{filters.from_date} - {filters.to_date}</span>
+        </div>
+
+        <div className="flex-1" />
+
+        {/* Filter button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setFilterSheetOpen(true)}
+          className="gap-2"
+        >
+          <Filter className="h-4 w-4" />
+          Lọc
+          {activeFilterCount > 0 && (
+            <Badge variant="secondary" className="ml-1 h-5 w-5 p-0 flex items-center justify-center">
+              {activeFilterCount}
+            </Badge>
+          )}
+        </Button>
+      </div>
+
+      {/* Active filters */}
+      {activeFilterCount > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <span className="text-sm text-muted-foreground">Đang lọc:</span>
+          {selectedEmployeeName && (
+            <Badge variant="secondary" className="gap-1">
+              Nhân viên: {selectedEmployeeName}
+              <button
+                onClick={() => handleEmployeeChange('all')}
+                className="ml-1 hover:text-destructive"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </Badge>
+          )}
+          <Button variant="ghost" size="sm" onClick={clearFilters} className="h-6 px-2 text-xs">
+            Xóa tất cả
+          </Button>
+        </div>
+      )}
+
+      {/* Summary Stats - Compact */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+        <Card className="p-3">
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="h-4 w-4 text-muted-foreground shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">Tổng đơn</p>
+              <p className="text-lg font-semibold">
+                {statsLoading ? '...' : stats?.totalOrders || 0}
+              </p>
             </div>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Summary Stats */}
-      <div className="grid gap-4 md:grid-cols-4 mb-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tổng đơn hàng</CardTitle>
-            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {statsLoading ? '...' : stats?.totalOrders || 0}
-            </div>
-          </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Đơn hoàn thành</CardTitle>
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-green-600">
-              {statsLoading ? '...' : stats?.completedOrders || 0}
+        <Card className="p-3">
+          <div className="flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-green-600 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">Hoàn thành</p>
+              <p className="text-lg font-semibold text-green-600">
+                {statsLoading ? '...' : stats?.completedOrders || 0}
+              </p>
             </div>
-          </CardContent>
+          </div>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tổng doanh thu</CardTitle>
-            <DollarSign className="h-4 w-4 text-blue-600" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-blue-600">
-              {statsLoading ? '...' : formatCurrency(stats?.totalRevenue || 0)}
+        <Card className="p-3">
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-4 w-4 text-blue-600 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">Doanh thu</p>
+              <p className="text-lg font-semibold text-blue-600 truncate">
+                {statsLoading ? '...' : formatCurrency(stats?.totalRevenue || 0)}
+              </p>
             </div>
-          </CardContent>
+          </div>
         </Card>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Tổng chiết khấu</CardTitle>
-            <Percent className="h-4 w-4 text-orange-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-orange-500">
-              {statsLoading ? '...' : formatCurrency(stats?.totalDiscounts || 0)}
+        <Card className="p-3">
+          <div className="flex items-center gap-2">
+            <Percent className="h-4 w-4 text-orange-500 shrink-0" />
+            <div className="min-w-0">
+              <p className="text-xs text-muted-foreground truncate">Chiết khấu</p>
+              <p className="text-lg font-semibold text-orange-500 truncate">
+                {statsLoading ? '...' : formatCurrency(stats?.totalDiscounts || 0)}
+              </p>
             </div>
-          </CardContent>
+          </div>
         </Card>
       </div>
 
@@ -355,6 +416,85 @@ export function SalesReportsPage() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Filter Sheet */}
+      <Sheet open={filterSheetOpen} onOpenChange={setFilterSheetOpen}>
+        <SheetContent className="overflow-y-auto sm:max-w-lg">
+          <SheetHeader className="px-6">
+            <SheetTitle>Bộ lọc báo cáo</SheetTitle>
+          </SheetHeader>
+          <div className="px-6 py-6 space-y-6">
+            {/* Date range */}
+            <div className="space-y-3">
+              <Label>Khoảng thời gian</Label>
+              {/* Date presets */}
+              <div className="flex flex-wrap gap-2">
+                <Button variant="outline" size="sm" onClick={() => setDatePreset('today')}>
+                  Hôm nay
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setDatePreset('week')}>
+                  7 ngày
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setDatePreset('month')}>
+                  Tháng này
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => setDatePreset('quarter')}>
+                  Quý này
+                </Button>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label htmlFor="from_date" className="text-xs text-muted-foreground">Từ ngày</Label>
+                  <Input
+                    id="from_date"
+                    type="date"
+                    value={filters.from_date}
+                    onChange={(e) => handleDateChange('from_date', e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="to_date" className="text-xs text-muted-foreground">Đến ngày</Label>
+                  <Input
+                    id="to_date"
+                    type="date"
+                    value={filters.to_date}
+                    onChange={(e) => handleDateChange('to_date', e.target.value)}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Employee filter */}
+            <div className="space-y-2">
+              <Label>Nhân viên</Label>
+              <Select
+                value={filters.employee_id || 'all'}
+                onValueChange={handleEmployeeChange}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Tất cả nhân viên" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả nhân viên</SelectItem>
+                  {employees?.map((emp) => (
+                    <SelectItem key={emp.id} value={emp.id}>
+                      {emp.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <SheetFooter className="px-6 pb-6">
+            <Button variant="outline" onClick={clearFilters}>
+              Xóa bộ lọc
+            </Button>
+            <Button onClick={() => setFilterSheetOpen(false)}>
+              Áp dụng
+            </Button>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }

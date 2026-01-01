@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { AlertCircle, CheckCircle, ExternalLink } from 'lucide-react';
+import { AlertCircle, CheckCircle, ExternalLink, CreditCard } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import {
   Table,
   TableBody,
@@ -14,13 +16,16 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { customersApi } from '@/lib/api/customers';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
+import { RecordReceivablePaymentDialog } from './RecordReceivablePaymentDialog';
 
 interface CustomerReceivablesTabProps {
   customerId: string;
 }
 
 export function CustomerReceivablesTab({ customerId }: CustomerReceivablesTabProps) {
-  const { data, isLoading } = useQuery({
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+
+  const { data, isLoading, refetch } = useQuery({
     queryKey: ['customer-receivables', customerId],
     queryFn: () => customersApi.getReceivables(customerId),
     enabled: !!customerId,
@@ -85,10 +90,20 @@ export function CustomerReceivablesTab({ customerId }: CustomerReceivablesTabPro
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             <p className={`text-2xl font-bold ${(summary?.total_balance || 0) > 0 ? 'text-red-600' : 'text-green-600'}`}>
               {formatCurrency(summary?.total_balance || 0)}
             </p>
+            {summary && summary.total_balance > 0 && (
+              <Button
+                size="sm"
+                className="w-full"
+                onClick={() => setPaymentDialogOpen(true)}
+              >
+                <CreditCard className="h-4 w-4 mr-2" />
+                Ghi nhận thanh toán
+              </Button>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -165,6 +180,16 @@ export function CustomerReceivablesTab({ customerId }: CustomerReceivablesTabPro
           )}
         </CardContent>
       </Card>
+
+      {/* Payment Dialog */}
+      <RecordReceivablePaymentDialog
+        open={paymentDialogOpen}
+        onOpenChange={setPaymentDialogOpen}
+        customerId={customerId}
+        receivables={receivables}
+        totalBalance={summary?.total_balance || 0}
+        onSuccess={() => refetch()}
+      />
     </div>
   );
 }

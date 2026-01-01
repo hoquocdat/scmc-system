@@ -22,6 +22,7 @@ import {
 import { CustomersService } from './customers.service';
 import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
+import { RecordReceivablePaymentDto } from './dto/record-receivable-payment.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
 @ApiTags('Customers')
@@ -113,5 +114,40 @@ export class CustomersController {
     @Query('limit') limit?: number,
   ) {
     return this.customersService.getOrders(id, page || 1, limit || 10);
+  }
+
+  @Post(':id/receivables/payment')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary: 'Record a payment against customer receivables',
+    description:
+      'Record a payment for a customer. If sales_order_id is provided, payment is applied to that specific order. Otherwise, payment is applied using FIFO to oldest unpaid orders.',
+  })
+  @ApiParam({ name: 'id', description: 'Customer UUID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Payment recorded successfully',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid payment data' })
+  @ApiResponse({ status: 404, description: 'Customer not found' })
+  async recordReceivablePayment(
+    @Param('id') id: string,
+    @Body() dto: RecordReceivablePaymentDto,
+  ) {
+    // Ensure customer_id in DTO matches the URL param
+    dto.customer_id = id;
+    return this.customersService.recordReceivablePayment(dto);
+  }
+
+  @Get(':id/receivables/payments')
+  @ApiOperation({ summary: 'Get payment history for customer receivables' })
+  @ApiParam({ name: 'id', description: 'Customer UUID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns list of all payments for customer orders',
+  })
+  @ApiResponse({ status: 404, description: 'Customer not found' })
+  async getReceivablePaymentHistory(@Param('id') id: string) {
+    return this.customersService.getReceivablePaymentHistory(id);
   }
 }

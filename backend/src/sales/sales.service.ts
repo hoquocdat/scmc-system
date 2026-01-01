@@ -14,11 +14,16 @@ import {
 import { UpdateSalesOrderDto } from './dto/update-sales-order.dto';
 import { SalesOrderQueryDto } from './dto/sales-order-query.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
+import { AddOrderItemDto } from './dto/add-order-item.dto';
 import { Prisma } from '@prisma/client';
+import { UserContextService } from '../auth/user-context.service';
 
 @Injectable()
 export class SalesService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private userContext: UserContextService,
+  ) {}
 
   async create(createSalesOrderDto: CreateSalesOrderDto) {
     try {
@@ -96,9 +101,11 @@ export class SalesService {
         data.customers = { connect: { id: orderData.customer_id } };
       }
 
-      if (orderData.created_by) {
+      // Set created_by from DTO or from current user context
+      const createdById = orderData.created_by || this.userContext.getUserId();
+      if (createdById) {
         data.user_profiles_sales_orders_created_byTouser_profiles = {
-          connect: { id: orderData.created_by },
+          connect: { id: createdById },
         };
       }
 
@@ -691,7 +698,11 @@ export class SalesService {
     };
   }
 
-  async getReportByEmployee(query: { from_date?: string; to_date?: string }) {
+  async getReportByEmployee(query: {
+    from_date?: string;
+    to_date?: string;
+    employee_id?: string;
+  }) {
     const where: Prisma.sales_ordersWhereInput = {
       status: { in: [OrderStatus.COMPLETED, OrderStatus.READY] },
     };
@@ -700,6 +711,11 @@ export class SalesService {
       where.created_at = {};
       if (query.from_date) where.created_at.gte = new Date(query.from_date);
       if (query.to_date) where.created_at.lte = new Date(query.to_date);
+    }
+
+    // Filter by specific employee
+    if (query.employee_id) {
+      where.created_by = query.employee_id;
     }
 
     const orders = await this.prisma.sales_orders.findMany({
@@ -749,7 +765,33 @@ export class SalesService {
     );
   }
 
-  async getReportByChannel(query: { from_date?: string; to_date?: string }) {
+  async getSalesEmployees() {
+    // Get all active employees except technicians
+    const employees = await this.prisma.user_profiles.findMany({
+      where: {
+        is_active: true,
+        role: { not: 'technician' },
+      },
+      select: {
+        id: true,
+        full_name: true,
+      },
+      orderBy: {
+        full_name: 'asc',
+      },
+    });
+
+    return employees.map((e) => ({
+      id: e.id,
+      name: e.full_name,
+    }));
+  }
+
+  async getReportByChannel(query: {
+    from_date?: string;
+    to_date?: string;
+    employee_id?: string;
+  }) {
     const where: Prisma.sales_ordersWhereInput = {
       status: { in: [OrderStatus.COMPLETED, OrderStatus.READY] },
     };
@@ -758,6 +800,11 @@ export class SalesService {
       where.created_at = {};
       if (query.from_date) where.created_at.gte = new Date(query.from_date);
       if (query.to_date) where.created_at.lte = new Date(query.to_date);
+    }
+
+    // Filter by specific employee
+    if (query.employee_id) {
+      where.created_by = query.employee_id;
     }
 
     const orders = await this.prisma.sales_orders.findMany({
@@ -795,5 +842,294 @@ export class SalesService {
     return Object.values(byChannel).sort(
       (a, b) => b.total_revenue - a.total_revenue,
     );
+  }
+
+  async addItem(orderId: string, addItemDto: AddOrderItemDto) {
+    try {
+      const order = await this.findOne(orderId) as any;
+
+      // Can only add items to unpaid or partially paid orders
+      if (order.payment_status === 'paid') {
+        throw new ConflictException('Cannot add items to a fully paid order');
+      }
+
+      // Can only add items to draft, confirmed, or processing orders
+      const allowedStatuses = ['draft', 'confirmed', 'processing'];
+      if (!allowedStatuses.includes(order.status)) {
+        throw new ConflictException(
+          'Cannot add items to orders with status: ' + order.status,
+        );
+      }
+
+      // Get product info for the item
+      const product = await this.prisma.products.findUnique({
+        where: { id: addItemDto.product_id },
+      });
+
+      if (!product) {
+        throw new NotFoundException('Product not found');
+      }
+
+      // Check if the same product (and variant) already exists in the order
+      const existingItem = order.sales_order_items?.find(
+        (item: any) =>
+          item.product_id === addItemDto.product_id &&
+          item.product_variant_id === (addItemDto.product_variant_id || null),
+      );
+
+      // Create or update item and recalculate order totals in a transaction
+      const result = await this.prisma.$transaction(async (tx) => {
+        let resultItem;
+
+        if (existingItem) {
+          // Update existing item - increase quantity
+          const newQuantity = existingItem.quantity + addItemDto.quantity;
+          const itemTotal =
+            (Number(existingItem.unit_price) -
+              Number(existingItem.discount_amount || 0) +
+              Number(existingItem.tax_amount || 0)) *
+            newQuantity;
+
+          resultItem = await tx.sales_order_items.update({
+            where: { id: existingItem.id },
+            data: {
+              quantity: newQuantity,
+              total_amount: new Prisma.Decimal(itemTotal),
+            },
+            include: {
+              products: true,
+              product_variants: true,
+            },
+          });
+        } else {
+          // Create new item
+          const itemTotal =
+            (addItemDto.unit_price -
+              (addItemDto.discount_amount || 0) +
+              (addItemDto.tax_amount || 0)) *
+            addItemDto.quantity;
+
+          resultItem = await tx.sales_order_items.create({
+            data: {
+              sales_orders: { connect: { id: orderId } },
+              products: { connect: { id: addItemDto.product_id } },
+              product_variants: addItemDto.product_variant_id
+                ? { connect: { id: addItemDto.product_variant_id } }
+                : undefined,
+              product_name: product.name,
+              quantity: addItemDto.quantity,
+              unit_price: new Prisma.Decimal(addItemDto.unit_price),
+              discount_amount: addItemDto.discount_amount
+                ? new Prisma.Decimal(addItemDto.discount_amount)
+                : undefined,
+              tax_amount: addItemDto.tax_amount
+                ? new Prisma.Decimal(addItemDto.tax_amount)
+                : undefined,
+              total_amount: new Prisma.Decimal(itemTotal),
+              notes: addItemDto.notes,
+            },
+            include: {
+              products: true,
+              product_variants: true,
+            },
+          });
+        }
+
+        // Recalculate order totals
+        const allItems = await tx.sales_order_items.findMany({
+          where: { sales_order_id: orderId },
+        });
+
+        const newSubtotal = allItems.reduce(
+          (sum, item) => sum + Number(item.unit_price) * item.quantity,
+          0,
+        );
+
+        const newTaxAmount = allItems.reduce(
+          (sum, item) => sum + Number(item.tax_amount || 0) * item.quantity,
+          0,
+        );
+
+        // Recalculate discount if percent-based
+        let newDiscountAmount = Number(order.discount_amount);
+        if (order.discount_type === 'percent' && order.discount_percent) {
+          newDiscountAmount =
+            (newSubtotal * Number(order.discount_percent)) / 100;
+        }
+
+        const newTotalAmount =
+          newSubtotal -
+          newDiscountAmount +
+          newTaxAmount +
+          Number(order.shipping_cost || 0);
+
+        // Update order totals
+        await tx.sales_orders.update({
+          where: { id: orderId },
+          data: {
+            subtotal: new Prisma.Decimal(newSubtotal),
+            tax_amount: new Prisma.Decimal(newTaxAmount),
+            discount_amount: new Prisma.Decimal(newDiscountAmount),
+            total_amount: new Prisma.Decimal(newTotalAmount),
+          },
+        });
+
+        return resultItem;
+      });
+
+      // Update customer receivable if order is not draft
+      if (order.customer_id && order.status !== 'draft') {
+        await this.updateReceivableAmount(orderId);
+      }
+
+      return result;
+    } catch (error: any) {
+      if (
+        error instanceof ConflictException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+      throw new BadRequestException(
+        `Failed to add item to order: ${error.message}`,
+      );
+    }
+  }
+
+  async removeItem(orderId: string, itemId: string) {
+    try {
+      const order = (await this.findOne(orderId)) as any;
+
+      // Can only remove items from unpaid or partially paid orders
+      if (order.payment_status === 'paid') {
+        throw new ConflictException(
+          'Cannot remove items from a fully paid order',
+        );
+      }
+
+      // Can only remove items from draft, confirmed, or processing orders
+      const allowedStatuses = ['draft', 'confirmed', 'processing'];
+      if (!allowedStatuses.includes(order.status)) {
+        throw new ConflictException(
+          'Cannot remove items from orders with status: ' + order.status,
+        );
+      }
+
+      // Check item exists and belongs to this order
+      const item = await this.prisma.sales_order_items.findFirst({
+        where: { id: itemId, sales_order_id: orderId },
+      });
+
+      if (!item) {
+        throw new NotFoundException('Item not found in this order');
+      }
+
+      // Cannot remove the last item
+      const itemCount = order.sales_order_items?.length || 0;
+      if (itemCount <= 1) {
+        throw new ConflictException(
+          'Cannot remove the last item. Cancel the order instead.',
+        );
+      }
+
+      // Remove item and update order totals in a transaction
+      await this.prisma.$transaction(async (tx) => {
+        // Delete the item
+        await tx.sales_order_items.delete({
+          where: { id: itemId },
+        });
+
+        // Recalculate order totals
+        const remainingItems = await tx.sales_order_items.findMany({
+          where: { sales_order_id: orderId },
+        });
+
+        const newSubtotal = remainingItems.reduce(
+          (sum, i) => sum + Number(i.unit_price) * i.quantity,
+          0,
+        );
+
+        const newTaxAmount = remainingItems.reduce(
+          (sum, i) => sum + Number(i.tax_amount || 0) * i.quantity,
+          0,
+        );
+
+        // Recalculate discount if percent-based
+        let newDiscountAmount = Number(order.discount_amount);
+        if (order.discount_type === 'percent' && order.discount_percent) {
+          newDiscountAmount =
+            (newSubtotal * Number(order.discount_percent)) / 100;
+        }
+
+        const newTotalAmount =
+          newSubtotal -
+          newDiscountAmount +
+          newTaxAmount +
+          Number(order.shipping_cost || 0);
+
+        // Update order totals
+        await tx.sales_orders.update({
+          where: { id: orderId },
+          data: {
+            subtotal: new Prisma.Decimal(newSubtotal),
+            tax_amount: new Prisma.Decimal(newTaxAmount),
+            discount_amount: new Prisma.Decimal(newDiscountAmount),
+            total_amount: new Prisma.Decimal(newTotalAmount),
+          },
+        });
+      });
+
+      // Update customer receivable if order is not draft
+      if (order.customer_id && order.status !== 'draft') {
+        await this.updateReceivableAmount(orderId);
+      }
+
+      return { success: true, message: 'Item removed successfully' };
+    } catch (error: any) {
+      if (
+        error instanceof ConflictException ||
+        error instanceof NotFoundException
+      ) {
+        throw error;
+      }
+      throw new BadRequestException(
+        `Failed to remove item from order: ${error.message}`,
+      );
+    }
+  }
+
+  // Helper method to update receivable amount when order total changes
+  private async updateReceivableAmount(orderId: string) {
+    try {
+      const order = await this.prisma.sales_orders.findUnique({
+        where: { id: orderId },
+      });
+
+      if (!order) return;
+
+      const receivable = await (this.prisma as any).customer_receivables.findFirst({
+        where: { sales_order_id: orderId },
+      });
+
+      if (receivable) {
+        const newBalance =
+          Number(order.total_amount) - Number(receivable.paid_amount);
+        await (this.prisma as any).customer_receivables.update({
+          where: { id: receivable.id },
+          data: {
+            original_amount: order.total_amount,
+            balance: new Prisma.Decimal(newBalance),
+            status:
+              newBalance <= 0
+                ? 'paid'
+                : Number(receivable.paid_amount) > 0
+                  ? 'partial'
+                  : 'unpaid',
+          },
+        });
+      }
+    } catch {
+      // Silently ignore errors in receivable updates
+    }
   }
 }

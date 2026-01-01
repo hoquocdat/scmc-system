@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Query,
+  Delete,
   UseGuards,
   ParseUUIDPipe,
   Request,
@@ -15,6 +16,7 @@ import { CreateSalesOrderDto, OrderStatus } from './dto/create-sales-order.dto';
 import { UpdateSalesOrderDto } from './dto/update-sales-order.dto';
 import { SalesOrderQueryDto } from './dto/sales-order-query.dto';
 import { CreatePaymentDto } from './dto/create-payment.dto';
+import { AddOrderItemDto } from './dto/add-order-item.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { RolesGuard } from '../common/guards/roles.guard';
 import { Roles } from '../common/decorators/roles.decorator';
@@ -73,19 +75,30 @@ export class SalesController {
     });
   }
 
+  @Get('reports/employees')
+  @Roles('manager', 'store_manager', 'finance', 'sales_associate')
+  @ApiOperation({ summary: 'Get list of employees who have created sales orders' })
+  @ApiResponse({ status: 200, description: 'Employees retrieved successfully' })
+  getSalesEmployees() {
+    return this.salesService.getSalesEmployees();
+  }
+
   @Get('reports/by-employee')
   @Roles('manager', 'store_manager', 'finance')
   @ApiOperation({ summary: 'Get sales report by employee' })
   @ApiQuery({ name: 'from_date', required: false, description: 'Filter from date (ISO 8601)' })
   @ApiQuery({ name: 'to_date', required: false, description: 'Filter to date (ISO 8601)' })
+  @ApiQuery({ name: 'employee_id', required: false, description: 'Filter by specific employee UUID' })
   @ApiResponse({ status: 200, description: 'Report retrieved successfully' })
   getReportByEmployee(
     @Query('from_date') fromDate?: string,
     @Query('to_date') toDate?: string,
+    @Query('employee_id') employeeId?: string,
   ) {
     return this.salesService.getReportByEmployee({
       from_date: fromDate,
       to_date: toDate,
+      employee_id: employeeId,
     });
   }
 
@@ -94,14 +107,17 @@ export class SalesController {
   @ApiOperation({ summary: 'Get sales report by channel' })
   @ApiQuery({ name: 'from_date', required: false, description: 'Filter from date (ISO 8601)' })
   @ApiQuery({ name: 'to_date', required: false, description: 'Filter to date (ISO 8601)' })
+  @ApiQuery({ name: 'employee_id', required: false, description: 'Filter by specific employee UUID' })
   @ApiResponse({ status: 200, description: 'Report retrieved successfully' })
   getReportByChannel(
     @Query('from_date') fromDate?: string,
     @Query('to_date') toDate?: string,
+    @Query('employee_id') employeeId?: string,
   ) {
     return this.salesService.getReportByChannel({
       from_date: fromDate,
       to_date: toDate,
+      employee_id: employeeId,
     });
   }
 
@@ -172,5 +188,36 @@ export class SalesController {
   @ApiResponse({ status: 400, description: 'Bad request' })
   addPayment(@Body() createPaymentDto: CreatePaymentDto) {
     return this.salesService.addPayment(createPaymentDto);
+  }
+
+  @Post(':id/items')
+  @Roles('manager', 'store_manager', 'sales_associate')
+  @ApiOperation({ summary: 'Add item to an unpaid sales order' })
+  @ApiParam({ name: 'id', description: 'Sales Order UUID' })
+  @ApiResponse({ status: 201, description: 'Item added successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 404, description: 'Sales order not found' })
+  @ApiResponse({ status: 409, description: 'Cannot add items to this order' })
+  addItem(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() addItemDto: AddOrderItemDto,
+  ) {
+    return this.salesService.addItem(id, addItemDto);
+  }
+
+  @Delete(':id/items/:itemId')
+  @Roles('manager', 'store_manager', 'sales_associate')
+  @ApiOperation({ summary: 'Remove item from an unpaid sales order' })
+  @ApiParam({ name: 'id', description: 'Sales Order UUID' })
+  @ApiParam({ name: 'itemId', description: 'Order Item UUID' })
+  @ApiResponse({ status: 200, description: 'Item removed successfully' })
+  @ApiResponse({ status: 400, description: 'Bad request' })
+  @ApiResponse({ status: 404, description: 'Sales order or item not found' })
+  @ApiResponse({ status: 409, description: 'Cannot remove items from this order' })
+  removeItem(
+    @Param('id', ParseUUIDPipe) id: string,
+    @Param('itemId', ParseUUIDPipe) itemId: string,
+  ) {
+    return this.salesService.removeItem(id, itemId);
   }
 }
