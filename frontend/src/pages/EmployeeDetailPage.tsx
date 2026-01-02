@@ -104,6 +104,11 @@ export function EmployeeDetailPage() {
           </Button>
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+              {employee.employee_code && (
+                <span className="font-mono text-sm bg-muted px-2 py-1 rounded">
+                  {employee.employee_code}
+                </span>
+              )}
               <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">
                 {employee.full_name}
               </h1>

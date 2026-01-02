@@ -6,6 +6,7 @@ interface AssignedEmployeeCardProps {
   employee?: {
     full_name: string;
     role: string;
+    employee_code?: string;
   };
   onEdit: () => void;
 }
@@ -32,6 +33,7 @@ export function AssignedEmployeeCard({ employee, onEdit }: AssignedEmployeeCardP
         <EmployeeProfileRow
           fullName={employee.full_name}
           role={employee.role}
+          employeeCode={employee.employee_code}
         />
       ) : (
         <p className="text-sm text-muted-foreground italic">Chưa phân công</p>

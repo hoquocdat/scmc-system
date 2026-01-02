@@ -35,6 +35,9 @@ import { SupplierReturnsModule } from './supplier-returns/supplier-returns.modul
 import { StockLocationsModule } from './stock-locations/stock-locations.module';
 import { StoresModule } from './stores/stores.module';
 import { LoyaltyModule } from './loyalty/loyalty.module';
+import { SalaryConfigModule } from './salary-config/salary-config.module';
+import { AttendanceModule } from './attendance/attendance.module';
+import { PayrollModule } from './payroll/payroll.module';
 
 @Module({
   imports: [
@@ -77,6 +80,9 @@ import { LoyaltyModule } from './loyalty/loyalty.module';
     StockLocationsModule,
     StoresModule,
     LoyaltyModule,
+    SalaryConfigModule,
+    AttendanceModule,
+    PayrollModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -26,6 +26,7 @@ export type OwnerType = 'individual' | 'company';
 // User Profile
 export interface UserProfile {
   id: string;
+  employee_code?: string;
   role: UserRole;
   full_name: string;
   phone?: string;
@@ -38,6 +39,7 @@ export interface UserProfile {
 // Audit metadata for tracking who created/updated records
 export interface AuditUser {
   id: string;
+  employee_code?: string;
   full_name: string;
   email?: string;
   phone?: string;

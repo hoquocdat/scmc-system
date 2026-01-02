@@ -10,7 +10,12 @@ const EmployeeOption = (props: any) => {
   const { data, innerRef, innerProps } = props;
   return (
     <div ref={innerRef} {...innerProps} className="px-3 py-2 cursor-pointer hover:bg-accent">
-      <div className="font-medium">{data.label}</div>
+      <div className="font-medium">
+        {data.employee_code && (
+          <span className="font-mono text-xs text-muted-foreground mr-2">{data.employee_code}</span>
+        )}
+        {data.label}
+      </div>
       {data.phone && <div className="text-sm text-muted-foreground">{data.phone}</div>}
     </div>
   );
@@ -23,7 +28,12 @@ const EmployeeSingleValue = (props: any) => {
     <components.SingleValue {...props}>
       <div className="flex items-center" >
         <div>
-          <div className="font-medium text-sm">{data.label}</div>
+          <div className="font-medium text-sm">
+            {data.employee_code && (
+              <span className="font-mono text-xs text-muted-foreground mr-2">{data.employee_code}</span>
+            )}
+            {data.label}
+          </div>
           {data.phone && <div className="text-xs text-muted-foreground">{data.phone}</div>}
         </div>
       </div>
@@ -37,10 +47,11 @@ export const createEmployeeOptions = (employees: UserProfile[], includeUnassigne
     value: employee.id,
     label: employee.full_name,
     phone: employee.phone,
+    employee_code: employee.employee_code,
   }));
 
   if (includeUnassigned) {
-    return [{ value: 'unassigned', label: 'Chưa phân công', phone: null }, ...options];
+    return [{ value: 'unassigned', label: 'Chưa phân công', phone: null, employee_code: null }, ...options];
   }
 
   return options;

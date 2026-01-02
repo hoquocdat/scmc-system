@@ -4,9 +4,10 @@ interface EmployeeProfileRowProps {
   fullName: string;
   role?: string;
   avatarUrl?: string;
+  employeeCode?: string;
 }
 
-export function EmployeeProfileRow({ fullName, role, avatarUrl }: EmployeeProfileRowProps) {
+export function EmployeeProfileRow({ fullName, role, avatarUrl, employeeCode }: EmployeeProfileRowProps) {
   // Get initials from full name for avatar fallback
   const getInitials = (name: string) => {
     return name
@@ -39,6 +40,9 @@ export function EmployeeProfileRow({ fullName, role, avatarUrl }: EmployeeProfil
       {/* Name and Role */}
       <div className="flex flex-col min-w-0">
         <span className="text-sm font-medium text-gray-900 truncate">
+          {employeeCode && (
+            <span className="font-mono text-xs text-gray-500 mr-2">{employeeCode}</span>
+          )}
           {fullName}
         </span>
         {role && (

@@ -30,6 +30,13 @@ export function createEmployeeColumns({
 
   return [
     {
+      accessorKey: 'employee_code',
+      header: 'Mã NV',
+      cell: ({ row }) => (
+        <div className="font-mono text-sm">{row.getValue('employee_code') || '-'}</div>
+      ),
+    },
+    {
       accessorKey: 'full_name',
       header: 'Họ Tên',
       cell: ({ row }) => <div className="font-medium">{row.getValue('full_name')}</div>,

@@ -16,7 +16,6 @@ import { ProductSearchInput } from '@/components/inventory/purchase-orders/Produ
 import {
   SalesOrderItemsTable,
   CustomerSelectCard,
-  CustomerDetailsCard,
   SalesOrderTotalsCard,
   SalesOrderNotesCard,
   type SalesOrderItem,

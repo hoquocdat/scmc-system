@@ -54,6 +54,9 @@ import {
   FileSpreadsheet,
   ShoppingBag,
   Gift,
+  Wallet,
+  CalendarDays,
+  Receipt,
 } from 'lucide-react';
 import { StoreSelector } from './StoreSelector';
 
@@ -282,6 +285,32 @@ export function AppLayout({ children }: AppLayoutProps) {
       roles: ['manager'],
     },
     {
+      id: 'hrm',
+      name: 'Nhân Sự',
+      icon: Users,
+      roles: ['manager', 'finance'],
+      children: [
+        {
+          name: 'Kỳ Lương',
+          href: '/hrm/payroll',
+          icon: CalendarDays,
+          roles: ['manager', 'finance'],
+        },
+        {
+          name: 'Cấu Hình Lương',
+          href: '/hrm/salary-configs',
+          icon: Wallet,
+          roles: ['manager', 'finance'],
+        },
+      ],
+    },
+    {
+      name: 'Phiếu Lương',
+      href: '/my-payroll',
+      icon: Receipt,
+      roles: ['sales', 'employee', 'technician', 'manager', 'finance'],
+    },
+    {
       id: 'settings',
       name: 'Cài Đặt',
       icon: Settings,
@@ -401,6 +430,11 @@ export function AppLayout({ children }: AppLayoutProps) {
         'payments': t('navigation.payments'),
         'reports': t('navigation.reports'),
         'employees': t('navigation.employees'),
+        'hrm': 'Nhân Sự',
+        'payroll': 'Kỳ Lương',
+        'salary-configs': 'Cấu Hình Lương',
+        'attendance': 'Chấm Công',
+        'my-payroll': 'Phiếu Lương',
       };
 
       if (segmentLabels[firstSegment]) {

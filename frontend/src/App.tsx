@@ -38,6 +38,11 @@ import { RoleDetailPage } from './pages/settings/RoleDetailPage';
 import { PermissionAuditPage } from './pages/settings/PermissionAuditPage';
 import { LoyaltySettingsPage } from './pages/settings/LoyaltySettingsPage';
 import { EmployeeEditPage } from './pages/EmployeeEditPage';
+import { SalaryConfigsPage } from './pages/hrm/SalaryConfigsPage';
+import { PayrollPeriodsPage } from './pages/hrm/PayrollPeriodsPage';
+import { PayrollPeriodDetailPage } from './pages/hrm/PayrollPeriodDetailPage';
+import { AttendanceImportPage } from './pages/hrm/AttendanceImportPage';
+import { EmployeePayrollPage } from './pages/hrm/EmployeePayrollPage';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { AppLayout } from './components/layout/AppLayout';
 import { Toaster } from './components/ui/sonner';
@@ -459,6 +464,57 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <LoyaltySettingsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        {/* HRM Routes */}
+        <Route
+          path="/hrm/salary-configs"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <SalaryConfigsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hrm/payroll"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <PayrollPeriodsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hrm/payroll/:id"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <PayrollPeriodDetailPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/hrm/payroll/:id/attendance"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <AttendanceImportPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/my-payroll"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <EmployeePayrollPage />
               </AppLayout>
             </ProtectedRoute>
           }
