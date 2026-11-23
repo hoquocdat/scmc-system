@@ -59,7 +59,7 @@ export class AttendanceService {
 
     try {
       // Parse the file
-      const parseResult = this.xlsxParser.parseAttendanceFile(file.buffer);
+      const parseResult = await this.xlsxParser.parseAttendanceFile(file.buffer);
 
       // Clear existing attendance if requested
       if (clearExisting) {

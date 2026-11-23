@@ -14,7 +14,7 @@ import { ServiceBoardPage } from './pages/ServiceBoardPage';
 import { PartsPage } from './pages/PartsPage';
 import { SuppliersPage } from './pages/SuppliersPage';
 import { PaymentsPage } from './pages/PaymentsPage';
-import { ReportsPage } from './pages/ReportsPage';
+import { ReportsLayout } from './pages/reports/ReportsLayout';
 import { ProductsPage } from './pages/inventory/ProductsPage';
 import { ProductDetailPage } from './pages/inventory/ProductDetailPage';
 import { ProductFormPage } from './pages/inventory/ProductFormPage';
@@ -279,11 +279,11 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/reports"
+          path="/reports/*"
           element={
             <ProtectedRoute>
               <AppLayout>
-                <ReportsPage />
+                <ReportsLayout />
               </AppLayout>
             </ProtectedRoute>
           }

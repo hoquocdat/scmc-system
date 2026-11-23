@@ -1,180 +1,228 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+  UseInterceptors,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiProduces,
+  ApiTags,
+} from '@nestjs/swagger';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { RolesGuard } from '../auth/roles.guard';
-import { Roles } from '../auth/roles.decorator';
-import { ReportsService } from './reports.service';
+import { Action } from '../casl/casl-ability.factory';
+import { CheckPolicies } from '../casl/check-policies.decorator';
+import { PoliciesGuard } from '../casl/policies.guard';
+import { isExport, ReportQueryDto } from './dto/report-query.dto';
+import { FinancialReportsService } from './financial-reports.service';
+import { InventoryReportsService } from './inventory-reports.service';
+import { ReportExportInterceptor } from './report-export.interceptor';
+import { ReportScope } from './report-scope';
+import { SalesReportsService } from './sales-reports.service';
+import { WorkshopReportsService } from './workshop-reports.service';
 
+/**
+ * Reporting API. Every endpoint takes the shared ReportQueryDto (from, to,
+ * storeId, interval, ...) and is guarded by a `reports` permission:
+ *   sales -> reports:sales, inventory -> reports:inventory,
+ *   financial -> reports:financial, workshop -> reports:service.
+ * Adding `format=xlsx|csv` downloads the same report as a file; that also
+ * requires reports:export (ReportExportInterceptor).
+ */
 @ApiTags('reports')
+@ApiBearerAuth()
+@ApiProduces(
+  'application/json',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'text/csv',
+)
+@UseGuards(JwtAuthGuard, PoliciesGuard)
+@UseInterceptors(ReportExportInterceptor)
 @Controller('reports')
-@UseGuards(JwtAuthGuard, RolesGuard)
 export class ReportsController {
-  constructor(private readonly reportsService: ReportsService) {}
+  constructor(
+    private readonly sales: SalesReportsService,
+    private readonly inventory: InventoryReportsService,
+    private readonly financial: FinancialReportsService,
+    private readonly workshop: WorkshopReportsService,
+  ) {}
 
   // ==================== SALES REPORTS ====================
 
   @Get('sales/summary')
-  @Roles('manager', 'finance', 'admin')
-  @ApiOperation({ summary: 'Get sales summary with totals and metrics' })
-  @ApiQuery({ name: 'startDate', required: false })
-  @ApiQuery({ name: 'endDate', required: false })
-  @ApiQuery({ name: 'location', required: false })
-  async getSalesSummary(
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @Query('location') location?: string,
-  ) {
-    return this.reportsService.getSalesSummary(startDate, endDate, location);
+  @CheckPolicies({ action: Action.Sales, subject: 'reports' })
+  @ApiOperation({
+    summary:
+      'Retail sales summary: orders, gross, discounts, net sales, tax, items, AOV',
+  })
+  salesSummary(@Query() q: ReportQueryDto) {
+    return this.sales.summary(new ReportScope(q));
   }
 
   @Get('sales/by-category')
-  @Roles('manager', 'finance', 'admin')
-  @ApiOperation({ summary: 'Get sales breakdown by product category' })
-  @ApiQuery({ name: 'startDate', required: false })
-  @ApiQuery({ name: 'endDate', required: false })
-  async getSalesByCategory(
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-  ) {
-    return this.reportsService.getSalesByCategory(startDate, endDate);
+  @CheckPolicies({ action: Action.Sales, subject: 'reports' })
+  @ApiOperation({ summary: 'Retail sales by product category' })
+  salesByCategory(@Query() q: ReportQueryDto) {
+    return this.sales.byCategory(new ReportScope(q));
   }
 
   @Get('sales/by-payment-method')
-  @Roles('manager', 'finance', 'admin')
-  @ApiOperation({ summary: 'Get sales breakdown by payment method' })
-  @ApiQuery({ name: 'startDate', required: false })
-  @ApiQuery({ name: 'endDate', required: false })
-  async getSalesByPaymentMethod(
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-  ) {
-    return this.reportsService.getSalesByPaymentMethod(startDate, endDate);
+  @CheckPolicies({ action: Action.Sales, subject: 'reports' })
+  @ApiOperation({
+    summary: 'Retail money received per payment method (completed payments)',
+  })
+  salesByPaymentMethod(@Query() q: ReportQueryDto) {
+    return this.sales.byPaymentMethod(new ReportScope(q));
   }
 
   @Get('sales/top-products')
-  @Roles('manager', 'finance', 'admin')
-  @ApiOperation({ summary: 'Get top selling products' })
-  @ApiQuery({ name: 'startDate', required: false })
-  @ApiQuery({ name: 'endDate', required: false })
-  @ApiQuery({ name: 'limit', required: false })
-  async getTopProducts(
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @Query('limit') limit?: number,
-  ) {
-    return this.reportsService.getTopProducts(
-      startDate,
-      endDate,
-      limit || 10,
+  @CheckPolicies({ action: Action.Sales, subject: 'reports' })
+  @ApiOperation({
+    summary:
+      'Best-selling products and variants (sortBy=quantity|netSales, limit)',
+  })
+  topProducts(@Query() q: ReportQueryDto) {
+    return this.sales.topProducts(
+      new ReportScope(q),
+      q.limit ?? 10,
+      (q.sortBy as 'quantity' | 'netSales') ?? 'quantity',
     );
   }
 
   @Get('sales/trends')
-  @Roles('manager', 'finance', 'admin')
-  @ApiOperation({ summary: 'Get sales trends over time (daily/weekly/monthly)' })
-  @ApiQuery({ name: 'startDate', required: false })
-  @ApiQuery({ name: 'endDate', required: false })
-  @ApiQuery({ name: 'interval', required: false, enum: ['daily', 'weekly', 'monthly'] })
-  async getSalesTrends(
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @Query('interval') interval: 'daily' | 'weekly' | 'monthly' = 'daily',
-  ) {
-    return this.reportsService.getSalesTrends(startDate, endDate, interval);
+  @CheckPolicies({ action: Action.Sales, subject: 'reports' })
+  @ApiOperation({
+    summary:
+      'Orders and net sales per day, week or month, including empty periods',
+  })
+  salesTrends(@Query() q: ReportQueryDto) {
+    return this.sales.trends(new ReportScope(q));
   }
 
   // ==================== INVENTORY REPORTS ====================
 
   @Get('inventory/valuation')
-  @Roles('manager', 'finance', 'admin')
-  @ApiOperation({ summary: 'Get inventory valuation by location and category' })
-  @ApiQuery({ name: 'location', required: false })
-  async getInventoryValuation(@Query('location') location?: string) {
-    return this.reportsService.getInventoryValuation(location);
+  @CheckPolicies({ action: Action.Inventory, subject: 'reports' })
+  @ApiOperation({
+    summary: 'Stock on hand and value at cost per product and location',
+  })
+  inventoryValuation(@Query() q: ReportQueryDto) {
+    return this.inventory.valuation(new ReportScope(q), q);
   }
 
   @Get('inventory/movement')
-  @Roles('manager', 'admin')
-  @ApiOperation({ summary: 'Get inventory movement report' })
-  @ApiQuery({ name: 'startDate', required: false })
-  @ApiQuery({ name: 'endDate', required: false })
-  @ApiQuery({ name: 'productId', required: false })
-  async getInventoryMovement(
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @Query('productId') productId?: string,
-  ) {
-    return this.reportsService.getInventoryMovement(
-      startDate,
-      endDate,
-      productId,
-    );
+  @CheckPolicies({ action: Action.Inventory, subject: 'reports' })
+  @ApiOperation({
+    summary:
+      'Stock movements in the period (paged; filters: productId, locationId, type). Exports include every row.',
+  })
+  inventoryMovement(@Query() q: ReportQueryDto) {
+    return this.inventory.movement(new ReportScope(q), {
+      ...q,
+      all: isExport(q),
+    });
   }
 
   @Get('inventory/low-stock')
-  @Roles('manager', 'warehouse', 'admin')
-  @ApiOperation({ summary: 'Get products below reorder point' })
-  @ApiQuery({ name: 'location', required: false })
-  async getLowStockProducts(@Query('location') location?: string) {
-    return this.reportsService.getLowStockProducts(location);
+  @CheckPolicies({ action: Action.Inventory, subject: 'reports' })
+  @ApiOperation({
+    summary: 'Products at or below their reorder point, per location',
+  })
+  lowStock(@Query() q: ReportQueryDto) {
+    return this.inventory.lowStock(new ReportScope(q), q);
   }
 
   @Get('inventory/turnover')
-  @Roles('manager', 'finance', 'admin')
-  @ApiOperation({ summary: 'Get inventory turnover analysis' })
-  @ApiQuery({ name: 'startDate', required: false })
-  @ApiQuery({ name: 'endDate', required: false })
-  async getInventoryTurnover(
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-  ) {
-    return this.reportsService.getInventoryTurnover(startDate, endDate);
+  @CheckPolicies({ action: Action.Inventory, subject: 'reports' })
+  @ApiOperation({
+    summary: 'Units sold, COGS, average stock and turnover ratio per product',
+  })
+  inventoryTurnover(@Query() q: ReportQueryDto) {
+    return this.inventory.turnover(new ReportScope(q));
   }
 
   // ==================== FINANCIAL REPORTS ====================
 
   @Get('financial/revenue')
-  @Roles('manager', 'finance', 'admin')
-  @ApiOperation({ summary: 'Get revenue report' })
-  @ApiQuery({ name: 'startDate', required: false })
-  @ApiQuery({ name: 'endDate', required: false })
-  async getRevenueReport(
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-  ) {
-    return this.reportsService.getRevenueReport(startDate, endDate);
+  @CheckPolicies({ action: Action.Financial, subject: 'reports' })
+  @ApiOperation({
+    summary: 'Revenue and money received: retail, workshop and combined',
+  })
+  revenue(@Query() q: ReportQueryDto) {
+    return this.financial.revenue(new ReportScope(q));
   }
 
   @Get('financial/profit')
-  @Roles('manager', 'finance', 'admin')
-  @ApiOperation({ summary: 'Get profit & loss report' })
-  @ApiQuery({ name: 'startDate', required: false })
-  @ApiQuery({ name: 'endDate', required: false })
-  async getProfitReport(
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-  ) {
-    return this.reportsService.getProfitReport(startDate, endDate);
+  @CheckPolicies({ action: Action.Financial, subject: 'reports' })
+  @ApiOperation({
+    summary: 'Gross profit: net sales minus cost of goods sold at time of sale',
+  })
+  profit(@Query() q: ReportQueryDto) {
+    return this.financial.profit(new ReportScope(q));
   }
 
   @Get('financial/vat')
-  @Roles('finance', 'admin')
-  @ApiOperation({ summary: 'Get VAT report for tax filing' })
-  @ApiQuery({ name: 'startDate', required: false })
-  @ApiQuery({ name: 'endDate', required: false })
-  async getVATReport(
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-  ) {
-    return this.reportsService.getVATReport(startDate, endDate);
+  @CheckPolicies({ action: Action.Financial, subject: 'reports' })
+  @ApiOperation({ summary: 'VAT from recorded tax amounts, per period' })
+  vat(@Query() q: ReportQueryDto) {
+    return this.financial.vat(new ReportScope(q));
   }
 
-  // ==================== DASHBOARD KPIs ====================
+  // ==================== WORKSHOP REPORTS ====================
+
+  @Get('workshop/revenue')
+  @CheckPolicies({ action: Action.Service, subject: 'reports' })
+  @ApiOperation({
+    summary:
+      'Service revenue from delivered orders, by delivery date, with trend',
+  })
+  workshopRevenue(@Query() q: ReportQueryDto) {
+    return this.workshop.revenue(new ReportScope(q));
+  }
+
+  @Get('workshop/technicians')
+  @CheckPolicies({ action: Action.Service, subject: 'reports' })
+  @ApiOperation({
+    summary:
+      'Technician performance: delivered orders, primary revenue, turnaround',
+  })
+  workshopTechnicians(@Query() q: ReportQueryDto) {
+    return this.workshop.technicians(new ReportScope(q));
+  }
+
+  @Get('workshop/parts')
+  @CheckPolicies({ action: Action.Service, subject: 'reports' })
+  @ApiOperation({ summary: 'Parts used on service orders, ranked by cost' })
+  workshopParts(@Query() q: ReportQueryDto) {
+    return this.workshop.parts(new ReportScope(q), q.limit ?? 10);
+  }
+
+  @Get('workshop/in-service')
+  @CheckPolicies({ action: Action.Service, subject: 'reports' })
+  @ApiOperation({ summary: 'Bikes currently in service per status' })
+  workshopInService(@Query() q: ReportQueryDto) {
+    return this.workshop.inService(new ReportScope(q));
+  }
+
+  @Get('workshop/turnaround')
+  @CheckPolicies({ action: Action.Service, subject: 'reports' })
+  @ApiOperation({
+    summary: 'Average and median days from drop-off to delivery',
+  })
+  workshopTurnaround(@Query() q: ReportQueryDto) {
+    return this.workshop.turnaround(new ReportScope(q));
+  }
+
+  // ==================== DASHBOARD ====================
 
   @Get('dashboard/kpis')
-  @Roles('manager', 'finance', 'admin')
-  @ApiOperation({ summary: 'Get dashboard KPIs for today and current period' })
-  async getDashboardKPIs() {
-    return this.reportsService.getDashboardKPIs();
+  @CheckPolicies({ action: Action.Sales, subject: 'reports' })
+  @ApiOperation({
+    summary: 'Dashboard KPIs: today and month to date, retail and workshop',
+  })
+  dashboardKpis(@Query() q: ReportQueryDto) {
+    return this.financial.dashboardKpis(q.storeId);
   }
 }

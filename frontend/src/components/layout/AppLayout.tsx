@@ -273,10 +273,42 @@ export function AppLayout({ children }: AppLayoutProps) {
       roles: ['finance', 'manager'],
     },
     {
+      id: 'reports',
       name: t('navigation.reports'),
-      href: '/reports',
       icon: BarChart3,
-      roles: ['manager', 'finance'],
+      roles: ['manager', 'finance', 'store_manager', 'warehouse_staff'],
+      children: [
+        {
+          name: 'Tổng Quan',
+          href: '/reports',
+          icon: BarChart3,
+          roles: ['manager', 'finance', 'store_manager', 'warehouse_staff'],
+        },
+        {
+          name: 'Bán Hàng',
+          href: '/reports/sales/summary',
+          icon: ShoppingCart,
+          roles: ['manager', 'finance', 'store_manager'],
+        },
+        {
+          name: 'Tồn Kho',
+          href: '/reports/inventory/valuation',
+          icon: ClipboardList,
+          roles: ['manager', 'finance', 'store_manager', 'warehouse_staff'],
+        },
+        {
+          name: 'Tài Chính',
+          href: '/reports/finance/revenue',
+          icon: CreditCard,
+          roles: ['manager', 'finance'],
+        },
+        {
+          name: 'Xưởng Dịch Vụ',
+          href: '/reports/workshop/revenue',
+          icon: FileText,
+          roles: ['manager', 'finance', 'store_manager'],
+        },
+      ],
     },
     {
       name: t('navigation.employees'),
