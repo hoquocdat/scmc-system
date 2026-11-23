@@ -156,6 +156,11 @@ export class MarkPaidDto {
   @IsOptional()
   @IsString()
   payment_reference?: string;
+
+  @ApiPropertyOptional({ description: 'Cash book account paid from; defaults to the default branch account mapped to the payment method' })
+  @IsOptional()
+  @IsUUID()
+  cash_account_id?: string;
 }
 
 export class MyPayrollQueryDto {

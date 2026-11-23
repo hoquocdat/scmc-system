@@ -28,6 +28,11 @@ export enum Action {
   Credit = 'credit',
   Reprint = 'reprint',
   Supervise = 'supervise',
+  // Cash book actions
+  Receive = 'receive',
+  Pay = 'pay',
+  Cancel = 'cancel',
+  Configure = 'configure',
   Export = 'export',
   // Report-specific actions
   Sales = 'sales',
@@ -57,6 +62,7 @@ export type Subjects =
   | 'permissions'
   | 'roles'
   | 'settings'
+  | 'cash_book'
   | 'all'; // Special subject that represents "any subject"
 
 export type AppAbility = Ability<[Action, Subjects]>;
@@ -194,6 +200,10 @@ export class CaslAbilityFactory {
       credit: Action.Credit,
       reprint: Action.Reprint,
       supervise: Action.Supervise,
+      receive: Action.Receive,
+      pay: Action.Pay,
+      cancel: Action.Cancel,
+      configure: Action.Configure,
       export: Action.Export,
       sales: Action.Sales,
       inventory: Action.Inventory,

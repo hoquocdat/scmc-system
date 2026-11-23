@@ -5,6 +5,7 @@ import { Printer } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { CurrencyInput } from '@/components/ui/currency-input';
+import { AccountSelect } from '@/components/cash-book/AccountSelect';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -31,6 +32,7 @@ export function ShiftSheet({ open, onOpenChange, shift, onClosed }: ShiftSheetPr
   const [moveType, setMoveType] = useState<'cash_in' | 'cash_out'>('cash_out');
   const [moveAmount, setMoveAmount] = useState<number | undefined>(undefined);
   const [moveReason, setMoveReason] = useState('');
+  const [moveAccountId, setMoveAccountId] = useState<string>();
   const [closingCash, setClosingCash] = useState<number | undefined>(undefined);
   const [confirmClose, setConfirmClose] = useState(false);
 
@@ -38,11 +40,12 @@ export function ShiftSheet({ open, onOpenChange, shift, onClosed }: ShiftSheetPr
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['pos', 'shift', shift.id, 'summary'] });
 
   const moveMutation = useMutation({
-    mutationFn: () => posApi.addCashMovement({ pos_session_id: shift.id, transaction_type: moveType, amount: moveAmount ?? 0, reason: moveReason }),
+    mutationFn: () => posApi.addCashMovement({ pos_session_id: shift.id, transaction_type: moveType, amount: moveAmount ?? 0, reason: moveReason, target_account_id: moveAccountId }),
     onSuccess: () => {
       toast.success(moveType === 'cash_in' ? 'Đã ghi nhận nộp tiền vào két' : 'Đã ghi nhận rút tiền khỏi két');
       setMoveAmount(undefined);
       setMoveReason('');
+      setMoveAccountId(undefined);
       void refresh();
     },
     onError: (e) => toast.error(errMsg(e)),
@@ -119,6 +122,17 @@ export function ShiftSheet({ open, onOpenChange, shift, onClosed }: ShiftSheetPr
               <CurrencyInput aria-label="Số tiền" value={moveAmount} onValueChange={setMoveAmount} />
             </div>
             <Input placeholder="Lý do (bắt buộc)" value={moveReason} onChange={(e) => setMoveReason(e.target.value)} />
+            {shift.store_id && (
+              <AccountSelect
+                storeId={shift.store_id}
+                value={moveAccountId}
+                onChange={setMoveAccountId}
+                allowDefault
+                excludeDrawer
+                defaultLabel={moveType === 'cash_in' ? 'Nộp từ bên ngoài' : 'Rút ra ngoài (chi)'}
+                placeholder={moveType === 'cash_in' ? 'Lấy từ tài khoản' : 'Chuyển vào tài khoản'}
+              />
+            )}
             <Button size="sm" disabled={!moveAmount || !moveReason || moveMutation.isPending} onClick={() => moveMutation.mutate()}>Ghi nhận</Button>
           </div>
 

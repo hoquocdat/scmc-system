@@ -37,6 +37,8 @@ import { RolesPage } from './pages/settings/RolesPage';
 import { RoleDetailPage } from './pages/settings/RoleDetailPage';
 import { PermissionAuditPage } from './pages/settings/PermissionAuditPage';
 import { LoyaltySettingsPage } from './pages/settings/LoyaltySettingsPage';
+import { CashBookPage } from './pages/finance/CashBookPage';
+import { CashBookSettingsPage } from './pages/finance/CashBookSettingsPage';
 import { EmployeeEditPage } from './pages/EmployeeEditPage';
 import { SalaryConfigsPage } from './pages/hrm/SalaryConfigsPage';
 import { PayrollPeriodsPage } from './pages/hrm/PayrollPeriodsPage';
@@ -454,6 +456,26 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <PermissionAuditPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cash-book"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <CashBookPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings/cash-book"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <CashBookSettingsPage />
               </AppLayout>
             </ProtectedRoute>
           }

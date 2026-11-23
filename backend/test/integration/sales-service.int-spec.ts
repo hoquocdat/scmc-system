@@ -1,4 +1,5 @@
 import { UserContextService } from '../../src/auth/user-context.service';
+import { CashBookPostingService } from '../../src/cash-book/cash-book-posting.service';
 import { LoyaltyService } from '../../src/loyalty/loyalty.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { PaymentMethod } from '../../src/sales/dto/create-payment.dto';
@@ -26,12 +27,13 @@ describe('SalesService on SalesPostingService', () => {
       prisma,
       new PriceResolverService(prisma),
       loyalty,
+      new CashBookPostingService(prisma),
     );
     const userContext = {
       getUserId: () => fx.users.sales_associate,
       getUser: () => null,
     } as unknown as UserContextService;
-    service = new SalesService(prisma, userContext, loyalty, posting);
+    service = new SalesService(prisma, userContext, loyalty, posting, new CashBookPostingService(prisma));
   });
   afterAll(closeTestDb);
 

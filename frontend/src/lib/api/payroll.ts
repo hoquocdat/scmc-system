@@ -160,8 +160,10 @@ export interface FinalizePeriodDto {
 }
 
 export interface MarkPaidDto {
-  payment_method?: string;
+  payment_method: string;
   payment_reference?: string;
+  /** Cash book account paid from; defaults to the account mapped to the method. */
+  cash_account_id?: string;
 }
 
 export interface PayrollPeriodQuery {

@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { CashBookPostingService } from '../cash-book/cash-book-posting.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
 import { PrismaService } from '../prisma/prisma.service';
 import {
@@ -125,6 +126,7 @@ export class SalesPostingService {
     private readonly prisma: PrismaService,
     private readonly prices: PriceResolverService,
     private readonly loyalty: LoyaltyService,
+    private readonly cashBook: CashBookPostingService,
   ) {}
 
   /** Maps the back-office DTO to a posting draft (client prices and totals are ignored). */
@@ -251,7 +253,7 @@ export class SalesPostingService {
       });
     }
     for (const p of payments) {
-      await tx.sales_order_payments.create({
+      const payment = await tx.sales_order_payments.create({
         data: {
           sales_order_id: order.id,
           payment_method: p.payment_method,
@@ -269,6 +271,16 @@ export class SalesPostingService {
           received_by: draft.created_by,
           payment_date: draft.at ?? new Date(),
         },
+      });
+      // Every completed payment is a cash book receipt in the same transaction
+      await this.cashBook.postSalesOrderPayment(tx, {
+        orderId: order.id,
+        paymentId: payment.id,
+        method: p.payment_method,
+        amount: p.amount,
+        categoryCode: 'sale',
+        createdBy: draft.created_by,
+        at: draft.at,
       });
     }
     if (posting) {

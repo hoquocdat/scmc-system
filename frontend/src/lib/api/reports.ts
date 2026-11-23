@@ -135,12 +135,13 @@ export const REPORT_ENDPOINTS = {
   'workshop.parts': '/reports/workshop/parts',
   'workshop.in-service': '/reports/workshop/in-service',
   'workshop.turnaround': '/reports/workshop/turnaround',
+  'finance.cash-book': '/cash-book/entries',
 } as const;
 
 export type ReportKey = keyof typeof REPORT_ENDPOINTS;
 
 /** Removes empty values so they are not sent as "undefined" strings. */
-function clean(params: ReportQuery = {}): Record<string, string | number> {
+function clean(params: ReportQuery | Record<string, unknown> = {}): Record<string, string | number> {
   const out: Record<string, string | number> = {};
   for (const [k, v] of Object.entries(params)) {
     if (v !== undefined && v !== null && v !== '') out[k] = v as string | number;
@@ -167,7 +168,7 @@ export const reportsApi = {
    * Downloads a report as a file with the same filters as the screen.
    * The server decides the file name (Content-Disposition).
    */
-  download: async (key: ReportKey, params: ReportQuery, format: ReportFormat): Promise<{ blob: Blob; fileName: string }> => {
+  download: async (key: ReportKey, params: ReportQuery | Record<string, unknown>, format: ReportFormat): Promise<{ blob: Blob; fileName: string }> => {
     const response = await apiClient.get(REPORT_ENDPOINTS[key], {
       params: { ...clean(params), format },
       responseType: 'blob',

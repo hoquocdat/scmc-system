@@ -15,6 +15,8 @@ const KEEP_TABLES = new Set([
   'roles',
   'permissions',
   'role_permissions',
+  'cash_book_categories',
+  'document_counters',
 ]);
 
 /**

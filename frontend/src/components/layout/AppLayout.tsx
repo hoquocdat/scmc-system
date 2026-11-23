@@ -273,6 +273,13 @@ export function AppLayout({ children }: AppLayoutProps) {
       roles: ['finance', 'manager'],
     },
     {
+      name: 'Sổ Quỹ',
+      href: '/cash-book',
+      icon: Wallet,
+      roles: ['finance', 'manager', 'store_manager', 'superadmin'],
+      permission: { resource: 'cash_book', action: 'read' },
+    },
+    {
       id: 'reports',
       name: t('navigation.reports'),
       icon: BarChart3,
@@ -355,6 +362,13 @@ export function AppLayout({ children }: AppLayoutProps) {
           roles: ['superadmin', 'manager'],
         },
         {
+          name: 'Sổ Quỹ',
+          href: '/settings/cash-book',
+          icon: Wallet,
+          roles: ['superadmin', 'manager'],
+          permission: { resource: 'cash_book', action: 'configure' },
+        },
+        {
           name: 'Vai Trò',
           href: '/settings/roles',
           icon: Shield,
@@ -404,7 +418,18 @@ export function AppLayout({ children }: AppLayoutProps) {
     return false;
   };
 
-  const filteredNavigation = navigation.filter((item: any) => {
+  const filteredNavigation = navigation
+    .map((item: any) =>
+      item.children
+        ? {
+            ...item,
+            children: item.children.filter(
+              (child: any) => !child.permission || hasPermission(child.permission.resource, child.permission.action),
+            ),
+          }
+        : item,
+    )
+    .filter((item: any) => {
     // Check role-based access
     const hasRoleAccess = user?.role && item.roles.includes(user.role);
 

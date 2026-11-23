@@ -78,6 +78,8 @@ export interface CashMovementDto {
   amount: number;
   reason: string;
   notes?: string;
+  /** Move the cash to this account of the same branch (e.g. the safe) instead of out of the books. */
+  target_account_id?: string;
 }
 
 export interface PosShiftQueryParams {

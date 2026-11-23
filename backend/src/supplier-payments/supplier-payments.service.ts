@@ -4,12 +4,16 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CashBookPostingService } from '../cash-book/cash-book-posting.service';
 import { CreateSupplierPaymentDto } from './dto/create-supplier-payment.dto';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class SupplierPaymentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private cashBook: CashBookPostingService,
+  ) {}
 
   /**
    * Generate a unique payment number
@@ -51,16 +55,20 @@ export class SupplierPaymentsService {
     });
 
     if (!supplier) {
-      throw new NotFoundException(`Supplier with ID ${dto.supplier_id} not found`);
+      throw new NotFoundException(
+        `Supplier with ID ${dto.supplier_id} not found`,
+      );
     }
 
     // Calculate supplier's outstanding balance
-    const outstandingBalance = await this.getSupplierOutstandingBalance(dto.supplier_id);
+    const outstandingBalance = await this.getSupplierOutstandingBalance(
+      dto.supplier_id,
+    );
 
     // Validate payment amount doesn't exceed outstanding balance
     if (dto.amount > outstandingBalance) {
       throw new BadRequestException(
-        `Payment amount (${dto.amount}) exceeds outstanding balance (${outstandingBalance})`
+        `Payment amount (${dto.amount}) exceeds outstanding balance (${outstandingBalance})`,
       );
     }
 
@@ -74,7 +82,9 @@ export class SupplierPaymentsService {
           supplier_id: dto.supplier_id,
           amount: new Prisma.Decimal(dto.amount),
           payment_method: dto.payment_method as any,
-          payment_date: dto.payment_date ? new Date(dto.payment_date) : new Date(),
+          payment_date: dto.payment_date
+            ? new Date(dto.payment_date)
+            : new Date(),
           transaction_id: dto.transaction_id,
           reference_number: dto.reference_number,
           notes: dto.notes,
@@ -85,6 +95,25 @@ export class SupplierPaymentsService {
         },
       });
 
+      // Cash book payment entry in the same transaction (chosen account, else default branch mapping)
+      await this.cashBook.post(tx, {
+        accountId: dto.cash_account_id,
+        method: dto.payment_method,
+        direction: 'out',
+        amount: dto.amount,
+        categoryCode: 'supplier_payment',
+        counterparty: {
+          type: 'supplier',
+          id: supplier.id,
+          name: supplier.name,
+        },
+        source: { type: 'supplier_payment', id: payment.id },
+        isAutomatic: true,
+        note: `Trả nhà cung cấp ${supplier.name} (${paymentNumber})`,
+        createdBy: userId,
+        at: payment.payment_date ?? undefined,
+      });
+
       let allocations;
 
       // Handle allocations
@@ -93,7 +122,7 @@ export class SupplierPaymentsService {
         allocations = await this.allocatePaymentManually(
           payment.id,
           dto.allocations,
-          tx
+          tx,
         );
       } else {
         // Automatic allocation to oldest unpaid POs
@@ -101,7 +130,7 @@ export class SupplierPaymentsService {
           payment.id,
           dto.supplier_id,
           dto.amount,
-          tx
+          tx,
         );
       }
 
@@ -118,19 +147,22 @@ export class SupplierPaymentsService {
   private async allocatePaymentManually(
     paymentId: string,
     allocations: Array<{ purchase_order_id: string; amount_allocated: number }>,
-    tx: Prisma.TransactionClient
+    tx: Prisma.TransactionClient,
   ) {
     const results = [];
 
     // Validate total allocated amount doesn't exceed payment amount
-    const totalAllocated = allocations.reduce((sum, a) => sum + a.amount_allocated, 0);
+    const totalAllocated = allocations.reduce(
+      (sum, a) => sum + a.amount_allocated,
+      0,
+    );
     const payment = await tx.supplier_payments.findUnique({
       where: { id: paymentId },
     });
 
     if (totalAllocated > Number(payment.amount)) {
       throw new BadRequestException(
-        `Total allocated amount (${totalAllocated}) exceeds payment amount (${payment.amount})`
+        `Total allocated amount (${totalAllocated}) exceeds payment amount (${payment.amount})`,
       );
     }
 
@@ -142,21 +174,22 @@ export class SupplierPaymentsService {
 
       if (!purchaseOrder) {
         throw new NotFoundException(
-          `Purchase Order with ID ${allocation.purchase_order_id} not found`
+          `Purchase Order with ID ${allocation.purchase_order_id} not found`,
         );
       }
 
       if (purchaseOrder.supplier_id !== payment.supplier_id) {
         throw new BadRequestException(
-          `Purchase Order ${allocation.purchase_order_id} does not belong to supplier ${payment.supplier_id}`
+          `Purchase Order ${allocation.purchase_order_id} does not belong to supplier ${payment.supplier_id}`,
         );
       }
 
       // Check if allocation amount doesn't exceed remaining balance
-      const remainingBalance = Number(purchaseOrder.total_amount) - Number(purchaseOrder.paid_amount);
+      const remainingBalance =
+        Number(purchaseOrder.total_amount) - Number(purchaseOrder.paid_amount);
       if (allocation.amount_allocated > remainingBalance) {
         throw new BadRequestException(
-          `Allocation amount (${allocation.amount_allocated}) exceeds remaining balance (${remainingBalance}) for PO ${purchaseOrder.order_number}`
+          `Allocation amount (${allocation.amount_allocated}) exceeds remaining balance (${remainingBalance}) for PO ${purchaseOrder.order_number}`,
         );
       }
 
@@ -185,7 +218,7 @@ export class SupplierPaymentsService {
     paymentId: string,
     supplierId: string,
     paymentAmount: number,
-    tx: Prisma.TransactionClient
+    tx: Prisma.TransactionClient,
   ) {
     const results = [];
 
@@ -198,10 +231,7 @@ export class SupplierPaymentsService {
           in: ['unpaid', 'partially_paid'],
         },
       },
-      orderBy: [
-        { order_date: 'asc' },
-        { created_at: 'asc' },
-      ],
+      orderBy: [{ order_date: 'asc' }, { created_at: 'asc' }],
     });
 
     let remainingAmount = paymentAmount;
@@ -234,7 +264,9 @@ export class SupplierPaymentsService {
   /**
    * Get supplier's outstanding balance
    */
-  private async getSupplierOutstandingBalance(supplierId: string): Promise<number> {
+  private async getSupplierOutstandingBalance(
+    supplierId: string,
+  ): Promise<number> {
     const result = await this.prisma.$queryRaw<Array<{ balance_due: number }>>`
       SELECT * FROM get_supplier_accounts_payable(${supplierId}::uuid)
     `;

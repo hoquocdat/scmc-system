@@ -28,6 +28,7 @@ import {
   type PaymentAllocationDto,
 } from '@/lib/api/supplier-payments';
 import { suppliersApi } from '@/lib/api/suppliers';
+import { AccountSelect } from '@/components/cash-book/AccountSelect';
 import { toast } from 'sonner';
 
 interface RecordSupplierPaymentDialogProps {
@@ -64,6 +65,7 @@ export function RecordSupplierPaymentDialog({
 }: RecordSupplierPaymentDialogProps) {
   const [allocationMode, setAllocationMode] = useState<'auto' | 'manual'>('auto');
   const [selectedPOs, setSelectedPOs] = useState<{ [key: string]: number }>({});
+  const [cashAccountId, setCashAccountId] = useState<string>();
   const queryClient = useQueryClient();
 
   // _errors reserved for future form validation display
@@ -167,6 +169,7 @@ export function RecordSupplierPaymentDialog({
       reference_number: data.reference_number || undefined,
       notes: data.notes || undefined,
       allocations: allocationMode === 'manual' ? allocations : undefined,
+      cash_account_id: cashAccountId,
     };
 
     createPaymentMutation.mutate(createDto);
@@ -175,6 +178,7 @@ export function RecordSupplierPaymentDialog({
   const handleClose = () => {
     reset();
     setSelectedPOs({});
+    setCashAccountId(undefined);
     setAllocationMode('auto');
     onOpenChange(false);
   };
@@ -241,6 +245,12 @@ export function RecordSupplierPaymentDialog({
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          {/* Cash book account */}
+          <div className="space-y-2">
+            <Label htmlFor="cash_account_id">Chi từ tài khoản</Label>
+            <AccountSelect id="cash_account_id" value={cashAccountId} onChange={setCashAccountId} allowDefault showBalance />
           </div>
 
           {/* Payment Date */}

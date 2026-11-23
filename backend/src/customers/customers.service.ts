@@ -9,6 +9,7 @@ import { CreateCustomerDto } from './dto/create-customer.dto';
 import { UpdateCustomerDto } from './dto/update-customer.dto';
 import { RecordReceivablePaymentDto } from './dto/record-receivable-payment.dto';
 import { UserContextService } from '../auth/user-context.service';
+import { CashBookPostingService } from '../cash-book/cash-book-posting.service';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -16,6 +17,7 @@ export class CustomersService {
   constructor(
     private prisma: PrismaService,
     private userContext: UserContextService,
+    private cashBook: CashBookPostingService,
   ) {}
 
   async findAll(page: number = 1, limit: number = 10) {
@@ -97,7 +99,9 @@ export class CustomersService {
     });
 
     if (existingCustomer) {
-      throw new ConflictException('Số điện thoại này đã được sử dụng bởi khách hàng khác');
+      throw new ConflictException(
+        'Số điện thoại này đã được sử dụng bởi khách hàng khác',
+      );
     }
 
     return this.prisma.customers.create({
@@ -145,7 +149,9 @@ export class CustomersService {
       });
 
       if (existingCustomer) {
-        throw new ConflictException('Số điện thoại này đã được sử dụng bởi khách hàng khác');
+        throw new ConflictException(
+          'Số điện thoại này đã được sử dụng bởi khách hàng khác',
+        );
       }
     }
 
@@ -288,7 +294,9 @@ export class CustomersService {
     const totalBalance = receivablesSummary.summary.total_balance;
 
     if (totalBalance <= 0) {
-      throw new BadRequestException('Khách hàng không có công nợ cần thanh toán');
+      throw new BadRequestException(
+        'Khách hàng không có công nợ cần thanh toán',
+      );
     }
 
     if (dto.amount > totalBalance) {
@@ -432,7 +440,7 @@ export class CustomersService {
     });
 
     // Create payment record on the sales order
-    await tx.sales_order_payments.create({
+    const payment = await tx.sales_order_payments.create({
       data: {
         sales_orders: { connect: { id: receivable.sales_order_id } },
         payment_method: paymentMethod,
@@ -441,6 +449,16 @@ export class CustomersService {
         notes: notes ? `[Công nợ] ${notes}` : '[Thanh toán công nợ]',
         user_profiles: userId ? { connect: { id: userId } } : undefined,
       },
+    });
+
+    // Receivable collections are cash book receipts in the same transaction
+    await this.cashBook.postSalesOrderPayment(tx, {
+      orderId: receivable.sales_order_id,
+      paymentId: payment.id,
+      method: paymentMethod,
+      amount,
+      categoryCode: 'receivable_collection',
+      createdBy: userId,
     });
 
     // Update sales order payment status and paid_amount

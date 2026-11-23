@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { ActivityLogsService } from '../activity-logs/activity-logs.service';
+import { CashBookPostingService } from '../cash-book/cash-book-posting.service';
 import { Action, CaslAbilityFactory } from '../casl/casl-ability.factory';
 import { PrismaService } from '../prisma/prisma.service';
 import { normalizePaymentMethod } from '../reports/report-types';
@@ -40,6 +41,7 @@ export class PosService {
     private readonly prisma: PrismaService,
     private readonly casl: CaslAbilityFactory,
     private readonly activity: ActivityLogsService,
+    private readonly cashBook: CashBookPostingService,
   ) {}
 
   /** True when the user may see and close other users' shifts (pos:supervise). */
@@ -179,6 +181,11 @@ export class PosService {
     return session;
   }
 
+  /**
+   * Cash put into / taken out of the drawer during a shift, recorded in the
+   * cash book on the branch's POS drawer (linked to the shift). With a target
+   * account (e.g. the safe) it is a transfer between the drawer and that account.
+   */
   async addCashMovement(user: PosUser, dto: CashMovementDto) {
     const session = await this.findOne(dto.pos_session_id, user);
     if (session.status !== PosSessionStatus.OPEN) {
@@ -186,27 +193,79 @@ export class PosService {
     }
     if (!(dto.amount > 0))
       throw new BadRequestException('Số tiền phải lớn hơn 0');
-    const signed =
-      dto.transaction_type === CashMovementType.CASH_OUT
-        ? -dto.amount
-        : dto.amount;
-    const movement = await this.prisma.pos_session_transactions.create({
-      data: {
-        pos_session_id: session.id,
-        transaction_type: dto.transaction_type,
-        amount: new Prisma.Decimal(signed),
-        reason: dto.reason,
-        notes: dto.notes,
-      },
+    if (!session.store_id)
+      throw new BadRequestException('Ca không gắn chi nhánh');
+    const storeId = session.store_id;
+    const isOut = dto.transaction_type === CashMovementType.CASH_OUT;
+    const note = [dto.reason, dto.notes].filter(Boolean).join(' - ');
+
+    const entry = await this.prisma.$transaction(async (tx) => {
+      const drawer = await this.cashBook.drawerOf(tx, storeId);
+      if (dto.target_account_id) {
+        const target = await tx.cash_book_accounts.findFirst({
+          where: { id: dto.target_account_id },
+        });
+        if (!target || target.store_id !== storeId) {
+          throw new BadRequestException(
+            'Tài khoản đích phải thuộc cùng chi nhánh',
+          );
+        }
+        const t = await this.cashBook.transfer(tx, {
+          fromAccountId: isOut ? drawer.id : target.id,
+          toAccountId: isOut ? target.id : drawer.id,
+          amount: dto.amount,
+          note,
+          createdBy: user.id,
+          posSessionId: session.id,
+          sessionSide: isOut ? 'from' : 'to',
+          isAutomatic: true,
+        });
+        return isOut ? t.out : t.in;
+      }
+      return this.cashBook.post(tx, {
+        accountId: drawer.id,
+        direction: isOut ? 'out' : 'in',
+        amount: dto.amount,
+        categoryCode: isOut ? 'shift_cash_out' : 'shift_cash_in',
+        source: { type: 'pos_session', id: session.id },
+        posSessionId: session.id,
+        isAutomatic: true,
+        note,
+        createdBy: user.id,
+      });
     });
+
     await this.activity.logActivity({
       userId: user.id,
       entityType: 'pos_session',
       entityId: session.id,
       action: dto.transaction_type,
-      newValues: { amount: dto.amount, reason: dto.reason },
+      newValues: {
+        amount: dto.amount,
+        reason: dto.reason,
+        entry_number: entry.entry_number,
+        target_account_id: dto.target_account_id,
+      },
     });
-    return movement;
+    return entry;
+  }
+
+  /** Drawer entries of a shift (cash book, posted only), with category codes. */
+  private async shiftDrawerEntries(sessionId: string, storeId: string | null) {
+    if (!storeId) return [];
+    const drawer = await this.prisma.cash_book_accounts.findFirst({
+      where: { store_id: storeId, is_pos_drawer: true },
+    });
+    if (!drawer) return [];
+    return this.prisma.cash_book_entries.findMany({
+      where: {
+        pos_session_id: sessionId,
+        account_id: drawer.id,
+        status: 'posted',
+      },
+      include: { cash_book_categories: true },
+      orderBy: { entry_date: 'asc' },
+    });
   }
 
   /** Sales, money per method, credit, movements and expected cash for a shift. */
@@ -220,7 +279,6 @@ export class PosService {
       string,
       { method: string; amount: number; payments: number }
     >();
-    let cashReceived = 0;
     let salesTotal = 0;
     let paidTotal = 0;
     for (const order of orders) {
@@ -230,22 +288,36 @@ export class PosService {
         const method = normalizePaymentMethod(p.payment_method);
         const amount = Number(p.amount);
         paidTotal += amount;
-        if (method === 'cash') cashReceived += amount;
         const cur = byMethod.get(method) ?? { method, amount: 0, payments: 0 };
         cur.amount += amount;
         cur.payments += 1;
         byMethod.set(method, cur);
       }
     }
-    const movements = session.pos_session_transactions;
+
+    // Expected cash comes from the cash book: every posted drawer entry linked to
+    // the shift, except the closing difference entry itself.
+    const entries = await this.shiftDrawerEntries(id, session.store_id);
+    const counted = entries.filter(
+      (e) => e.cash_book_categories.code !== 'cash_count_difference',
+    );
+    const signed = (e: { direction: string; amount: Prisma.Decimal }) =>
+      e.direction === 'in' ? Number(e.amount) : -Number(e.amount);
+    const cashReceived = counted
+      .filter((e) => e.cash_book_categories.code === 'sale')
+      .reduce((s, e) => s + signed(e), 0);
+    const movements = counted.filter(
+      (e) => e.cash_book_categories.code !== 'sale',
+    );
     const cashIn = movements
-      .filter((m) => Number(m.amount) > 0)
-      .reduce((s, m) => s + Number(m.amount), 0);
+      .filter((e) => e.direction === 'in')
+      .reduce((s, e) => s + Number(e.amount), 0);
     const cashOut = movements
-      .filter((m) => Number(m.amount) < 0)
-      .reduce((s, m) => s + Math.abs(Number(m.amount)), 0);
+      .filter((e) => e.direction === 'out')
+      .reduce((s, e) => s + Number(e.amount), 0);
     const expectedCash =
-      Number(session.opening_cash ?? 0) + cashReceived + cashIn - cashOut;
+      Number(session.opening_cash ?? 0) +
+      counted.reduce((s, e) => s + signed(e), 0);
 
     return {
       session_id: session.id,
@@ -281,7 +353,15 @@ export class PosService {
       cash_received: cashReceived,
       cash_in: cashIn,
       cash_out: cashOut,
-      movements,
+      movements: movements.map((e) => ({
+        id: e.id,
+        entry_number: e.entry_number,
+        transaction_type: e.direction === 'in' ? 'cash_in' : 'cash_out',
+        category: e.cash_book_categories.name,
+        amount: e.direction === 'in' ? Number(e.amount) : -Number(e.amount),
+        reason: e.note,
+        created_at: e.entry_date,
+      })),
       expected_cash: expectedCash,
       closing_cash:
         session.closing_cash != null ? Number(session.closing_cash) : null,
@@ -293,25 +373,43 @@ export class PosService {
     };
   }
 
+  /** Closes a shift; a non-zero difference is booked on the drawer so its balance matches the count. */
   async closeShift(id: string, user: PosUser, dto: ClosePosSessionDto) {
     const session = await this.findOne(id, user);
     if (session.status === PosSessionStatus.CLOSED) {
       throw new ConflictException('Ca đã được đóng');
     }
     const summary = await this.getSummary(id);
-    const difference = dto.closing_cash - summary.expected_cash;
-    const closed = await this.prisma.pos_sessions.update({
-      where: { id },
-      data: {
-        status: PosSessionStatus.CLOSED,
-        closing_cash: new Prisma.Decimal(dto.closing_cash),
-        expected_cash: new Prisma.Decimal(summary.expected_cash),
-        cash_difference: new Prisma.Decimal(difference),
-        closed_at: new Date(),
-        closed_by: user.id,
-        notes: dto.notes || session.notes,
-      },
-      include: sessionInclude,
+    const difference =
+      Math.round((dto.closing_cash - summary.expected_cash) * 100) / 100;
+    const closed = await this.prisma.$transaction(async (tx) => {
+      if (difference !== 0 && session.store_id) {
+        const drawer = await this.cashBook.drawerOf(tx, session.store_id);
+        await this.cashBook.post(tx, {
+          accountId: drawer.id,
+          direction: difference > 0 ? 'in' : 'out',
+          amount: Math.abs(difference),
+          categoryCode: 'cash_count_difference',
+          source: { type: 'pos_session', id },
+          posSessionId: id,
+          isAutomatic: true,
+          note: `Chênh lệch kiểm quỹ ca ${session.session_number}`,
+          createdBy: user.id,
+        });
+      }
+      return tx.pos_sessions.update({
+        where: { id },
+        data: {
+          status: PosSessionStatus.CLOSED,
+          closing_cash: new Prisma.Decimal(dto.closing_cash),
+          expected_cash: new Prisma.Decimal(summary.expected_cash),
+          cash_difference: new Prisma.Decimal(difference),
+          closed_at: new Date(),
+          closed_by: user.id,
+          notes: dto.notes || session.notes,
+        },
+        include: sessionInclude,
+      });
     });
     await this.activity.logActivity({
       userId: user.id,

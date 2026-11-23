@@ -39,4 +39,9 @@ export class CashMovementDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @ApiPropertyOptional({ description: 'Another account of the branch (e.g. the safe); the movement becomes a transfer with the POS drawer' })
+  @IsUUID()
+  @IsOptional()
+  target_account_id?: string;
 }

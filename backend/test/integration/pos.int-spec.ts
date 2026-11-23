@@ -1,4 +1,5 @@
 import 'reflect-metadata';
+import { CashBookPostingService } from '../../src/cash-book/cash-book-posting.service';
 import {
   ConflictException,
   ForbiddenException,
@@ -75,8 +76,9 @@ describe('POS shifts and checkout', () => {
       prisma,
       new PriceResolverService(prisma),
       new LoyaltyService(prisma),
+      new CashBookPostingService(prisma),
     );
-    shifts = new PosService(prisma, casl, activity);
+    shifts = new PosService(prisma, casl, activity, new CashBookPostingService(prisma));
     checkout = new PosCheckoutService(prisma, posting, casl, activity, {
       get: () => SECRET,
     } as unknown as ConfigService);
@@ -127,7 +129,9 @@ describe('POS shifts and checkout', () => {
         amount: 1_000_000,
         reason: 'move to safe',
       });
-      expect(Number(out.amount)).toBe(-1_000_000);
+      // recorded in the cash book: positive amount, direction out, on the drawer, linked to the shift
+      expect(out).toMatchObject({ direction: 'out', pos_session_id: shift.id });
+      expect(Number(out.amount)).toBe(1_000_000);
       await expect(
         shifts.addCashMovement(u('sales_associate'), {
           pos_session_id: shift.id,

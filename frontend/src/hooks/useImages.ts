@@ -6,7 +6,7 @@ import { toast } from 'sonner';
  * Hook to fetch images for an entity
  */
 export function useEntityImages(
-  entityType: 'bike' | 'service_order' | 'customer' | 'part' | 'comment' | 'service_item',
+  entityType: 'bike' | 'service_order' | 'customer' | 'part' | 'comment' | 'service_item' | 'cash_book_entry',
   entityId: string,
   enabled = true
 ) {
@@ -30,7 +30,7 @@ export function useEntityImages(
  * Hook to upload images for an entity
  */
 export function useUploadImages(
-  entityType: 'bike' | 'service_order' | 'customer' | 'part' | 'comment' | 'service_item',
+  entityType: 'bike' | 'service_order' | 'customer' | 'part' | 'comment' | 'service_item' | 'cash_book_entry',
   entityId: string
 ) {
   const queryClient = useQueryClient();
@@ -57,7 +57,7 @@ export function useUploadImages(
  * Hook to delete an image
  */
 export function useDeleteImage(
-  entityType: 'bike' | 'service_order' | 'customer' | 'part' | 'comment' | 'service_item',
+  entityType: 'bike' | 'service_order' | 'customer' | 'part' | 'comment' | 'service_item' | 'cash_book_entry',
   entityId: string
 ) {
   const queryClient = useQueryClient();

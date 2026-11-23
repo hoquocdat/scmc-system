@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { CashBookPostingService } from '../../src/cash-book/cash-book-posting.service';
 import { LoyaltyService } from '../../src/loyalty/loyalty.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { PriceResolverService } from '../../src/sales/pricing/price-resolver';
@@ -48,6 +49,7 @@ describe('SalesPostingService', () => {
       prisma,
       new PriceResolverService(prisma),
       loyalty,
+      new CashBookPostingService(prisma),
     );
   });
   afterAll(closeTestDb);

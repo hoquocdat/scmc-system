@@ -19,6 +19,7 @@ import { Prisma } from '@prisma/client';
 import { UserContextService } from '../auth/user-context.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
 import { SalesPostingService } from './sales-posting.service';
+import { CashBookPostingService } from '../cash-book/cash-book-posting.service';
 
 @Injectable()
 export class SalesService {
@@ -27,6 +28,7 @@ export class SalesService {
     private userContext: UserContextService,
     private loyaltyService: LoyaltyService,
     private posting: SalesPostingService,
+    private cashBook: CashBookPostingService,
   ) {}
 
   /**
@@ -344,6 +346,14 @@ export class SalesService {
           },
         });
 
+        await this.cashBook.postSalesOrderPayment(tx, {
+          orderId: order.id,
+          paymentId: payment.id,
+          method: createPaymentDto.payment_method,
+          amount: createPaymentDto.amount,
+          categoryCode: 'sale',
+          createdBy: receivedBy,
+        });
         await this.posting.settleIn(tx, order.id, receivedBy);
         return payment;
       });

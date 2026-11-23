@@ -27,6 +27,7 @@ import { WorkshopReportsService } from './workshop-reports.service';
     FinancialReportsService,
     WorkshopReportsService,
     ExportService,
+    ReportExportInterceptor,
   ],
 })
 export class ReportsModule {}

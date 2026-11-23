@@ -7,7 +7,7 @@ import { readBlobError, reportsApi, saveBlob, type ReportFormat, type ReportKey,
 
 interface ExportMenuProps {
   reportKey: ReportKey;
-  query: ReportQuery;
+  query: ReportQuery | Record<string, unknown>;
   disabled?: boolean;
 }
 

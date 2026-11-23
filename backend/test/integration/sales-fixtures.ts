@@ -5,6 +5,8 @@
  */
 import { Prisma } from '@prisma/client';
 import { randomUUID } from 'crypto';
+import { CashBookAccountsService } from '../../src/cash-book/cash-book-accounts.service';
+import { PrismaService } from '../../src/prisma/prisma.service';
 import { testDb } from './db';
 
 const D = (n: number) => new Prisma.Decimal(n);
@@ -12,6 +14,7 @@ const D = (n: number) => new Prisma.Decimal(n);
 export interface SalesFixtures {
   store: { id: string; locationId: string };
   store2: { id: string; locationId: string };
+  accounts: { hcmDrawer: string; hcmBank: string; hnDrawer: string; hnBank: string };
   products: { jeans: string; exhaust: string; sticker: string; master: string };
   variants: { size32: string };
   customers: { member: string; plain: string };
@@ -61,6 +64,11 @@ export async function seedSalesFixtures(): Promise<SalesFixtures> {
   const store2 = await testDb.stores.create({
     data: { name: 'SCMC Hanoi', code: 'HN', default_warehouse_id: loc2.id },
   });
+
+  // Branch cash book accounts (what StoresService.create does for real branches)
+  const cashAccounts = new CashBookAccountsService(testDb as unknown as PrismaService);
+  const hcmAccounts = await testDb.$transaction((tx) => cashAccounts.createDefaultsFor(tx, store));
+  const hnAccounts = await testDb.$transaction((tx) => cashAccounts.createDefaultsFor(tx, store2));
 
   const denim = await testDb.product_categories.create({
     data: { name: 'Denim', slug: 'denim' },
@@ -190,6 +198,7 @@ export async function seedSalesFixtures(): Promise<SalesFixtures> {
   return {
     store: { id: store.id, locationId: loc.id },
     store2: { id: store2.id, locationId: loc2.id },
+    accounts: { hcmDrawer: hcmAccounts.drawer.id, hcmBank: hcmAccounts.bank.id, hnDrawer: hnAccounts.drawer.id, hnBank: hnAccounts.bank.id },
     products: {
       jeans: jeans.id,
       exhaust: exhaust.id,

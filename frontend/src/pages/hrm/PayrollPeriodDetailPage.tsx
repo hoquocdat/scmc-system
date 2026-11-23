@@ -1,6 +1,6 @@
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { payrollApi, type PayrollSlip } from '@/lib/api/payroll';
+import { payrollApi, type MarkPaidDto, type PayrollSlip } from '@/lib/api/payroll';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -19,6 +19,7 @@ import { createPayrollSlipColumns } from '@/components/payroll/PayrollSlipTableC
 import { toast } from 'sonner';
 import { useState } from 'react';
 import { ConfirmDialog } from '@/components/payroll/ConfirmDialog';
+import { MarkPaidDialog } from '@/components/payroll/MarkPaidDialog';
 
 const formatCurrency = (value: number | undefined | null) => {
   if (!value) return '0 ₫';
@@ -34,6 +35,7 @@ export function PayrollPeriodDetailPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  const [markPaidOpen, setMarkPaidOpen] = useState(false);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -105,8 +107,9 @@ export function PayrollPeriodDetailPage() {
 
   // Mark paid mutation
   const markPaidMutation = useMutation({
-    mutationFn: () => payrollApi.markPaid(id!, {}),
+    mutationFn: (dto: MarkPaidDto) => payrollApi.markPaid(id!, dto),
     onSuccess: () => {
+      setMarkPaidOpen(false);
       queryClient.invalidateQueries({ queryKey: ['payroll-period', id] });
       queryClient.invalidateQueries({ queryKey: ['payroll-slips', id] });
       toast.success('Đã đánh dấu đã thanh toán');
@@ -143,14 +146,7 @@ export function PayrollPeriodDetailPage() {
     });
   };
 
-  const handleMarkPaid = () => {
-    setConfirmDialog({
-      isOpen: true,
-      title: 'Đánh dấu đã thanh toán',
-      description: 'Xác nhận đã thanh toán lương cho tất cả nhân viên trong kỳ này?',
-      action: async () => { await markPaidMutation.mutateAsync(); },
-    });
-  };
+  const handleMarkPaid = () => setMarkPaidOpen(true);
 
   const handleViewSlip = (slip: PayrollSlip) => {
     // Could open a detail modal or navigate to slip detail page
@@ -316,6 +312,7 @@ export function PayrollPeriodDetailPage() {
       </Card>
 
       {/* Confirm Dialog */}
+      <MarkPaidDialog open={markPaidOpen} onOpenChange={setMarkPaidOpen} isPending={markPaidMutation.isPending} onConfirm={(dto) => markPaidMutation.mutate(dto)} />
       <ConfirmDialog
         isOpen={confirmDialog.isOpen}
         onClose={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}

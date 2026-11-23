@@ -289,7 +289,7 @@ class APIClient {
   // Images
   images = {
     upload: async (
-      entityType: 'bike' | 'service_order' | 'customer' | 'part' | 'comment' | 'service_item',
+      entityType: 'bike' | 'service_order' | 'customer' | 'part' | 'comment' | 'service_item' | 'cash_book_entry',
       entityId: string,
       files: File[]
     ) => {
@@ -319,7 +319,7 @@ class APIClient {
     },
 
     getByEntity: async (
-      entityType: 'bike' | 'service_order' | 'customer' | 'part' | 'comment' | 'service_item',
+      entityType: 'bike' | 'service_order' | 'customer' | 'part' | 'comment' | 'service_item' | 'cash_book_entry',
       entityId: string
     ) => {
       return this.request(`/images/entity/${entityType}/${entityId}`);
