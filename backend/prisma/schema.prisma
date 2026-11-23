@@ -237,6 +237,7 @@ model service_orders {
   status                                                    service_status?           @default(pending)
   priority                                                  priority_level?           @default(normal)
   description                                               String?
+  customer_demand                                           String?
   mileage_in                                                Int?
   mileage_out                                               Int?
   drop_off_date                                             DateTime?                 @default(now()) @db.Timestamptz(6)
@@ -250,10 +251,9 @@ model service_orders {
   created_at                                                DateTime?                 @default(now()) @db.Timestamptz(6)
   updated_at                                                DateTime?                 @default(now()) @db.Timestamptz(6)
   image_url                                                 String?
-  created_by_id                                             String?                   @db.Uuid
-  customer_demand                                           String?
-  updated_by_id                                             String?                   @db.Uuid
   store_id                                                  String?                   @db.Uuid
+  created_by_id                                             String?                   @db.Uuid
+  updated_by_id                                             String?                   @db.Uuid
   payments                                                  payments[]
   service_items                                             service_items[]
   service_order_comments                                    service_order_comments[]
@@ -361,6 +361,7 @@ model user_profiles {
   payroll_slips_payroll_slips_paid_byTouser_profiles                           payroll_slips[]              @relation("payroll_slips_paid_byTouser_profiles")
   permission_audit_log_permission_audit_log_performed_byTouser_profiles        permission_audit_log[]       @relation("permission_audit_log_performed_byTouser_profiles")
   permission_audit_log_permission_audit_log_user_idTouser_profiles             permission_audit_log[]       @relation("permission_audit_log_user_idTouser_profiles")
+  pos_sessions_pos_sessions_closed_byTouser_profiles                           pos_sessions[]               @relation("pos_sessions_closed_byTouser_profiles")
   pos_sessions                                                                 pos_sessions[]
   purchase_orders_purchase_orders_approved_byTouser_profiles                   purchase_orders[]            @relation("purchase_orders_approved_byTouser_profiles")
   purchase_orders_purchase_orders_created_by_idTouser_profiles                 purchase_orders[]            @relation("purchase_orders_created_by_idTouser_profiles")
@@ -369,6 +370,7 @@ model user_profiles {
   purchase_orders_purchase_orders_updated_by_idTouser_profiles                 purchase_orders[]            @relation("purchase_orders_updated_by_idTouser_profiles")
   sales_order_payments                                                         sales_order_payments[]
   sales_orders_sales_orders_created_byTouser_profiles                          sales_orders[]               @relation("sales_orders_created_byTouser_profiles")
+  sales_orders_sales_orders_discount_approved_byTouser_profiles                sales_orders[]               @relation("sales_orders_discount_approved_byTouser_profiles")
   sales_orders_sales_orders_processed_byTouser_profiles                        sales_orders[]               @relation("sales_orders_processed_byTouser_profiles")
   service_items                                                                service_items[]
   service_order_comments                                                       service_order_comments[]
@@ -459,29 +461,35 @@ model pos_session_transactions {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model pos_sessions {
-  id                       String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  session_number           String                     @unique @db.VarChar(50)
-  location_id              String                     @db.Uuid
-  user_id                  String                     @db.Uuid
-  status                   String?                    @default("open") @db.VarChar(50)
-  opening_cash             Decimal?                   @default(0) @db.Decimal(10, 2)
-  closing_cash             Decimal?                   @db.Decimal(10, 2)
-  expected_cash            Decimal?                   @db.Decimal(10, 2)
-  cash_difference          Decimal?                   @db.Decimal(10, 2)
-  opened_at                DateTime?                  @default(now()) @db.Timestamptz(6)
-  closed_at                DateTime?                  @db.Timestamptz(6)
-  notes                    String?
-  created_at               DateTime?                  @default(now()) @db.Timestamptz(6)
-  updated_at               DateTime?                  @default(now()) @db.Timestamptz(6)
-  pos_session_transactions pos_session_transactions[]
-  stock_locations          stock_locations            @relation(fields: [location_id], references: [id], onUpdate: NoAction)
-  user_profiles            user_profiles              @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+  id                                                  String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  session_number                                      String                     @unique @db.VarChar(50)
+  location_id                                         String                     @db.Uuid
+  user_id                                             String                     @db.Uuid
+  status                                              String?                    @default("open") @db.VarChar(50)
+  opening_cash                                        Decimal?                   @default(0) @db.Decimal(10, 2)
+  closing_cash                                        Decimal?                   @db.Decimal(10, 2)
+  expected_cash                                       Decimal?                   @db.Decimal(10, 2)
+  cash_difference                                     Decimal?                   @db.Decimal(10, 2)
+  opened_at                                           DateTime?                  @default(now()) @db.Timestamptz(6)
+  closed_at                                           DateTime?                  @db.Timestamptz(6)
+  notes                                               String?
+  created_at                                          DateTime?                  @default(now()) @db.Timestamptz(6)
+  updated_at                                          DateTime?                  @default(now()) @db.Timestamptz(6)
+  store_id                                            String?                    @db.Uuid
+  closed_by                                           String?                    @db.Uuid
+  pos_session_transactions                            pos_session_transactions[]
+  user_profiles_pos_sessions_closed_byTouser_profiles user_profiles?             @relation("pos_sessions_closed_byTouser_profiles", fields: [closed_by], references: [id], onUpdate: NoAction)
+  stock_locations                                     stock_locations            @relation(fields: [location_id], references: [id], onUpdate: NoAction)
+  stores                                              stores?                    @relation(fields: [store_id], references: [id], onUpdate: NoAction)
+  user_profiles                                       user_profiles              @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+  sales_orders                                        sales_orders[]
 
   @@index([location_id], map: "idx_pos_sessions_location")
   @@index([session_number], map: "idx_pos_sessions_number")
   @@index([opened_at(sort: Desc)], map: "idx_pos_sessions_opened_at")
   @@index([status], map: "idx_pos_sessions_status")
   @@index([user_id], map: "idx_pos_sessions_user")
+  @@index([store_id], map: "idx_pos_sessions_store")
   @@schema("public")
 }
 
@@ -639,50 +647,55 @@ model sales_order_payments {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model sales_orders {
-  id                                                     String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  order_number                                           String                 @unique @db.VarChar(50)
-  customer_id                                            String?                @db.Uuid
-  customer_name                                          String                 @db.VarChar(255)
-  customer_phone                                         String?                @db.VarChar(20)
-  customer_email                                         String?                @db.VarChar(255)
-  channel                                                String                 @db.VarChar(50)
-  location_id                                            String?                @db.Uuid
-  status                                                 String?                @default("pending") @db.VarChar(50)
-  payment_status                                         String?                @default("unpaid") @db.VarChar(50)
-  shipping_address                                       String?
-  shipping_city                                          String?                @db.VarChar(100)
-  shipping_method                                        String?                @db.VarChar(50)
-  tracking_number                                        String?                @db.VarChar(100)
-  order_date                                             DateTime?              @default(now()) @db.Timestamptz(6)
-  payment_date                                           DateTime?              @db.Timestamptz(6)
-  shipped_date                                           DateTime?              @db.Timestamptz(6)
-  delivered_date                                         DateTime?              @db.Timestamptz(6)
-  subtotal                                               Decimal?               @default(0) @db.Decimal(10, 2)
-  discount_amount                                        Decimal?               @default(0) @db.Decimal(10, 2)
-  tax_amount                                             Decimal?               @default(0) @db.Decimal(10, 2)
-  shipping_cost                                          Decimal?               @default(0) @db.Decimal(10, 2)
-  total_amount                                           Decimal                @db.Decimal(10, 2)
-  paid_amount                                            Decimal?               @default(0) @db.Decimal(10, 2)
-  notes                                                  String?
-  internal_notes                                         String?
-  created_by                                             String?                @db.Uuid
-  processed_by                                           String?                @db.Uuid
-  created_at                                             DateTime?              @default(now()) @db.Timestamptz(6)
-  updated_at                                             DateTime?              @default(now()) @db.Timestamptz(6)
-  discount_type                                          String?                @default("fixed") @db.VarChar(20)
-  discount_percent                                       Decimal?               @default(0) @db.Decimal(5, 2)
-  store_id                                               String?                @db.Uuid
-  loyalty_points_redeemed                                Int?                   @default(0)
-  loyalty_discount_amount                                Decimal?               @default(0) @db.Decimal(10, 2)
-  loyalty_points_earned                                  Int?                   @default(0)
-  customer_receivables                                   customer_receivables?
-  sales_order_items                                      sales_order_items[]
-  sales_order_payments                                   sales_order_payments[]
-  user_profiles_sales_orders_created_byTouser_profiles   user_profiles?         @relation("sales_orders_created_byTouser_profiles", fields: [created_by], references: [id], onUpdate: NoAction)
-  customers                                              customers?             @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
-  stock_locations                                        stock_locations?       @relation(fields: [location_id], references: [id], onUpdate: NoAction)
-  user_profiles_sales_orders_processed_byTouser_profiles user_profiles?         @relation("sales_orders_processed_byTouser_profiles", fields: [processed_by], references: [id], onUpdate: NoAction)
-  stores                                                 stores?                @relation(fields: [store_id], references: [id], onUpdate: NoAction)
+  id                                                             String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  order_number                                                   String                 @unique @db.VarChar(50)
+  customer_id                                                    String?                @db.Uuid
+  customer_name                                                  String                 @db.VarChar(255)
+  customer_phone                                                 String?                @db.VarChar(20)
+  customer_email                                                 String?                @db.VarChar(255)
+  channel                                                        String                 @db.VarChar(50)
+  location_id                                                    String?                @db.Uuid
+  status                                                         String?                @default("pending") @db.VarChar(50)
+  payment_status                                                 String?                @default("unpaid") @db.VarChar(50)
+  shipping_address                                               String?
+  shipping_city                                                  String?                @db.VarChar(100)
+  shipping_method                                                String?                @db.VarChar(50)
+  tracking_number                                                String?                @db.VarChar(100)
+  order_date                                                     DateTime?              @default(now()) @db.Timestamptz(6)
+  payment_date                                                   DateTime?              @db.Timestamptz(6)
+  shipped_date                                                   DateTime?              @db.Timestamptz(6)
+  delivered_date                                                 DateTime?              @db.Timestamptz(6)
+  subtotal                                                       Decimal?               @default(0) @db.Decimal(10, 2)
+  discount_amount                                                Decimal?               @default(0) @db.Decimal(10, 2)
+  tax_amount                                                     Decimal?               @default(0) @db.Decimal(10, 2)
+  shipping_cost                                                  Decimal?               @default(0) @db.Decimal(10, 2)
+  total_amount                                                   Decimal                @db.Decimal(10, 2)
+  paid_amount                                                    Decimal?               @default(0) @db.Decimal(10, 2)
+  notes                                                          String?
+  internal_notes                                                 String?
+  created_by                                                     String?                @db.Uuid
+  processed_by                                                   String?                @db.Uuid
+  created_at                                                     DateTime?              @default(now()) @db.Timestamptz(6)
+  updated_at                                                     DateTime?              @default(now()) @db.Timestamptz(6)
+  store_id                                                       String?                @db.Uuid
+  discount_type                                                  String?                @default("fixed") @db.VarChar(20)
+  discount_percent                                               Decimal?               @default(0) @db.Decimal(5, 2)
+  loyalty_points_redeemed                                        Int?                   @default(0)
+  loyalty_discount_amount                                        Decimal?               @default(0) @db.Decimal(10, 2)
+  loyalty_points_earned                                          Int?                   @default(0)
+  pos_session_id                                                 String?                @db.Uuid
+  client_request_id                                              String?                @db.Uuid
+  discount_approved_by                                           String?                @db.Uuid
+  customer_receivables                                           customer_receivables?
+  sales_order_items                                              sales_order_items[]
+  sales_order_payments                                           sales_order_payments[]
+  user_profiles_sales_orders_created_byTouser_profiles           user_profiles?         @relation("sales_orders_created_byTouser_profiles", fields: [created_by], references: [id], onUpdate: NoAction)
+  customers                                                      customers?             @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
+  user_profiles_sales_orders_discount_approved_byTouser_profiles user_profiles?         @relation("sales_orders_discount_approved_byTouser_profiles", fields: [discount_approved_by], references: [id], onUpdate: NoAction)
+  stock_locations                                                stock_locations?       @relation(fields: [location_id], references: [id], onUpdate: NoAction)
+  pos_sessions                                                   pos_sessions?          @relation(fields: [pos_session_id], references: [id], onUpdate: NoAction)
+  user_profiles_sales_orders_processed_byTouser_profiles         user_profiles?         @relation("sales_orders_processed_byTouser_profiles", fields: [processed_by], references: [id], onUpdate: NoAction)
+  stores                                                         stores?                @relation(fields: [store_id], references: [id], onUpdate: NoAction)
 
   @@index([channel], map: "idx_sales_orders_channel")
   @@index([customer_id], map: "idx_sales_orders_customer")
@@ -693,6 +706,7 @@ model sales_orders {
   @@index([payment_status], map: "idx_sales_orders_payment_status")
   @@index([status], map: "idx_sales_orders_status")
   @@index([store_id], map: "idx_sales_orders_store")
+  @@index([pos_session_id], map: "idx_sales_orders_pos_session")
   @@schema("public")
 }
 
@@ -875,14 +889,15 @@ model role_permissions {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model roles {
-  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name             String             @unique @db.VarChar(100)
-  description      String?
-  is_system        Boolean?           @default(false)
-  created_at       DateTime           @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime           @default(now()) @db.Timestamptz(6)
-  role_permissions role_permissions[]
-  user_roles       user_roles[]
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String             @unique @db.VarChar(100)
+  description          String?
+  is_system            Boolean?           @default(false)
+  created_at           DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime           @default(now()) @db.Timestamptz(6)
+  max_discount_percent Decimal?           @db.Decimal(5, 2)
+  role_permissions     role_permissions[]
+  user_roles           user_roles[]
 
   @@schema("public")
 }
@@ -1162,6 +1177,7 @@ model stores {
   default_warehouse_id String?          @db.Uuid
   created_at           DateTime         @default(now()) @db.Timestamptz(6)
   updated_at           DateTime         @default(now()) @db.Timestamptz(6)
+  pos_sessions         pos_sessions[]
   sales_orders         sales_orders[]
   service_orders       service_orders[]
   stock_locations      stock_locations? @relation(fields: [default_warehouse_id], references: [id], onUpdate: NoAction)
@@ -1527,6 +1543,17 @@ model payroll_slips {
   @@schema("public")
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model document_counters {
+  doc_type   String   @db.VarChar(20)
+  period     String   @db.VarChar(20)
+  last_value Int      @default(0)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@id([doc_type, period])
+  @@schema("public")
+}
+
 enum owner_type {
   individual
   company
@@ -1578,6 +1605,7 @@ enum user_role {
   store_manager
   sales_associate
   warehouse_staff
+  superadmin
 
   @@schema("public")
 }

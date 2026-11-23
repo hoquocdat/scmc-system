@@ -4,6 +4,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 import { Decimal } from '@prisma/client/runtime/library';
 import {
   EarnPointsDto,
@@ -21,6 +22,17 @@ import {
 @Injectable()
 export class LoyaltyService {
   constructor(private readonly prisma: PrismaService) {}
+
+  /**
+   * A view of this service whose reads and writes run on the given Prisma
+   * transaction client, so loyalty changes commit or roll back together with
+   * the order that caused them. Methods that take an optional `tx` delegate here.
+   */
+  forTransaction(tx: Prisma.TransactionClient): LoyaltyService {
+    const bound: LoyaltyService = Object.create(LoyaltyService.prototype);
+    Object.assign(bound, this, { prisma: tx });
+    return bound;
+  }
 
   /**
    * Get customer loyalty information including tier and balance
@@ -106,7 +118,11 @@ export class LoyaltyService {
   /**
    * Earn points from a purchase
    */
-  async earnPoints(dto: EarnPointsDto): Promise<EarnPointsResultDto> {
+  async earnPoints(
+    dto: EarnPointsDto,
+    tx?: Prisma.TransactionClient,
+  ): Promise<EarnPointsResultDto> {
+    if (tx) return this.forTransaction(tx).earnPoints(dto);
     const { customerId, orderId, orderType, amount, createdBy } = dto;
 
     // Get customer loyalty
@@ -114,9 +130,11 @@ export class LoyaltyService {
     const rules = await this.getActiveRules();
 
     // Get tier multiplier
-    const tier = await this.prisma.loyalty_tiers.findUnique({
-      where: { id: loyalty.current_tier_id ?? undefined },
-    });
+    const tier = loyalty.current_tier_id
+      ? await this.prisma.loyalty_tiers.findUnique({
+          where: { id: loyalty.current_tier_id },
+        })
+      : null;
     const tierMultiplier = tier
       ? Number(tier.points_multiplier)
       : 1.0;
@@ -222,12 +240,16 @@ export class LoyaltyService {
   /**
    * Redeem points for a discount
    */
-  async redeemPoints(dto: RedeemPointsDto): Promise<{
+  async redeemPoints(
+    dto: RedeemPointsDto,
+    tx?: Prisma.TransactionClient,
+  ): Promise<{
     discountAmount: number;
     pointsRedeemed: number;
     pointsBalance: number;
     transactionId: string;
   }> {
+    if (tx) return this.forTransaction(tx).redeemPoints(dto);
     const { customerId, points, orderId, orderType } = dto;
 
     const loyalty = await this.getOrCreateLoyalty(customerId);
@@ -290,7 +312,11 @@ export class LoyaltyService {
     customerId: string,
     orderId: string,
     orderType: string = 'sales_order',
+    tx?: Prisma.TransactionClient,
   ): Promise<void> {
+    if (tx) {
+      return this.forTransaction(tx).reversePoints(customerId, orderId, orderType);
+    }
     const loyalty = await this.prisma.customer_loyalty.findUnique({
       where: { customer_id: customerId },
     });

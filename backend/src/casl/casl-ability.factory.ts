@@ -24,6 +24,10 @@ export enum Action {
   Transfer = 'transfer',
   Grant = 'grant',
   Revoke = 'revoke',
+  // POS-specific actions
+  Credit = 'credit',
+  Reprint = 'reprint',
+  Supervise = 'supervise',
   Export = 'export',
   // Report-specific actions
   Sales = 'sales',
@@ -187,6 +191,9 @@ export class CaslAbilityFactory {
       transfer: Action.Transfer,
       grant: Action.Grant,
       revoke: Action.Revoke,
+      credit: Action.Credit,
+      reprint: Action.Reprint,
+      supervise: Action.Supervise,
       export: Action.Export,
       sales: Action.Sales,
       inventory: Action.Inventory,

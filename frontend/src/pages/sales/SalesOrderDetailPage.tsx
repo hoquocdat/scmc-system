@@ -49,6 +49,8 @@ import { PaymentDialog } from '@/components/sales-orders/PaymentDialog';
 import { InvoicePreviewModal } from '@/components/sales-orders/InvoicePreviewModal';
 import { ProductSearchInput } from '@/components/inventory/purchase-orders/ProductSearchInput';
 import { CustomerLoyaltyCard } from '@/components/loyalty/CustomerLoyaltyCard';
+import { ReceiptDialog } from '@/components/pos/ReceiptDialog';
+import { posApi, type PosReceipt } from '@/lib/api/pos';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
 import { toast } from 'sonner';
 
@@ -70,6 +72,14 @@ export function SalesOrderDetailPage() {
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [posReceipt, setPosReceipt] = useState<PosReceipt | null>(null);
+
+  // POS receipts are reprinted from server data; every reprint is logged
+  const reprintMutation = useMutation({
+    mutationFn: (orderId: string) => posApi.reprint(orderId),
+    onSuccess: (receipt) => setPosReceipt(receipt),
+    onError: () => toast.error('Không in lại được hóa đơn (cần quyền in lại)'),
+  });
 
   // Fetch sales order
   const { data: order, isLoading } = useQuery({
@@ -251,6 +261,15 @@ export function SalesOrderDetailPage() {
             <Printer className="mr-2 h-4 w-4" />
             In hóa đơn
           </Button>
+          {order.channel === 'pos' && (
+            <>
+              <Button variant="outline" onClick={() => reprintMutation.mutate(order.id)} disabled={reprintMutation.isPending}>
+                <Printer className="mr-2 h-4 w-4" />
+                In lại hóa đơn POS
+              </Button>
+              <ReceiptDialog open={!!posReceipt} onOpenChange={(o) => !o && setPosReceipt(null)} receipt={posReceipt} />
+            </>
+          )}
           {canCancel && (
             <Button variant="destructive" onClick={() => setIsCancelDialogOpen(true)} disabled={cancelMutation.isPending}>
               <XCircle className="mr-2 h-4 w-4" />

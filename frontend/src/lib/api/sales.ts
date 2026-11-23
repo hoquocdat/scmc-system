@@ -2,7 +2,7 @@ import { apiClient } from './client';
 
 export type OrderStatus = 'draft' | 'pending' | 'confirmed' | 'processing' | 'ready' | 'completed' | 'cancelled';
 export type PaymentStatus = 'unpaid' | 'partial' | 'paid' | 'refunded';
-export type SalesChannel = 'retail_store' | 'workshop' | 'online' | 'phone';
+export type SalesChannel = 'retail_store' | 'workshop' | 'online' | 'phone' | 'pos';
 export type DiscountType = 'fixed' | 'percent';
 export type PaymentMethod = 'cash' | 'card' | 'bank_transfer' | 'ewallet_momo' | 'ewallet_zalopay' | 'ewallet_vnpay';
 
@@ -342,6 +342,7 @@ export const SALES_CHANNEL_LABELS: Record<SalesChannel, string> = {
   workshop: 'Xưởng',
   online: 'Trực tuyến',
   phone: 'Điện thoại',
+  pos: 'POS',
 };
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {

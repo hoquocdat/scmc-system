@@ -1,187 +1,110 @@
 import { forwardRef } from 'react';
-import { formatCurrency } from '@/lib/utils';
-import type { Product } from '@/lib/api/products';
-import type { Customer } from '@/lib/api/customers';
+import { num, POS_PAYMENT_METHOD_LABELS, type PosPaymentMethod, type PosReceipt } from '@/lib/api/pos';
+import { formatCurrency, formatDateTime } from '@/lib/utils';
 
-export interface ReceiptItem {
-  product: Product;
-  quantity: number;
-  price: number;
-  discount?: number;
-}
-
-export interface ReceiptData {
-  receiptNumber: string;
-  date: Date;
-  customer?: Customer | null;
-  items: ReceiptItem[];
-  subtotal: number;
-  discount: number;
-  vat: number;
-  total: number;
-  paymentMethod: string;
-  amountPaid: number;
-  change?: number;
-  cashier?: string;
-  location?: string;
-}
+export type ReceiptPaper = '80mm' | 'A4';
 
 interface ReceiptTemplateProps {
-  data: ReceiptData;
+  receipt: PosReceipt;
+  paper?: ReceiptPaper;
 }
 
-export const ReceiptTemplate = forwardRef<HTMLDivElement, ReceiptTemplateProps>(
-  ({ data }, ref) => {
-    return (
-      <div
-        ref={ref}
-        className="bg-white p-8 max-w-sm mx-auto font-mono text-sm"
-        style={{ width: '80mm' }} // Standard thermal printer width
-      >
-        {/* Header */}
-        <div className="text-center mb-6 border-b-2 border-dashed border-gray-400 pb-4">
-          <h1 className="text-2xl font-bold mb-1">SAIGON CLASSIC</h1>
-          <p className="text-xs">Motorcycle Parts & Service</p>
-          <p className="text-xs mt-1">
-            {data.location || 'HCMC Store'}
-          </p>
-          <p className="text-xs">123 Nguyen Hue, District 1</p>
-          <p className="text-xs">Ho Chi Minh City, Vietnam</p>
-          <p className="text-xs">Tel: +84 28 1234 5678</p>
-        </div>
+/** Receipt rendered from server data only (order, store, cashier, payments, loyalty). */
+export const ReceiptTemplate = forwardRef<HTMLDivElement, ReceiptTemplateProps>(function ReceiptTemplate({ receipt, paper = '80mm' }, ref) {
+  const store = receipt.stores;
+  const cashier = receipt.user_profiles_sales_orders_created_byTouser_profiles?.full_name ?? '—';
+  const paid = receipt.sales_order_payments.filter((p) => p.status === 'completed').reduce((s, p) => s + num(p.amount), 0);
+  const balance = Math.max(0, num(receipt.total_amount) - paid);
+  const lineDiscounts = receipt.sales_order_items.reduce((s, l) => s + num(l.discount_amount) * l.quantity, 0);
+  const gross = receipt.sales_order_items.reduce((s, l) => s + num(l.unit_price) * l.quantity, 0);
+  const narrow = paper === '80mm';
 
-        {/* Receipt Info */}
-        <div className="mb-4 text-xs">
-          <div className="flex justify-between mb-1">
-            <span>Receipt #:</span>
-            <span className="font-bold">{data.receiptNumber}</span>
-          </div>
-          <div className="flex justify-between mb-1">
-            <span>Date:</span>
-            <span>{data.date.toLocaleString('vi-VN')}</span>
-          </div>
-          {data.cashier && (
-            <div className="flex justify-between mb-1">
-              <span>Cashier:</span>
-              <span>{data.cashier}</span>
-            </div>
-          )}
-          {data.customer && (
-            <div className="flex justify-between mb-1">
-              <span>Customer:</span>
-              <span>{data.customer.full_name}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Items */}
-        <div className="border-t-2 border-b-2 border-dashed border-gray-400 py-3 mb-3">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-gray-300">
-                <th className="text-left pb-2">Item</th>
-                <th className="text-center pb-2">Qty</th>
-                <th className="text-right pb-2">Price</th>
-                <th className="text-right pb-2">Total</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.map((item, index) => (
-                <tr key={index} className="border-b border-gray-200">
-                  <td className="py-2">
-                    <div className="font-semibold">{item.product.name}</div>
-                    <div className="text-gray-600">{item.product.sku}</div>
-                  </td>
-                  <td className="text-center py-2">{item.quantity}</td>
-                  <td className="text-right py-2">
-                    {formatCurrency(item.price)}
-                  </td>
-                  <td className="text-right py-2 font-semibold">
-                    {formatCurrency(item.price * item.quantity)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Totals */}
-        <div className="mb-4 text-xs space-y-1">
-          <div className="flex justify-between">
-            <span>Subtotal:</span>
-            <span>{formatCurrency(data.subtotal)}</span>
-          </div>
-          {data.discount > 0 && (
-            <div className="flex justify-between text-green-600">
-              <span>Discount:</span>
-              <span>-{formatCurrency(data.discount)}</span>
-            </div>
-          )}
-          <div className="flex justify-between">
-            <span>VAT (10%):</span>
-            <span>{formatCurrency(data.vat)}</span>
-          </div>
-          <div className="flex justify-between text-lg font-bold border-t-2 border-gray-400 pt-2 mt-2">
-            <span>TOTAL:</span>
-            <span>{formatCurrency(data.total)}</span>
-          </div>
-        </div>
-
-        {/* Payment Info */}
-        <div className="border-t-2 border-dashed border-gray-400 pt-3 mb-4 text-xs">
-          <div className="flex justify-between mb-1">
-            <span>Payment Method:</span>
-            <span className="font-semibold uppercase">{data.paymentMethod}</span>
-          </div>
-          <div className="flex justify-between mb-1">
-            <span>Amount Paid:</span>
-            <span className="font-semibold">{formatCurrency(data.amountPaid)}</span>
-          </div>
-          {data.change !== undefined && data.change > 0 && (
-            <div className="flex justify-between text-lg font-bold">
-              <span>Change:</span>
-              <span>{formatCurrency(data.change)}</span>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="text-center text-xs border-t-2 border-dashed border-gray-400 pt-4 space-y-2">
-          <p className="font-semibold">Thank you for your purchase!</p>
-          <p>Please keep this receipt for warranty claims</p>
-          <p className="mt-2">Exchange/Return within 7 days with receipt</p>
-
-          {/* Barcode placeholder */}
-          <div className="mt-4 flex justify-center">
-            <svg
-              width="200"
-              height="60"
-              className="border border-gray-300"
-            >
-              {/* Simple barcode representation */}
-              <text
-                x="50%"
-                y="50%"
-                textAnchor="middle"
-                dominantBaseline="middle"
-                fontSize="10"
-                fill="#333"
-              >
-                {data.receiptNumber}
-              </text>
-            </svg>
-          </div>
-
-          <p className="text-xs text-gray-500 mt-4">
-            Generated with Claude Code
-          </p>
-          <p className="text-xs text-gray-500">
-            www.saigonclassic.com
-          </p>
-        </div>
+  return (
+    <div ref={ref} className={`mx-auto bg-white text-black ${narrow ? 'font-mono text-xs' : 'text-sm'}`} style={{ width: narrow ? '80mm' : '190mm', padding: narrow ? '4mm' : '12mm' }}>
+      {receipt.reprint && <div className="mb-2 border border-black text-center font-bold uppercase">Bản in lại</div>}
+      <div className={`text-center ${narrow ? 'mb-2' : 'mb-4'}`}>
+        <div className={`font-bold ${narrow ? 'text-base' : 'text-2xl'}`}>{store?.name ?? 'SCMC'}</div>
+        {store?.address && <div>{store.address}{store.city ? `, ${store.city}` : ''}</div>}
+        {store?.phone && <div>ĐT: {store.phone}</div>}
       </div>
-    );
-  }
-);
+      <div className="border-t border-dashed border-black" />
+      <div className="my-1 grid grid-cols-[auto_1fr] gap-x-2">
+        <span>Số HĐ:</span><span className="text-right font-bold">{receipt.order_number}</span>
+        <span>Ngày:</span><span className="text-right">{formatDateTime(receipt.order_date ?? receipt.created_at ?? new Date().toISOString())}</span>
+        <span>Thu ngân:</span><span className="text-right">{cashier}</span>
+        <span>Khách:</span><span className="text-right">{receipt.customers?.full_name ?? receipt.customer_name}{receipt.customer_phone ? ` · ${receipt.customer_phone}` : ''}</span>
+      </div>
+      <div className="border-t border-dashed border-black" />
 
-ReceiptTemplate.displayName = 'ReceiptTemplate';
+      <table className="my-1 w-full">
+        <thead>
+          <tr className="text-left">
+            <th className="font-normal">Sản phẩm</th>
+            <th className="text-right font-normal">SL</th>
+            <th className="text-right font-normal">Thành tiền</th>
+          </tr>
+        </thead>
+        <tbody>
+          {receipt.sales_order_items.map((l) => (
+            <tr key={l.id} className="align-top">
+              <td>
+                {l.product_name}
+                <div className="opacity-70">{formatCurrency(num(l.unit_price))}{num(l.discount_amount) > 0 && <> (-{formatCurrency(num(l.discount_amount))})</>}</div>
+              </td>
+              <td className="text-right">{l.quantity}</td>
+              <td className="text-right tabular-nums">{formatCurrency((num(l.unit_price) - num(l.discount_amount)) * l.quantity)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      <div className="border-t border-dashed border-black" />
+
+      <div className="my-1 space-y-0.5">
+        <Row label="Tạm tính" value={formatCurrency(gross)} />
+        {lineDiscounts > 0 && <Row label="Giảm theo dòng" value={`-${formatCurrency(lineDiscounts)}`} />}
+        {num(receipt.discount_amount) > 0 && <Row label={`Giảm giá đơn${num(receipt.discount_percent) > 0 ? ` (${num(receipt.discount_percent)}%)` : ''}`} value={`-${formatCurrency(num(receipt.discount_amount))}`} />}
+        {num(receipt.loyalty_discount_amount) > 0 && <Row label={`Điểm thưởng (${receipt.loyalty_points_redeemed ?? 0} điểm)`} value={`-${formatCurrency(num(receipt.loyalty_discount_amount))}`} />}
+        {num(receipt.tax_amount) > 0 && <Row label="Thuế" value={formatCurrency(num(receipt.tax_amount))} />}
+        <Row label="TỔNG CỘNG" value={formatCurrency(num(receipt.total_amount))} strong />
+      </div>
+      <div className="border-t border-dashed border-black" />
+      <div className="my-1 space-y-0.5">
+        {receipt.sales_order_payments.map((p) => (
+          <div key={p.id}>
+            <Row label={POS_PAYMENT_METHOD_LABELS[p.payment_method as PosPaymentMethod] ?? p.payment_method} value={formatCurrency(num(p.amount))} />
+            {p.payment_method === 'cash' && num(p.amount_tendered) > 0 && (
+              <>
+                <Row label="  Khách đưa" value={formatCurrency(num(p.amount_tendered))} />
+                <Row label="  Tiền thối" value={formatCurrency(num(p.change_given))} />
+              </>
+            )}
+          </div>
+        ))}
+        {balance > 0 && <Row label="Còn nợ" value={formatCurrency(balance)} strong />}
+      </div>
+      {receipt.loyalty && (
+        <>
+          <div className="border-t border-dashed border-black" />
+          <div className="my-1">
+            {(receipt.loyalty_points_earned ?? 0) > 0 && <Row label="Điểm tích lũy" value={`+${receipt.loyalty_points_earned}`} />}
+            <Row label="Điểm hiện có" value={`${receipt.loyalty.points_balance.toLocaleString('vi-VN')}${receipt.loyalty.tier ? ` · ${receipt.loyalty.tier}` : ''}`} />
+          </div>
+        </>
+      )}
+      <div className="border-t border-dashed border-black" />
+      <div className="mt-2 text-center">
+        <div>Cảm ơn quý khách!</div>
+        <div className="opacity-70">Vui lòng giữ hóa đơn để đổi trả.</div>
+      </div>
+    </div>
+  );
+});
+
+function Row({ label, value, strong }: { label: string; value: string; strong?: boolean }) {
+  return (
+    <div className={`flex justify-between whitespace-pre ${strong ? 'font-bold' : ''}`}>
+      <span>{label}</span>
+      <span className="tabular-nums">{value}</span>
+    </div>
+  );
+}
