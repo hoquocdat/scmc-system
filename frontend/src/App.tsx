@@ -38,6 +38,9 @@ import { RoleDetailPage } from './pages/settings/RoleDetailPage';
 import { PermissionAuditPage } from './pages/settings/PermissionAuditPage';
 import { LoyaltySettingsPage } from './pages/settings/LoyaltySettingsPage';
 import { CashBookPage } from './pages/finance/CashBookPage';
+import { PriceBooksPage } from './pages/inventory/PriceBooksPage';
+import { PriceBookDetailPage } from './pages/inventory/PriceBookDetailPage';
+import { CustomerGroupsPage } from './pages/CustomerGroupsPage';
 import { CashBookSettingsPage } from './pages/finance/CashBookSettingsPage';
 import { EmployeeEditPage } from './pages/EmployeeEditPage';
 import { SalaryConfigsPage } from './pages/hrm/SalaryConfigsPage';
@@ -76,6 +79,16 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <CustomersPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customers/groups"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <CustomerGroupsPage />
               </AppLayout>
             </ProtectedRoute>
           }
@@ -306,6 +319,26 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <EmployeeDetailPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/price-books"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <PriceBooksPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/price-books/:id"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <PriceBookDetailPage />
               </AppLayout>
             </ProtectedRoute>
           }

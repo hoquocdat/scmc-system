@@ -60,6 +60,7 @@ export function PosTerminal({ shift, userId }: PosTerminalProps) {
     })),
     order_discount: cart.order_discount ?? undefined,
     points_to_redeem: cart.points_to_redeem || undefined,
+    price_book_id: cart.price_book_id ?? undefined,
     payments,
     discount_approval_token: token ?? cart.approval_token,
     notes: cart.notes || undefined,
@@ -160,6 +161,8 @@ export function PosTerminal({ shift, userId }: PosTerminalProps) {
               onOrderDiscount={carts.setOrderDiscount}
               onPoints={carts.setPoints}
               onPay={() => setPaymentOpen(true)}
+              storeId={shift.store_id}
+              onPriceBook={carts.setPriceBook}
             />
           </div>
         </aside>

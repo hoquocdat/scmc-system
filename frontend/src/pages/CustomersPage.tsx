@@ -1,5 +1,9 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Users } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { customerGroupsApi } from '@/lib/api/customer-groups';
+import { usePermissions } from '@/hooks/usePermissions';
 import { useQuery } from '@tanstack/react-query';
 import { useForm, Controller } from 'react-hook-form';
 import { apiClient } from '../lib/api-client';
@@ -60,11 +64,16 @@ export function CustomersPage() {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = useState({});
 
+  const [searchParams, setSearchParams] = useSearchParams();
+  const groupId = searchParams.get('groupId') || undefined;
+  const { can } = usePermissions();
+  const { data: groups = [] } = useQuery({ queryKey: ['customer-groups'], queryFn: customerGroupsApi.list, enabled: can('customer_groups', 'read') });
+
   // Fetch customers with useQuery
   const { data: customersData, isLoading, refetch } = useQuery({
-    queryKey: ['customers'],
+    queryKey: ['customers', groupId ?? 'all'],
     queryFn: async () => {
-      const response: any = await apiClient.customers.getAll(1, 100);
+      const response: any = await apiClient.customers.getAll(1, 100, groupId);
       return response.data || [];
     },
   });
@@ -206,9 +215,23 @@ export function CustomersPage() {
           }
           className="w-full sm:max-w-sm"
         />
-        <Button onClick={() => setIsSheetOpen(true)} className="w-full sm:w-auto">
-          Thêm Khách Hàng
-        </Button>
+        {groups.length > 0 && (
+          <Select value={groupId ?? '__all__'} onValueChange={(v) => setSearchParams(v === '__all__' ? {} : { groupId: v })}>
+            <SelectTrigger className="w-full sm:w-56" aria-label="Lọc theo nhóm"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__all__">Tất cả nhóm</SelectItem>
+              {groups.map((g) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        )}
+        <div className="flex gap-2 sm:ml-auto">
+          {can('customer_groups', 'read') && (
+            <Button asChild variant="outline" className="w-full sm:w-auto"><Link to="/customers/groups"><Users className="h-4 w-4" /> Nhóm khách hàng</Link></Button>
+          )}
+          <Button onClick={() => setIsSheetOpen(true)} className="w-full sm:w-auto">
+            Thêm Khách Hàng
+          </Button>
+        </div>
       </div>
 
       <div className="rounded-md border overflow-x-auto">

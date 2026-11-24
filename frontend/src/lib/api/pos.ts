@@ -128,6 +128,8 @@ export interface CheckoutDto {
   lines: CheckoutLineDto[];
   order_discount?: { type: 'fixed' | 'percent'; value: number };
   points_to_redeem?: number;
+  /** Manually chosen price book (needs price_books:apply). */
+  price_book_id?: string;
   payments: CheckoutPaymentDto[];
   discount_approval_token?: string;
   notes?: string;

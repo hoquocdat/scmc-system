@@ -1,3 +1,4 @@
+import { Badge } from '@/components/ui/badge';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,20 +22,20 @@ export interface SalesOrderItem {
   quantity: number;
   unit_price: number;
   notes?: string;
+  /** Price book that priced the line (server quote); null = base price. */
+  price_book_name?: string | null;
 }
 
 interface SalesOrderItemsTableProps {
   items: SalesOrderItem[];
   onRemoveItem: (tempId: string) => void;
   onUpdateQuantity: (tempId: string, quantity: number) => void;
-  onUpdateUnitPrice: (tempId: string, price: number) => void;
 }
 
 export function SalesOrderItemsTable({
   items,
   onRemoveItem,
   onUpdateQuantity,
-  onUpdateUnitPrice,
 }: SalesOrderItemsTableProps) {
   return (
     <Card className="p-6">
@@ -86,15 +87,10 @@ export function SalesOrderItemsTable({
                     />
                   </TableCell>
                   <TableCell className="text-right">
-                    <Input
-                      type="number"
-                      value={item.unit_price}
-                      onChange={(e) =>
-                        onUpdateUnitPrice(item.tempId, parseFloat(e.target.value) || 0)
-                      }
-                      className="w-28 text-right"
-                      min="0"
-                    />
+                    <div className="tabular-nums">{item.unit_price.toLocaleString('vi-VN')}</div>
+                    {item.price_book_name && (
+                      <Badge variant="secondary" className="mt-1 px-1.5 text-[11px]">{item.price_book_name}</Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-right font-medium">
                     {total.toLocaleString('vi-VN')}

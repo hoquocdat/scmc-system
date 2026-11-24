@@ -25,6 +25,8 @@ import {
 } from '../ui/breadcrumb';
 import {
   LayoutDashboard,
+  BookOpen,
+  UsersRound,
   Wrench,
   Users,
   Bike,
@@ -142,10 +144,25 @@ export function AppLayout({ children }: AppLayoutProps) {
       roles: ['employee', 'technician'],
     },
     {
+      id: 'customers',
       name: t('navigation.customers'),
-      href: '/customers',
       icon: Users,
       roles: ['sales', 'manager'],
+      children: [
+        {
+          name: 'Danh Sách',
+          href: '/customers',
+          icon: Users,
+          roles: ['sales', 'manager'],
+        },
+        {
+          name: 'Nhóm Khách Hàng',
+          href: '/customers/groups',
+          icon: UsersRound,
+          roles: ['sales', 'manager'],
+          permission: { resource: 'customer_groups', action: 'read' },
+        },
+      ],
     },
     {
       name: t('navigation.bikes'),
@@ -187,6 +204,13 @@ export function AppLayout({ children }: AppLayoutProps) {
           href: '/inventory/products',
           icon: Package,
           roles: ['sales', 'manager'],
+        },
+        {
+          name: 'Bảng Giá',
+          href: '/inventory/price-books',
+          icon: BookOpen,
+          roles: ['sales', 'manager'],
+          permission: { resource: 'price_books', action: 'read' },
         },
         {
           name: 'Đơn Đặt Hàng',

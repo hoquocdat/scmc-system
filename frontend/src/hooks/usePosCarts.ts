@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Product, ProductVariant } from '@/lib/api/products';
+import { priceBooksApi, quoteKey } from '@/lib/api/price-books';
 
 export interface CartCustomer {
   id: string;
@@ -22,6 +24,10 @@ export interface CartLine {
   stock: number | null;
   /** Set from an INSUFFICIENT_STOCK error so the line can be highlighted. */
   shortage?: number;
+  /** Price book that priced the line (from the server quote); null = base price. */
+  price_book_name?: string | null;
+  /** Price before the price book. */
+  base_price?: number;
 }
 
 export interface Cart {
@@ -35,6 +41,8 @@ export interface Cart {
   order_discount: { type: 'fixed' | 'percent'; value: number } | null;
   points_to_redeem: number;
   notes: string;
+  /** Manually chosen price book for the whole sale; null = automatic. */
+  price_book_id?: string | null;
   /** Discount approval bound to client_request_id; dropped when the cart changes. */
   approval_token?: string;
   created_at: number;
@@ -142,7 +150,35 @@ export function usePosCarts(userId: string | undefined, storeId: string | undefi
 
   useEffect(() => save(storageKey, state), [storageKey, state]);
 
-  const active = useMemo(() => state.carts.find((c) => c.id === state.activeId) ?? state.carts[0], [state]);
+  const rawActive = useMemo(() => state.carts.find((c) => c.id === state.activeId) ?? state.carts[0], [state]);
+
+  // Server prices (base price + price books) for the active cart (price-books D5)
+  const queryClient = useQueryClient();
+  const lineKeys = rawActive?.lines.map((l) => l.key).sort().join(',') ?? '';
+  const quote = useQuery({
+    queryKey: ['pos', 'quote', storeId, rawActive?.customer?.id ?? null, rawActive?.price_book_id ?? null, lineKeys],
+    queryFn: () =>
+      priceBooksApi.quote({
+        store_id: storeId!,
+        customer_id: rawActive?.customer?.id ?? null,
+        price_book_id: rawActive?.price_book_id ?? null,
+        items: rawActive!.lines.map((l) => ({ product_id: l.product_id, product_variant_id: l.product_variant_id })),
+      }),
+    enabled: !!storeId && !!rawActive && rawActive.lines.length > 0,
+    placeholderData: keepPreviousData,
+    staleTime: 30_000,
+  });
+  const active = useMemo(() => {
+    if (!rawActive || !quote.data) return rawActive;
+    const byKey = new Map(quote.data.items.map((q) => [quoteKey(q), q]));
+    return {
+      ...rawActive,
+      lines: rawActive.lines.map((l) => {
+        const q = byKey.get(l.key);
+        return q ? { ...l, unit_price: q.unit_price, base_price: q.base_price, price_book_name: q.price_book_name } : l;
+      }),
+    };
+  }, [rawActive, quote.data]);
 
   const updateActive = useCallback((fn: (cart: Cart) => Cart, contentChanged = true) => {
     setState((s) => ({
@@ -200,6 +236,7 @@ export function usePosCarts(userId: string | undefined, storeId: string | undefi
     [updateActive],
   );
 
+  const setPriceBook = useCallback((price_book_id: string | null) => updateActive((cart) => ({ ...cart, price_book_id })), [updateActive]);
   const setOrderDiscount = useCallback((order_discount: Cart['order_discount']) => updateActive((cart) => ({ ...cart, order_discount })), [updateActive]);
   const setPoints = useCallback((points_to_redeem: number) => updateActive((cart) => ({ ...cart, points_to_redeem })), [updateActive]);
   const setNotes = useCallback((notes: string) => updateActive((cart) => ({ ...cart, notes }), false), [updateActive]);
@@ -208,14 +245,17 @@ export function usePosCarts(userId: string | undefined, storeId: string | undefi
   /** Applies server prices after a PRICE_CHANGED error (renews the request id). */
   const applyPriceChanges = useCallback(
     (changes: { product_id: string; product_variant_id: string | null; unit_price: number }[]) =>
+    {
       updateActive((cart) => ({
         ...cart,
         lines: cart.lines.map((l) => {
           const change = changes.find((c) => c.product_id === l.product_id && (c.product_variant_id ?? null) === l.product_variant_id);
           return change ? { ...l, unit_price: change.unit_price } : l;
         }),
-      })),
-    [updateActive],
+      }));
+      void queryClient.invalidateQueries({ queryKey: ['pos', 'quote'] });
+    },
+    [updateActive, queryClient],
   );
 
   /** Marks lines short on stock (no request id change: the cart content is the same). */
@@ -265,6 +305,9 @@ export function usePosCarts(userId: string | undefined, storeId: string | undefi
     setQuantity,
     setLineDiscount,
     setCustomer,
+    setPriceBook,
+    /** True while server prices for the active cart are being fetched. */
+    pricing: quote.isFetching,
     setOrderDiscount,
     setPoints,
     setNotes,

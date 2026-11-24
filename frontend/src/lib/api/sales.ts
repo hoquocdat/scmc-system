@@ -153,6 +153,8 @@ export interface CreateSalesOrderItemDto {
 
 export interface CreateSalesOrderDto {
   customer_id?: string;
+  /** Manually chosen price book (needs price_books:apply). */
+  price_book_id?: string;
   customer_name: string;
   customer_phone?: string;
   customer_email?: string;

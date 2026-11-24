@@ -236,15 +236,16 @@ describe('price books API', () => {
       ws.addRow(['NOPE', '', 'fixed', 1]);
       ws.addRow(['STICKER', '', 'Giảm %', 150]);
       const file = Buffer.from(await wb.xlsx.writeBuffer());
-      await expect(books.importXlsx(siId, file)).rejects.toMatchObject({
-        status: 422,
-        response: {
-          errors: [
-            { row: 3, message: expect.stringContaining('NOPE') },
-            { row: 4, message: expect.stringContaining('0 đến 100') },
-          ],
-        },
-      });
+      const err = (await books
+        .importXlsx(siId, file)
+        .catch((e: unknown) => e)) as {
+        status: number;
+        response: { errors: { row: number; message: string }[] };
+      };
+      expect(err.status).toBe(422);
+      expect(err.response.errors.map((e) => e.row)).toEqual([3, 4]);
+      expect(err.response.errors[0].message).toContain('NOPE');
+      expect(err.response.errors[1].message).toContain('0 đến 100');
       const jeans = await testDb.price_book_entries.findFirstOrThrow({
         where: { price_book_id: siId, product_id: fx.products.jeans },
       });

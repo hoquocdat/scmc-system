@@ -20,14 +20,14 @@
 
 ## 4. Frontend
 
-- [ ] 4.1 API clients `lib/api/price-books.ts` and `lib/api/customer-groups.ts`
-- [ ] 4.2 `/products/price-books` list with create/edit Sheet (conditions, dates, priority) and same-priority warning; `/products/price-books/:id` entries table with inline edit, remove, add-products Sheet (products, category, brand), import/export; shadcn only, pages < 200 lines
-- [ ] 4.3 `/customers/groups` page and group multi-select on the customer edit sheet, group filter on the customer list
-- [ ] 4.4 POS: quote-driven cart prices with price source per line, applicable/chosen price book Select gated by `price_books:apply`, `price_book_id` sent at checkout
-- [ ] 4.5 Sales-order form: quote-driven prices, price source per line, price book Select gated by permission
-- [ ] 4.6 Navigation entries gated by `price_books:read` and `customer_groups:read`
+- [x] 4.1 API clients `lib/api/price-books.ts` and `lib/api/customer-groups.ts`
+- [x] 4.2 `/products/price-books` list with create/edit Sheet (conditions, dates, priority) and same-priority warning; `/products/price-books/:id` entries table with inline edit, remove, add-products Sheet (products, category, brand), import/export; shadcn only, pages < 200 lines
+- [x] 4.3 `/customers/groups` page and group multi-select on the customer edit sheet, group filter on the customer list
+- [x] 4.4 POS: quote-driven cart prices with price source per line, applicable/chosen price book Select gated by `price_books:apply`, `price_book_id` sent at checkout
+- [x] 4.5 Sales-order form: quote-driven prices, price source per line, price book Select gated by permission
+- [x] 4.6 Navigation entries gated by `price_books:read` and `customer_groups:read`
 
 ## 5. Checks
 
-- [ ] 5.1 Run backend unit and integration suites, both builds and lint on new files; verify all pass
-- [ ] 5.2 Write `docs/pricing/PRICE_BOOKS.md` (concepts, resolution rule with examples, how to set up wholesale and branch prices, import format)
+- [x] 5.1 Run backend unit and integration suites, both builds and lint on new files; verify all pass
+- [x] 5.2 Write `docs/pricing/PRICE_BOOKS.md` (concepts, resolution rule with examples, how to set up wholesale and branch prices, import format)

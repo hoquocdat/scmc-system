@@ -9,6 +9,7 @@ import PhoneInput from 'react-phone-number-input';
 import { apiClient } from '../../lib/api-client';
 import type { Customer, UserProfile } from '../../types';
 import { EmployeeSelect } from '../forms/EmployeeSelect';
+import { CustomerGroupsSection } from './CustomerGroupsSection';
 
 interface CustomerFormData {
   full_name: string;
@@ -235,6 +236,8 @@ export function CustomerEditSheet({ customer, isOpen, onClose, onSuccess, onErro
                 className="min-h-[60px]"
               />
             </div>
+
+            <CustomerGroupsSection customerId={customer.id} />
 
             <div className="flex justify-end gap-3 pt-4">
               <Button

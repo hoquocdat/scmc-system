@@ -11,6 +11,7 @@ import { Separator } from '@/components/ui/separator';
 import { loyaltyApi } from '@/lib/api/loyalty';
 import { formatCurrency } from '@/lib/utils';
 import type { Cart, CartTotals } from '@/hooks/usePosCarts';
+import { PriceBookPicker } from '@/components/price-books/PriceBookPicker';
 
 interface CartSummaryProps {
   cart: Cart;
@@ -20,10 +21,12 @@ interface CartSummaryProps {
   onOrderDiscount: (d: Cart['order_discount']) => void;
   onPoints: (points: number) => void;
   onPay: () => void;
+  storeId?: string | null;
+  onPriceBook: (priceBookId: string | null) => void;
 }
 
 /** Customer, discounts, loyalty redemption and the amount due. */
-export function CartSummary({ cart, totals, onOpenCustomer, onClearCustomer, onOrderDiscount, onPoints, onPay }: CartSummaryProps) {
+export function CartSummary({ cart, totals, onOpenCustomer, onClearCustomer, onOrderDiscount, onPoints, onPay, storeId, onPriceBook }: CartSummaryProps) {
   const customerId = cart.customer?.id;
   const preview = useQuery({
     queryKey: ['pos', 'loyalty-preview', customerId, totals.afterLines - totals.orderDiscount, cart.points_to_redeem],
@@ -42,6 +45,7 @@ export function CartSummary({ cart, totals, onOpenCustomer, onClearCustomer, onO
         </Button>
         {(cart.customer || cart.new_customer) && <Button variant="ghost" size="sm" onClick={onClearCustomer}>Bỏ</Button>}
       </div>
+      <PriceBookPicker storeId={storeId} customerId={cart.customer?.id} value={cart.price_book_id} onChange={onPriceBook} className="w-full" />
       {cart.customer && preview.data && (
         <div className="flex items-center justify-between rounded-md bg-muted/50 px-3 py-2 text-sm">
           <span className="flex items-center gap-1"><Gift className="h-4 w-4" /> {preview.data.tierName} · {preview.data.pointsAvailable.toLocaleString('vi-VN')} điểm</span>

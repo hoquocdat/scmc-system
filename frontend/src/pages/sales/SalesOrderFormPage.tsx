@@ -22,13 +22,16 @@ import {
 } from '@/components/sales-orders/form';
 import { PointRedemptionInput } from '@/components/loyalty/PointRedemptionInput';
 import { useStoreStore } from '@/store/storeStore';
+import { useQuotedItems } from '@/hooks/useQuotedItems';
+import { PriceBookPicker } from '@/components/price-books/PriceBookPicker';
 
 export function SalesOrderFormPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { selectedStoreId } = useStoreStore();
 
-  const [items, setItems] = useState<SalesOrderItem[]>([]);
+  const [rawItems, setItems] = useState<SalesOrderItem[]>([]);
+  const [priceBookId, setPriceBookId] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [customerName, setCustomerName] = useState('');
@@ -52,6 +55,8 @@ export function SalesOrderFormPage() {
   });
 
   const customers = customersData?.data || [];
+  // Lines shown at server prices (base price + price books); the server prices the order again on save
+  const { items } = useQuotedItems(selectedStoreId, selectedCustomerId || null, priceBookId, rawItems);
 
   // Handle customer selection - auto-fill customer info
   useEffect(() => {
@@ -146,14 +151,6 @@ export function SalesOrderFormPage() {
     );
   };
 
-  // Update item unit price
-  const handleUpdateUnitPrice = (tempId: string, unit_price: number) => {
-    if (unit_price < 0) return;
-    setItems(
-      items.map((item) => (item.tempId === tempId ? { ...item, unit_price } : item))
-    );
-  };
-
   // Calculate totals
   const subtotal = items.reduce(
     (sum, item) => sum + item.quantity * item.unit_price,
@@ -201,6 +198,7 @@ export function SalesOrderFormPage() {
       // Loyalty redemption fields
       points_to_redeem: pointsToRedeem > 0 ? pointsToRedeem : undefined,
       loyalty_discount_amount: loyaltyDiscountAmount > 0 ? loyaltyDiscountAmount : undefined,
+      price_book_id: priceBookId ?? undefined,
       items: items.map(({ tempId, product_name, product_sku, variant_name, ...item }) => ({
         product_id: item.product_id,
         product_variant_id: item.product_variant_id,
@@ -291,11 +289,12 @@ export function SalesOrderFormPage() {
             placeholder="Tìm sản phẩm theo tên hoặc mã SKU..."
           />
 
+          <PriceBookPicker storeId={selectedStoreId} customerId={selectedCustomerId || null} value={priceBookId} onChange={setPriceBookId} className="w-full sm:w-80" />
+
           <SalesOrderItemsTable
             items={items}
             onRemoveItem={handleRemoveItem}
             onUpdateQuantity={handleUpdateQuantity}
-            onUpdateUnitPrice={handleUpdateUnitPrice}
           />
         </div>
 

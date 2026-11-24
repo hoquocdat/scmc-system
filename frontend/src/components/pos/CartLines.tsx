@@ -35,6 +35,11 @@ export function CartLines({ lines, onQuantity, onLineDiscount }: CartLinesProps)
                 {line.sku}
                 {line.stock !== null && <> · tồn {line.stock}</>}
               </div>
+              {line.price_book_name && (
+                <Badge variant="secondary" className="mt-1 px-1.5 text-[11px]" title={line.base_price != null ? `Giá chung ${formatCurrency(line.base_price)}` : undefined}>
+                  {line.price_book_name}
+                </Badge>
+              )}
               {line.shortage !== undefined && (
                 <div className="mt-1 flex items-center gap-1 text-xs text-destructive">
                   <AlertTriangle className="h-3 w-3" /> Không đủ tồn kho (còn {line.shortage})
