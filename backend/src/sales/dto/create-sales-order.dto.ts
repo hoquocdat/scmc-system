@@ -53,6 +53,11 @@ export class SalesOrderItemDto {
   @IsOptional()
   product_variant_id?: string;
 
+  @ApiPropertyOptional({ description: 'Selling unit (product_units id); absent = base unit' })
+  @IsUUID()
+  @IsOptional()
+  unit_id?: string;
+
   @ApiProperty({ description: 'Quantity' })
   @IsNumber()
   @Min(1)

@@ -36,6 +36,11 @@ export enum Action {
   Export = 'export',
   // Price books
   Apply = 'apply',
+  // Inventory operations
+  WriteOff = 'write_off',
+  Count = 'count',
+  ApproveCount = 'approve_count',
+  Labels = 'labels',
   // Report-specific actions
   Sales = 'sales',
   Inventory = 'inventory',
@@ -213,6 +218,10 @@ export class CaslAbilityFactory {
       configure: Action.Configure,
       export: Action.Export,
       apply: Action.Apply,
+      write_off: Action.WriteOff,
+      count: Action.Count,
+      approve_count: Action.ApproveCount,
+      labels: Action.Labels,
       sales: Action.Sales,
       inventory: Action.Inventory,
       financial: Action.Financial,

@@ -21,6 +21,7 @@ import { LoyaltyService } from '../loyalty/loyalty.service';
 import { PriceResolverService } from './pricing/price-resolver';
 import { spendCreditForPayment } from '../sales-returns/customer-credit';
 import { releaseVouchers } from '../promotions/promotion-loader';
+import { recomputeOrderReservations } from '../inventory/stock-helpers';
 import { SalesPostingService } from './sales-posting.service';
 import { CashBookPostingService } from '../cash-book/cash-book-posting.service';
 
@@ -251,6 +252,8 @@ export class SalesService {
 
         // A voucher used by the order can be used again (promotions-vouchers D5)
         await releaseVouchers(tx, id);
+        // A pending order's reservation is released (inventory-operations D7)
+        if (order.status === OrderStatus.PENDING) await recomputeOrderReservations(tx, id);
 
         // Return stock only if it was deducted (drafts never move stock)
         const wasPosted =
@@ -266,7 +269,7 @@ export class SalesService {
             await tx.inventory_transactions.create({
               data: {
                 transaction_type: 'RETURN',
-                quantity: Math.abs(item.quantity),
+                quantity: Math.abs(item.quantity * item.unit_factor),
                 reference_id: order.id,
                 reference_type: 'sales_order_cancellation',
                 stock_locations: { connect: { id: warehouseId } },
@@ -404,8 +407,8 @@ export class SalesService {
     try {
       const order = await this.findOne(id);
 
-      if (order.status !== OrderStatus.DRAFT) {
-        throw new ConflictException('Only draft orders can be confirmed');
+      if (order.status !== OrderStatus.DRAFT && order.status !== OrderStatus.PENDING) {
+        throw new ConflictException('Only draft or pending orders can be confirmed');
       }
       const actor = userId || this.userContext.getUserId() || undefined;
 
@@ -414,6 +417,8 @@ export class SalesService {
           where: { id },
           data: { status: OrderStatus.CONFIRMED, processed_by: actor },
         });
+        // Its own reservation is released before stock is checked and deducted
+        if (order.status === OrderStatus.PENDING) await recomputeOrderReservations(tx, id);
         await this.posting.postConfirmedIn(tx, id, { userId: actor });
         await this.posting.settleIn(tx, id, actor);
         return tx.sales_orders.findUniqueOrThrow({
@@ -697,7 +702,7 @@ export class SalesService {
       }
 
       // Can only add items to draft, confirmed, or processing orders
-      const allowedStatuses = ['draft', 'confirmed', 'processing'];
+      const allowedStatuses = ['draft', 'pending', 'confirmed', 'processing'];
       if (!allowedStatuses.includes(order.status)) {
         throw new ConflictException(
           'Cannot add items to orders with status: ' + order.status,
@@ -825,6 +830,8 @@ export class SalesService {
           newTaxAmount +
           Number(order.shipping_cost || 0);
 
+        if (order.status === 'pending') await recomputeOrderReservations(tx, order.id);
+
         // Update order totals
         await tx.sales_orders.update({
           where: { id: orderId },
@@ -870,7 +877,7 @@ export class SalesService {
       }
 
       // Can only remove items from draft, confirmed, or processing orders
-      const allowedStatuses = ['draft', 'confirmed', 'processing'];
+      const allowedStatuses = ['draft', 'pending', 'confirmed', 'processing'];
       if (!allowedStatuses.includes(order.status)) {
         throw new ConflictException(
           'Cannot remove items from orders with status: ' + order.status,
@@ -928,6 +935,8 @@ export class SalesService {
           newDiscountAmount +
           newTaxAmount +
           Number(order.shipping_cost || 0);
+
+        if (order.status === 'pending') await recomputeOrderReservations(tx, order.id);
 
         // Update order totals
         await tx.sales_orders.update({

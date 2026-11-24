@@ -33,6 +33,11 @@ export class CheckoutLineDto {
   @Min(0)
   expected_unit_price: number;
 
+  @ApiPropertyOptional({ description: 'Selling unit (product_units id); absent = base unit' })
+  @IsOptional()
+  @IsUUID()
+  unit_id?: string;
+
   @ApiPropertyOptional({ description: 'Line discount per unit (VND)' })
   @IsOptional()
   @IsNumber()

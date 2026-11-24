@@ -283,6 +283,7 @@ export class CartLineDto {
   @IsNumber()
   @Min(0)
   discount_amount?: number;
+  @ApiPropertyOptional() @IsOptional() @IsUUID() unit_id?: string;
 }
 
 export class CartDto {

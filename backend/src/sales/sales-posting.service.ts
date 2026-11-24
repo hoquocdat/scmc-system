@@ -1,4 +1,5 @@
 import { spendCreditForPayment } from '../sales-returns/customer-credit';
+import { assertAvailable, recomputeOrderReservations } from '../inventory/stock-helpers';
 import {
   AppliedPromotion,
   checkVoucher,
@@ -49,6 +50,8 @@ export interface PostingLineInput {
   /** Per-unit tax. */
   tax_amount?: number;
   notes?: string;
+  /** Selling unit (product_units); absent = base unit (inventory-operations D8). */
+  unit_id?: string | null;
 }
 
 export interface PostingPaymentInput {
@@ -105,6 +108,9 @@ export interface ComputedLine {
   unitPrice: number;
   discountPerUnit: number;
   taxPerUnit: number;
+  /** Selling unit name and base units per selling unit. */
+  unitName: string | null;
+  unitFactor: number;
   /** Line promotions on this line (total, not per unit). */
   promotionDiscount: number;
   lineTotal: number;
@@ -205,6 +211,7 @@ export class SalesPostingService {
       lines: dto.items.map((i) => ({
         product_id: i.product_id,
         product_variant_id: i.product_variant_id ?? null,
+        unit_id: i.unit_id ?? null,
         quantity: i.quantity,
         discount_amount: i.discount_amount ?? 0,
         tax_amount: i.tax_amount ?? 0,
@@ -309,6 +316,8 @@ export class SalesPostingService {
           price_book_id: line.price.priceBookId,
           price_source: line.price.source,
           promotion_discount: new Prisma.Decimal(line.promotionDiscount),
+          unit_name: line.unitName,
+          unit_factor: line.unitFactor,
           notes: line.input.notes,
         },
       });
@@ -322,6 +331,7 @@ export class SalesPostingService {
       itemIds,
     );
 
+    if (draft.status === 'pending') await recomputeOrderReservations(tx, order.id);
     if (posting) {
       await this.postConfirmedIn(tx, order.id, {
         userId: draft.created_by,
@@ -408,35 +418,18 @@ export class SalesPostingService {
     const items = [...order.sales_order_items].sort((a, b) =>
       (a.product_id ?? '').localeCompare(b.product_id ?? ''),
     );
-    const shortages: StockShortage[] = [];
-    for (const item of items) {
-      const rows = await tx.$queryRaw<
-        { id: string; quantity_on_hand: number }[]
-      >`
-        SELECT id, quantity_on_hand FROM inventory
-        WHERE location_id = ${locationId}::uuid
-          AND ${
-            item.product_variant_id
-              ? Prisma.sql`product_variant_id = ${item.product_variant_id}::uuid`
-              : Prisma.sql`product_id = ${item.product_id}::uuid AND product_variant_id IS NULL`
-          }
-        ORDER BY id FOR UPDATE`;
-      const available = rows.reduce(
-        (s, r) => s + Number(r.quantity_on_hand),
-        0,
-      );
-      if (rows.length === 0 || available < item.quantity) {
-        shortages.push({
-          product_id: item.product_id ?? '',
-          product_variant_id: item.product_variant_id,
-          sku: item.product_sku ?? '',
-          name: item.product_name,
-          requested: item.quantity,
-          available,
-        });
-      }
-    }
-    if (shortages.length) throw new InsufficientStockException(shortages);
+    // Available = on hand − reserved by pending orders (inventory-operations D7); units move factor × quantity
+    await assertAvailable(
+      tx,
+      locationId,
+      items.map((item) => ({
+        productId: item.product_variant_id ? null : item.product_id,
+        variantId: item.product_variant_id,
+        quantity: item.quantity * item.unit_factor,
+        name: item.product_name,
+        sku: item.product_sku ?? '',
+      })),
+    );
 
     for (const item of items) {
       await tx.inventory_transactions.create({
@@ -445,7 +438,7 @@ export class SalesPostingService {
           product_id: item.product_variant_id ? null : item.product_id,
           product_variant_id: item.product_variant_id,
           transaction_type: 'SALE',
-          quantity: -Math.abs(item.quantity),
+          quantity: -Math.abs(item.quantity * item.unit_factor),
           unit_cost: item.unit_cost,
           total_cost: item.unit_cost
             ? new Prisma.Decimal(Number(item.unit_cost) * item.quantity)
@@ -689,13 +682,31 @@ export class SalesPostingService {
       tx,
     );
     const changes: PriceChange[] = [];
+    const unitIds = [...new Set(draft.lines.map((l) => l.unit_id).filter((u): u is string => !!u))];
+    const units = unitIds.length
+      ? new Map((await tx.product_units.findMany({ where: { id: { in: unitIds } } })).map((u) => [u.id, u]))
+      : new Map<string, never>();
     const lines: ComputedLine[] = draft.lines.map((input) => {
       if (!Number.isInteger(input.quantity) || input.quantity <= 0) {
         throw new BadRequestException(
           'Quantity must be a positive whole number',
         );
       }
-      const price = resolved.get(PriceResolverService.key(input));
+      const base = resolved.get(PriceResolverService.key(input))!;
+      // A selling unit multiplies price and cost by its factor unless it has its own price
+      const unit = input.unit_id ? units.get(input.unit_id) : undefined;
+      if (input.unit_id && (!unit || unit.product_id !== base.productId || !unit.is_active || input.product_variant_id))
+        throw new BadRequestException(`Đơn vị bán không hợp lệ cho ${base.name}`);
+      const factor = unit?.factor ?? 1;
+      const price = unit
+        ? {
+            ...base,
+            name: `${base.name} (${unit.name})`,
+            unitPrice: unit.price != null ? Number(unit.price) : base.unitPrice * factor,
+            basePrice: base.basePrice * factor,
+            unitCost: base.unitCost * factor,
+          }
+        : base;
       if (
         draft.enforcePrice &&
         input.expected_unit_price != null &&
@@ -723,6 +734,8 @@ export class SalesPostingService {
         unitPrice: price.unitPrice,
         discountPerUnit,
         taxPerUnit,
+        unitName: unit?.name ?? null,
+        unitFactor: factor,
         promotionDiscount: 0,
         lineTotal:
           (price.unitPrice - discountPerUnit + taxPerUnit) * input.quantity,

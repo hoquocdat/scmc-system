@@ -132,7 +132,7 @@ describe('SalesService on SalesPostingService', () => {
     );
     await service.confirm(draft.id);
     await expect(service.confirm(draft.id)).rejects.toThrow(
-      /Only draft orders/,
+      /Only draft or pending orders/,
     );
     expect(await onHand(fx.store.locationId, fx.products.sticker)).toBe(
       stockBefore - 5,

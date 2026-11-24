@@ -2,22 +2,22 @@
 
 ## 1. Database migration
 
-- [ ] 1.1 Write `backend/prisma/migrations/027_inventory_operations.sql` (D1): transfer columns and status check, counts, write-offs, barcodes, units, unit columns on sales and purchase lines, trigger update, permissions; verify with `\d`, the trigger on `WRITE_OFF`, and barcode uniqueness per table
-- [ ] 1.2 Rollback; up/down/up on the test database; apply to dev; `prisma db pull && generate` (remove the `license_plate` artefact); build
+- [x] 1.1 Write `backend/prisma/migrations/027_inventory_operations.sql` (D1): transfer columns and status check, counts, write-offs, barcodes, units, unit columns on sales and purchase lines, trigger update, permissions; verify with `\d`, the trigger on `WRITE_OFF`, and barcode uniqueness per table
+- [x] 1.2 Rollback; up/down/up on the test database; apply to dev; `prisma db pull && generate` (remove the `license_plate` artefact); build
 
 ## 2. Stock core
 
-- [ ] 2.1 Shared stock helpers: available quantity with row locks, ensure row, current cost, document numbers (CK/KK/XH)
-- [ ] 2.2 Reservations: recompute from pending orders; pending create/confirm/cancel; available-stock checks in posting (D7); verify reservation scenarios and that existing suites pass
+- [x] 2.1 Shared stock helpers: available quantity with row locks, ensure row, current cost, document numbers (CK/KK/XH)
+- [x] 2.2 Reservations: recompute from pending orders; pending create/confirm/cancel; available-stock checks in posting (D7); verify reservation scenarios and that existing suites pass
 
 ## 3. Operations
 
-- [ ] 3.1 Transfers service and API (D2); verify ship/receive, shortage, partial with discrepancy, cancel in transit, permissions
-- [ ] 3.2 Counts service and API (D3); verify the sale-after-counting and shortage scenarios, one open count per location, approval permission
-- [ ] 3.3 Write-offs service and API with list/export (D4); verify scenarios and permission
-- [ ] 3.4 Barcodes: fields, uniqueness across tables, EAN-13 generation, lookup, product search by barcode (D5); verify duplicate and generation scenarios
-- [ ] 3.5 Reorder alerts and draft PO from alerts (D6); verify scenarios
-- [ ] 3.6 Units: CRUD on products, posting with unit factor and price, returns restock, PO approval with factor, lookup by unit barcode (D8); verify box scenarios
+- [x] 3.1 Transfers service and API (D2); verify ship/receive, shortage, partial with discrepancy, cancel in transit, permissions
+- [x] 3.2 Counts service and API (D3); verify the sale-after-counting and shortage scenarios, one open count per location, approval permission
+- [x] 3.3 Write-offs service and API with list/export (D4); verify scenarios and permission
+- [x] 3.4 Barcodes: fields, uniqueness across tables, EAN-13 generation, lookup, product search by barcode (D5); verify duplicate and generation scenarios
+- [x] 3.5 Reorder alerts and draft PO from alerts (D6); verify scenarios
+- [x] 3.6 Units: CRUD on products, posting with unit factor and price, returns restock, PO approval with factor, lookup by unit barcode (D8); verify box scenarios
 
 ## 4. Frontend
 

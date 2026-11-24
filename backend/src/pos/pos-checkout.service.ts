@@ -147,6 +147,7 @@ export class PosCheckoutService {
       lines: dto.lines.map((l) => ({
         product_id: l.product_id,
         product_variant_id: l.product_variant_id ?? null,
+        unit_id: l.unit_id ?? null,
         quantity: l.quantity,
         expected_unit_price: l.expected_unit_price,
         discount_amount: l.discount_amount ?? 0,
