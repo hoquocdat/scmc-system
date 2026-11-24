@@ -16,6 +16,7 @@ import { ReturnRequestDto } from '../../src/sales-returns/dto/sales-returns.dto'
 import { SalesReturnsService } from '../../src/sales-returns/sales-returns.service';
 import { PriceResolverService } from '../../src/sales/pricing/price-resolver';
 import { SalesPostingService } from '../../src/sales/sales-posting.service';
+import { RetailReportsService } from '../../src/reports/retail-reports.service';
 import { SalesService } from '../../src/sales/sales.service';
 import { closeTestDb, resetTestDb, testDb } from './db';
 import { SalesFixtures, seedSalesFixtures } from './sales-fixtures';
@@ -260,6 +261,21 @@ describe('promotions and vouchers', () => {
     expect(after.promotionDiscounts - (before?.promotionDiscounts ?? 0)).toBe(
       50_000,
     );
+    const perf = await new RetailReportsService(
+      testDb as unknown as PrismaService,
+    ).promotionPerformance(
+      new ReportScope({
+        from: toReportDate(new Date()),
+        to: toReportDate(new Date()),
+      }),
+    );
+    expect(perf.rows.find((r) => r.name === 'Mua 2 tặng 1')).toMatchObject({
+      orders: 1,
+      discount: 50_000,
+      netSales: 100_000,
+      averageOrderValue: 100_000,
+      costRate: 33.33,
+    });
   });
 
   it('TOTAL_CHANGED when the screen total no longer matches', async () => {

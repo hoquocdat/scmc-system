@@ -67,7 +67,7 @@ New groups in the reports area: "Cuối ngày", "Khách hàng", "Nhà cung cấp
 
 ## Risks / Trade-offs
 
-- **Query cost** on large data: indexes added for `sales_returns(created_at)`, `inventory_transactions(product_id, created_at)` / variant, `sales_order_discounts(promotion_id)` (exists), `customer_receivables(status)`.
+- **Query cost** on large data: indexes added for `sales_returns(created_at)`, `inventory_transactions(product_id, created_at)` / variant / `(transaction_type, created_at)` and `sales_orders(created_by)`; `sales_order_discounts(promotion_id)` and `customer_receivables(status)` already existed.
 - **Return date vs order date**: returns are counted when they happen, so a day's net can be negative; this matches the cash reality and is stated on the report.
 
 ## Migration Plan

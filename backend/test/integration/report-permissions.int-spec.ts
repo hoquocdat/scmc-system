@@ -111,6 +111,15 @@ describe('report permissions', () => {
       financial: Action.Financial,
       workshop: Action.Service,
       dashboard: Action.Sales,
+      eod: Action.Sales,
+      returns: Action.Sales,
+      customers: Action.Sales,
+      promotions: Action.Sales,
+      suppliers: Action.Financial,
+    };
+    // reports-retail-suite D2: money owed is financial even inside the customers section
+    const expectedByPath: Record<string, Action> = {
+      'customers/receivables-aging': Action.Financial,
     };
     const metadata = (key: string, target: object): unknown =>
       Reflect.getMetadata(key, target);
@@ -120,7 +129,7 @@ describe('report permissions', () => {
       const path = metadata('path', handler) as string;
       const section = path.split('/')[0];
       const expectedPolicy = {
-        action: expectedBySection[section],
+        action: expectedByPath[path] ?? expectedBySection[section],
         subject: 'reports',
       };
       expect({

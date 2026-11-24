@@ -4,15 +4,23 @@ import type { ChartSpec } from './TrendChart';
 import type { Kpi } from './KpiCards';
 import type { ReportKey, ReportQuery, ReportResult, RevenueMeta, ProfitMeta, SalesSummaryRow } from '@/lib/api/reports';
 import { formatCurrency } from '@/lib/utils';
+import type { DatePreset } from '@/hooks/useReportFilters';
 import { ReceivedByMethod } from './sections/ReceivedByMethod';
+import { RETAIL_SUITE_REPORTS } from './report-registry-retail';
 
-export type ReportGroup = 'sales' | 'inventory' | 'finance' | 'workshop';
+export type ReportGroup = 'eod' | 'sales' | 'inventory' | 'customers' | 'suppliers' | 'promotions' | 'finance' | 'workshop';
+
+const SALES_ROLES = ['manager', 'finance', 'store_manager'];
 
 export const REPORT_GROUPS: { id: ReportGroup; label: string; roles: string[] }[] = [
-  { id: 'sales', label: 'Bán hàng', roles: ['manager', 'finance', 'store_manager'] },
+  { id: 'eod', label: 'Cuối ngày', roles: SALES_ROLES },
+  { id: 'sales', label: 'Bán hàng', roles: SALES_ROLES },
   { id: 'inventory', label: 'Tồn kho', roles: ['manager', 'finance', 'store_manager', 'warehouse_staff'] },
+  { id: 'customers', label: 'Khách hàng', roles: SALES_ROLES },
+  { id: 'suppliers', label: 'Nhà cung cấp', roles: ['manager', 'finance'] },
+  { id: 'promotions', label: 'Khuyến mãi', roles: SALES_ROLES },
   { id: 'finance', label: 'Tài chính', roles: ['manager', 'finance'] },
-  { id: 'workshop', label: 'Xưởng dịch vụ', roles: ['manager', 'finance', 'store_manager'] },
+  { id: 'workshop', label: 'Xưởng dịch vụ', roles: SALES_ROLES },
 ];
 
 export interface ReportDefinition {
@@ -23,6 +31,8 @@ export interface ReportDefinition {
   description: string;
   filters: ReportFilterOptions;
   defaultQuery?: Partial<ReportQuery>;
+  /** Default period when the URL has none (default: this month). */
+  defaultPreset?: DatePreset;
   /** Columns kept out of the on-screen table (ids and the like). */
   hidden?: string[];
   /** Server-side paged report (movement). */
@@ -33,6 +43,8 @@ export interface ReportDefinition {
   kpis?: (result: ReportResult) => Kpi[];
   notice?: (result: ReportResult) => string | null;
   extra?: (result: ReportResult) => ReactNode;
+  /** Narrower than the group's roles (e.g. money owed needs reports:financial). */
+  roles?: string[];
 }
 
 const money = (v: unknown) => formatCurrency(Number(v ?? 0));
@@ -210,9 +222,16 @@ export const REPORT_DEFINITIONS: ReportDefinition[] = [
       ];
     },
   },
+  ...RETAIL_SUITE_REPORTS,
 ];
 
 export const findReport = (group: string | undefined, slug: string | undefined) =>
   REPORT_DEFINITIONS.find((d) => d.group === group && d.slug === slug);
+
+export const findReportByKey = (key: string) => REPORT_DEFINITIONS.find((d) => d.key === key);
+
+/** Whether a user with this role sees the report in the navigation. */
+export const canSeeReport = (d: ReportDefinition, role?: string) =>
+  !role || ((REPORT_GROUPS.find((g) => g.id === d.group)?.roles.includes(role) ?? false) && (!d.roles || d.roles.includes(role)));
 
 export const reportPath = (d: ReportDefinition) => `/reports/${d.group}/${d.slug}`;

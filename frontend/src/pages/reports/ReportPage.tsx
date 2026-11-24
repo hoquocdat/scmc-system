@@ -7,7 +7,7 @@ import { ReportLayout } from '@/components/reports/ReportLayout';
 import { KpiCards } from '@/components/reports/KpiCards';
 import { TrendChart } from '@/components/reports/TrendChart';
 import { ReportTable } from '@/components/reports/ReportTable';
-import { findReport } from '@/components/reports/report-registry';
+import { findReport, findReportByKey } from '@/components/reports/report-registry';
 import { useReportFilters } from '@/hooks/useReportFilters';
 import { reportsApi, type PagedMeta } from '@/lib/api/reports';
 
@@ -20,13 +20,19 @@ export function ReportPage() {
 }
 
 function ReportBody({ definitionKey }: { definitionKey: string }) {
-  const definition = useMemo(() => findReportByKey(definitionKey), [definitionKey]);
-  const { filters, query, setFilters, clearFilters, activeCount } = useReportFilters(definition.defaultQuery);
+  const definition = useMemo(() => {
+    const d = findReportByKey(definitionKey);
+    if (!d) throw new Error(`Unknown report ${definitionKey}`);
+    return d;
+  }, [definitionKey]);
+  const { filters, query, setFilters, clearFilters, activeCount, defaultPreset } = useReportFilters(definition.defaultQuery, definition.defaultPreset);
+  const needsProduct = !!definition.filters.product?.required && !query.productId;
 
   const { data, isLoading, isFetching, error } = useQuery({
     queryKey: ['reports', definition.key, query],
     queryFn: () => reportsApi.get(definition.key, query),
     placeholderData: keepPreviousData,
+    enabled: !needsProduct,
   });
 
   const kpis = data && definition.kpis ? definition.kpis(data) : [];
@@ -44,15 +50,24 @@ function ReportBody({ definitionKey }: { definitionKey: string }) {
       query={query}
       filterOptions={definition.filters}
       activeCount={activeCount}
+      defaultPreset={defaultPreset}
       onFiltersChange={setFilters}
       onClearFilters={clearFilters}
-      exportDisabled={!data || isLoading}
+      exportDisabled={!data || isLoading || needsProduct}
     >
       {error && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Không tải được báo cáo</AlertTitle>
           <AlertDescription>{(error as { response?: { data?: { message?: string } } }).response?.data?.message ?? (error as Error).message}</AlertDescription>
+        </Alert>
+      )}
+
+      {needsProduct && (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>Chọn sản phẩm</AlertTitle>
+          <AlertDescription>Bấm "Lọc" và chọn một sản phẩm để xem thẻ kho.</AlertDescription>
         </Alert>
       )}
 
@@ -72,7 +87,7 @@ function ReportBody({ definitionKey }: { definitionKey: string }) {
 
       {!definition.hideTable && <ReportTable result={data} isLoading={isLoading || isFetching} hidden={definition.hidden} paging={paging} />}
 
-      {data && (
+      {data && !needsProduct && (
         <p className="text-xs text-muted-foreground">
           Kỳ {data.scope.from} → {data.scope.to}, múi giờ {data.scope.timeZone}. Chỉ tính đơn đã xác nhận trở đi; đơn nháp, chờ và đã hủy không được tính.
         </p>
@@ -81,11 +96,3 @@ function ReportBody({ definitionKey }: { definitionKey: string }) {
   );
 }
 
-function findReportByKey(key: string) {
-  const [group, ...rest] = key.split('.');
-  const slug = rest.join('.');
-  const groupMap: Record<string, string> = { financial: 'finance' };
-  const def = findReport(groupMap[group] ?? group, slug);
-  if (!def) throw new Error(`Unknown report ${key}`);
-  return def;
-}

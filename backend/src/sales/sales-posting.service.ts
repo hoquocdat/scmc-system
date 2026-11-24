@@ -448,7 +448,10 @@ export class SalesPostingService {
           product_variant_id: item.product_variant_id,
           transaction_type: 'SALE',
           quantity: -Math.abs(item.quantity * item.unit_factor),
-          unit_cost: item.unit_cost,
+          // per base unit: stock moves in base units (inventory-operations D8)
+          unit_cost: item.unit_cost
+            ? new Prisma.Decimal(Number(item.unit_cost) / item.unit_factor)
+            : null,
           total_cost: item.unit_cost
             ? new Prisma.Decimal(Number(item.unit_cost) * item.quantity)
             : null,

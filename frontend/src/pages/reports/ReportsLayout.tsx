@@ -1,7 +1,7 @@
 import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { REPORT_DEFINITIONS, REPORT_GROUPS, reportPath } from '@/components/reports/report-registry';
+import { canSeeReport, REPORT_DEFINITIONS, REPORT_GROUPS, reportPath } from '@/components/reports/report-registry';
 import { cn } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
 import { ReportPage } from './ReportPage';
@@ -27,7 +27,7 @@ export function ReportsLayout() {
               <SelectItem value="/reports">Tổng quan</SelectItem>
               {groups.map((g) => (
                 <SelectGroup key={g.id}>
-                  {REPORT_DEFINITIONS.filter((d) => d.group === g.id).map((d) => (
+                  {REPORT_DEFINITIONS.filter((d) => d.group === g.id && canSeeReport(d, user?.role)).map((d) => (
                     <SelectItem key={d.key} value={reportPath(d)}>{g.label} · {d.title}</SelectItem>
                   ))}
                 </SelectGroup>
@@ -43,7 +43,7 @@ export function ReportsLayout() {
               <div key={g.id}>
                 <div className="px-2 pb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{g.label}</div>
                 <div className="space-y-0.5">
-                  {REPORT_DEFINITIONS.filter((d) => d.group === g.id).map((d) => (
+                  {REPORT_DEFINITIONS.filter((d) => d.group === g.id && canSeeReport(d, user?.role)).map((d) => (
                     <NavLink key={d.key} to={reportPath(d)} className={({ isActive }) => linkClass(isActive)}>
                       {d.title}
                     </NavLink>

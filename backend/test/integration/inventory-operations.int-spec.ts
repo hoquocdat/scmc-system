@@ -18,6 +18,8 @@ import { PosCheckoutService } from '../../src/pos/pos-checkout.service';
 import { PosService } from '../../src/pos/pos.service';
 import { PrismaService } from '../../src/prisma/prisma.service';
 import { PurchaseOrdersService } from '../../src/purchase-orders/purchase-orders.service';
+import { ReportScope } from '../../src/reports/report-scope';
+import { StockReportsService } from '../../src/reports/stock-reports.service';
 import { ReturnRequestDto } from '../../src/sales-returns/dto/sales-returns.dto';
 import { SalesReturnsService } from '../../src/sales-returns/sales-returns.service';
 import { PriceResolverService } from '../../src/sales/pricing/price-resolver';
@@ -275,6 +277,17 @@ describe('inventory operations', () => {
       });
       await transfers.ship(u('store_manager'), t.id, {});
       expect((await stock(HCM(), fx.products.sticker)).onHand).toBe(0);
+      const road = await new StockReportsService(
+        testDb as unknown as PrismaService,
+      ).inTransit(new ReportScope({}));
+      expect(road.rows).toEqual([
+        expect.objectContaining({
+          transfer: t.transfer_number,
+          quantity: 5,
+          value: 50_000,
+          daysOnRoad: 0,
+        }),
+      ]);
       const c = await transfers.cancel(u('store_manager'), t.id, 'Xe hỏng');
       expect(c.status).toBe('cancelled');
       expect((await stock(HCM(), fx.products.sticker)).onHand).toBe(5);
@@ -321,6 +334,19 @@ describe('inventory operations', () => {
         (await stock(HCM(), fx.products.jeans)).onHand,
         (await stock(HCM(), fx.products.sticker)).onHand,
       ]).toEqual([4, 7]);
+      const variances = await new StockReportsService(
+        testDb as unknown as PrismaService,
+      ).countVariances(new ReportScope({}), HCM());
+      expect(variances.rows).toEqual([
+        expect.objectContaining({
+          sku: 'STICKER',
+          system: 9,
+          counted: 7,
+          difference: -2,
+          value: -20_000,
+        }),
+      ]);
+      expect(variances.meta?.shortageValue).toBe(-20_000);
     });
   });
 

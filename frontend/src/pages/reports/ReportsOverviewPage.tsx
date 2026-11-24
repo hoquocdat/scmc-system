@@ -6,7 +6,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { KpiCards } from '@/components/reports/KpiCards';
-import { REPORT_DEFINITIONS, REPORT_GROUPS, reportPath } from '@/components/reports/report-registry';
+import { canSeeReport, REPORT_DEFINITIONS, REPORT_GROUPS, reportPath } from '@/components/reports/report-registry';
 import { reportsApi } from '@/lib/api/reports';
 import { formatCurrency } from '@/lib/utils';
 import { useAuthStore } from '@/store/authStore';
@@ -56,7 +56,7 @@ export function ReportsOverviewPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-xl font-semibold sm:text-2xl">Báo cáo</h1>
-        <p className="text-sm text-muted-foreground">Số liệu bán lẻ, tồn kho, tài chính và xưởng dịch vụ. Mọi báo cáo đều xuất được ra Excel/CSV.</p>
+        <p className="text-sm text-muted-foreground">Cuối ngày, bán hàng, tồn kho, khách hàng, nhà cung cấp, khuyến mãi, tài chính và xưởng dịch vụ. Mọi báo cáo đều xuất được ra Excel/CSV.</p>
       </div>
 
       {!bannerDismissed && (
@@ -82,10 +82,10 @@ export function ReportsOverviewPage() {
           <Card key={g.id}>
             <CardHeader>
               <CardTitle className="text-base">{g.label}</CardTitle>
-              <CardDescription>{REPORT_DEFINITIONS.filter((d) => d.group === g.id).length} báo cáo</CardDescription>
+              <CardDescription>{REPORT_DEFINITIONS.filter((d) => d.group === g.id && canSeeReport(d, user?.role)).length} báo cáo</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-1">
-              {REPORT_DEFINITIONS.filter((d) => d.group === g.id).map((d) => (
+              {REPORT_DEFINITIONS.filter((d) => d.group === g.id && canSeeReport(d, user?.role)).map((d) => (
                 <Button key={d.key} asChild variant="ghost" className="justify-between">
                   <Link to={reportPath(d)}>
                     {d.title}

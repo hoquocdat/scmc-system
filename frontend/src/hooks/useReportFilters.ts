@@ -70,13 +70,13 @@ const FILTER_KEYS = ['from', 'to', 'preset', 'storeId', 'interval', 'page', 'pag
 
 /**
  * Report filters kept in the URL so they survive refresh and can be shared.
- * Defaults to the current month in Vietnam time.
+ * Defaults to the current month in Vietnam time (or the report's own default period).
  */
-export function useReportFilters(defaults: Partial<ReportQuery> = {}) {
+export function useReportFilters(defaults: Partial<ReportQuery> = {}, defaultPreset: DatePreset = 'this_month') {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const filters = useMemo<ReportFilters>(() => {
-    const preset = (searchParams.get('preset') as DatePreset) || 'this_month';
+    const preset = (searchParams.get('preset') as DatePreset) || defaultPreset;
     const range = preset === 'custom' ? null : presetRange(preset);
     const num = (k: string) => (searchParams.get(k) ? Number(searchParams.get(k)) : undefined);
     return {
@@ -131,13 +131,13 @@ export function useReportFilters(defaults: Partial<ReportQuery> = {}) {
 
   const activeCount = useMemo(() => {
     let n = 0;
-    if (filters.preset !== 'this_month') n++;
+    if (filters.preset !== defaultPreset) n++;
     if (filters.storeId) n++;
     if (filters.productId) n++;
     if (filters.locationId) n++;
     if (filters.type) n++;
     return n;
-  }, [filters]);
+  }, [filters, defaultPreset]);
 
-  return { filters, query, setFilters, clearFilters, activeCount };
+  return { filters, query, setFilters, clearFilters, activeCount, defaultPreset };
 }

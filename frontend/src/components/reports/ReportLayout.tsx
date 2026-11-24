@@ -3,7 +3,7 @@ import { Filter } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import type { ReportKey, ReportQuery } from '@/lib/api/reports';
-import type { ReportFilters } from '@/hooks/useReportFilters';
+import type { DatePreset, ReportFilters } from '@/hooks/useReportFilters';
 import { ExportMenu } from './ExportMenu';
 import { ReportFilterBadges } from './ReportFilterBadges';
 import { ReportFilterSheet, type ReportFilterOptions } from './ReportFilterSheet';
@@ -16,6 +16,7 @@ interface ReportLayoutProps {
   query: ReportQuery;
   filterOptions: ReportFilterOptions;
   activeCount: number;
+  defaultPreset?: DatePreset;
   onFiltersChange: (next: Partial<ReportFilters>) => void;
   onClearFilters: () => void;
   exportDisabled?: boolean;
@@ -25,7 +26,7 @@ interface ReportLayoutProps {
 /** Title, "Lọc" button, export menu, active filter badges, then the report body. */
 export function ReportLayout(props: ReportLayoutProps) {
   const [filterOpen, setFilterOpen] = useState(false);
-  const { title, description, reportKey, filters, query, filterOptions, activeCount, onFiltersChange, onClearFilters, exportDisabled, children } = props;
+  const { title, description, reportKey, filters, query, filterOptions, activeCount, defaultPreset, onFiltersChange, onClearFilters, exportDisabled, children } = props;
 
   return (
     <div className="space-y-4">
@@ -44,7 +45,7 @@ export function ReportLayout(props: ReportLayoutProps) {
         </div>
       </div>
 
-      <ReportFilterBadges filters={filters} activeCount={activeCount} onChange={onFiltersChange} onClear={onClearFilters} />
+      <ReportFilterBadges filters={filters} activeCount={activeCount} onChange={onFiltersChange} onClear={onClearFilters} options={filterOptions} defaultPreset={defaultPreset} />
 
       {children}
 

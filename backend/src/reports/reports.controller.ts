@@ -16,11 +16,15 @@ import { Action } from '../casl/casl-ability.factory';
 import { CheckPolicies } from '../casl/check-policies.decorator';
 import { PoliciesGuard } from '../casl/policies.guard';
 import { isExport, ReportQueryDto } from './dto/report-query.dto';
+import { EodReportsService } from './eod-reports.service';
 import { FinancialReportsService } from './financial-reports.service';
 import { InventoryReportsService } from './inventory-reports.service';
+import { LedgerReportsService } from './ledger-reports.service';
 import { ReportExportInterceptor } from './report-export.interceptor';
 import { ReportScope } from './report-scope';
+import { RetailReportsService } from './retail-reports.service';
 import { SalesReportsService } from './sales-reports.service';
+import { StockReportsService } from './stock-reports.service';
 import { WorkshopReportsService } from './workshop-reports.service';
 
 /**
@@ -47,6 +51,10 @@ export class ReportsController {
     private readonly inventory: InventoryReportsService,
     private readonly financial: FinancialReportsService,
     private readonly workshop: WorkshopReportsService,
+    private readonly eod: EodReportsService,
+    private readonly retail: RetailReportsService,
+    private readonly stock: StockReportsService,
+    private readonly ledger: LedgerReportsService,
   ) {}
 
   // ==================== SALES REPORTS ====================
@@ -224,5 +232,203 @@ export class ReportsController {
   })
   dashboardKpis(@Query() q: ReportQueryDto) {
     return this.financial.dashboardKpis(q.storeId);
+  }
+
+  // ==================== RETAIL SUITE ====================
+
+  @Get('eod/daily')
+  @CheckPolicies({ action: Action.Sales, subject: 'reports' })
+  @ApiOperation({
+    summary:
+      'End of day per branch: sales, discounts by source, returns, money received by method, drawer cash, new receivables',
+  })
+  eodDaily(@Query() q: ReportQueryDto) {
+    return this.eod.daily(new ReportScope(q));
+  }
+
+  @Get('eod/shifts')
+  @CheckPolicies({ action: Action.Sales, subject: 'reports' })
+  @ApiOperation({
+    summary:
+      'Shift close: float, cash sales, refunds, cash in/out, expected, counted, over/short',
+  })
+  eodShifts(@Query() q: ReportQueryDto) {
+    return this.eod.shifts(new ReportScope(q));
+  }
+
+  @Get('sales/by-hour')
+  @CheckPolicies({ action: Action.Sales, subject: 'reports' })
+  @ApiOperation({ summary: 'Orders and net sales per hour of day' })
+  salesByHour(@Query() q: ReportQueryDto) {
+    return this.retail.byHour(new ReportScope(q));
+  }
+
+  @Get('sales/by-staff')
+  @CheckPolicies({ action: Action.Sales, subject: 'reports' })
+  @ApiOperation({ summary: 'Orders, net sales and returns per salesperson' })
+  salesByStaff(@Query() q: ReportQueryDto) {
+    return this.retail.byStaff(new ReportScope(q));
+  }
+
+  @Get('sales/by-branch')
+  @CheckPolicies({ action: Action.Sales, subject: 'reports' })
+  @ApiOperation({ summary: 'Net sales per branch and channel' })
+  salesByBranch(@Query() q: ReportQueryDto) {
+    return this.retail.byBranch(new ReportScope(q));
+  }
+
+  @Get('sales/by-brand')
+  @CheckPolicies({ action: Action.Sales, subject: 'reports' })
+  @ApiOperation({ summary: 'Net sales per brand' })
+  salesByBrand(@Query() q: ReportQueryDto) {
+    return this.retail.byBrand(new ReportScope(q));
+  }
+
+  @Get('sales/slow-movers')
+  @CheckPolicies({ action: Action.Sales, subject: 'reports' })
+  @ApiOperation({ summary: 'Items in stock that sold least in the period' })
+  salesSlowMovers(@Query() q: ReportQueryDto) {
+    return this.retail.slowMovers(
+      new ReportScope(q),
+      isExport(q) ? 5000 : (q.limit ?? 50),
+    );
+  }
+
+  @Get('sales/discounts')
+  @CheckPolicies({ action: Action.Sales, subject: 'reports' })
+  @ApiOperation({ summary: 'Discounts by source per period' })
+  salesDiscounts(@Query() q: ReportQueryDto) {
+    return this.retail.discounts(new ReportScope(q));
+  }
+
+  @Get('returns/by-product')
+  @CheckPolicies({ action: Action.Sales, subject: 'reports' })
+  @ApiOperation({
+    summary: 'Returned quantity, value and return rate per product',
+  })
+  returnsByProduct(@Query() q: ReportQueryDto) {
+    return this.retail.returnsByProduct(
+      new ReportScope(q),
+      isExport(q) ? 5000 : (q.limit ?? 100),
+    );
+  }
+
+  @Get('returns/reasons')
+  @CheckPolicies({ action: Action.Sales, subject: 'reports' })
+  @ApiOperation({ summary: 'Returns by reason, or by staff with type=staff' })
+  returnsReasons(@Query() q: ReportQueryDto) {
+    return this.retail.returnsReasons(new ReportScope(q), q.type);
+  }
+
+  @Get('inventory/stock-card')
+  @CheckPolicies({ action: Action.Inventory, subject: 'reports' })
+  @ApiOperation({
+    summary:
+      'Stock card of one product (productId, optional locationId) with running balance',
+  })
+  stockCard(@Query() q: ReportQueryDto) {
+    return this.stock.stockCard(new ReportScope(q), q.productId, q.locationId);
+  }
+
+  @Get('inventory/in-transit')
+  @CheckPolicies({ action: Action.Inventory, subject: 'reports' })
+  @ApiOperation({ summary: 'Transfers shipped and not yet fully received' })
+  inTransit(@Query() q: ReportQueryDto) {
+    return this.stock.inTransit(new ReportScope(q));
+  }
+
+  @Get('inventory/count-variances')
+  @CheckPolicies({ action: Action.Inventory, subject: 'reports' })
+  @ApiOperation({
+    summary: 'Differences found by stock counts completed in the period',
+  })
+  countVariances(@Query() q: ReportQueryDto) {
+    return this.stock.countVariances(new ReportScope(q), q.locationId);
+  }
+
+  @Get('inventory/days-of-stock')
+  @CheckPolicies({ action: Action.Inventory, subject: 'reports' })
+  @ApiOperation({
+    summary:
+      'Days of stock left at the period sales rate; type=dead lists unsold stock',
+  })
+  daysOfStock(@Query() q: ReportQueryDto) {
+    return this.stock.daysOfStock(
+      new ReportScope(q),
+      q.type,
+      isExport(q) ? 5000 : (q.limit ?? 200),
+    );
+  }
+
+  @Get('customers/top')
+  @CheckPolicies({ action: Action.Sales, subject: 'reports' })
+  @ApiOperation({
+    summary: 'Customers ranked by net sales (sortBy=orders for order count)',
+  })
+  topCustomers(@Query() q: ReportQueryDto) {
+    return this.retail.topCustomers(
+      new ReportScope(q),
+      isExport(q) ? 5000 : (q.limit ?? 20),
+      q.sortBy,
+    );
+  }
+
+  @Get('customers/receivables-aging')
+  @CheckPolicies({ action: Action.Financial, subject: 'reports' })
+  @ApiOperation({
+    summary:
+      'Open customer receivables by age (0–30, 31–60, 61–90, over 90 days)',
+  })
+  receivablesAging(@Query() q: ReportQueryDto) {
+    return this.ledger.receivablesAging(new ReportScope(q));
+  }
+
+  @Get('customers/loyalty')
+  @CheckPolicies({ action: Action.Sales, subject: 'reports' })
+  @ApiOperation({ summary: 'Points earned, redeemed and balances per tier' })
+  loyalty(@Query() q: ReportQueryDto) {
+    return this.retail.loyalty(new ReportScope(q));
+  }
+
+  @Get('suppliers/purchases')
+  @CheckPolicies({ action: Action.Financial, subject: 'reports' })
+  @ApiOperation({
+    summary: 'Purchases, returns, payments and balance per supplier',
+  })
+  supplierPurchases(@Query() q: ReportQueryDto) {
+    return this.ledger.supplierPurchases(new ReportScope(q));
+  }
+
+  @Get('suppliers/payables-aging')
+  @CheckPolicies({ action: Action.Financial, subject: 'reports' })
+  @ApiOperation({ summary: 'Open supplier payables by age' })
+  payablesAging(@Query() q: ReportQueryDto) {
+    return this.ledger.payablesAging(new ReportScope(q));
+  }
+
+  @Get('promotions/performance')
+  @CheckPolicies({ action: Action.Sales, subject: 'reports' })
+  @ApiOperation({
+    summary:
+      'Orders, discount and net sales per promotion and voucher campaign',
+  })
+  promotionPerformance(@Query() q: ReportQueryDto) {
+    return this.retail.promotionPerformance(new ReportScope(q));
+  }
+
+  @Get('financial/cash-balances')
+  @CheckPolicies({ action: Action.Financial, subject: 'reports' })
+  @ApiOperation({
+    summary: 'Opening, in, out and closing per cash book account',
+  })
+  cashBalances(@Query() q: ReportQueryDto) {
+    return this.ledger.cashBalances(new ReportScope(q));
+  }
+
+  @Get('financial/pnl')
+  @CheckPolicies({ action: Action.Financial, subject: 'reports' })
+  @ApiOperation({ summary: 'Profit and loss: retail, workshop and combined' })
+  pnl(@Query() q: ReportQueryDto) {
+    return this.ledger.pnl(new ReportScope(q));
   }
 }

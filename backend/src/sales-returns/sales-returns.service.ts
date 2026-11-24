@@ -906,7 +906,9 @@ export class SalesReturnsService {
           transaction_type: i.restock ? 'RETURN' : 'RETURN_DAMAGED',
           // stock is kept in base units (inventory-operations D8)
           quantity: i.quantity * oi.unit_factor,
-          unit_cost: oi.unit_cost,
+          unit_cost: oi.unit_cost
+            ? new Prisma.Decimal(num(oi.unit_cost) / oi.unit_factor)
+            : null,
           total_cost: oi.unit_cost
             ? new Prisma.Decimal(num(oi.unit_cost) * i.quantity)
             : null,

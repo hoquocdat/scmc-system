@@ -5,6 +5,10 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { X } from 'lucide-react';
+import { ProductSearchInput } from '@/components/inventory/purchase-orders/ProductSearchInput';
+import { productsApi } from '@/lib/api/products';
 import { storesApi } from '@/lib/api/stores';
 import { stockLocationsApi } from '@/lib/api/stock-locations';
 import { DATE_PRESET_LABELS, type DatePreset, type ReportFilters, presetRange } from '@/hooks/useReportFilters';
@@ -16,6 +20,10 @@ export interface ReportFilterOptions {
   movementType?: boolean;
   limit?: boolean;
   sortBy?: { label: string; options: { value: string; label: string }[] };
+  /** Product picker (stock card); `required` means the report needs one. */
+  product?: { required?: boolean };
+  /** A report-specific "type" choice sent as `type`; the first option is the default (no value). */
+  typeChoice?: { label: string; options: { value: string; label: string }[] };
 }
 
 interface ReportFilterSheetProps {
@@ -48,6 +56,12 @@ export function ReportFilterSheet({ open, onOpenChange, filters, options, onAppl
     queryKey: ['stock-locations'],
     queryFn: stockLocationsApi.getAll,
     enabled: !!options.location && open,
+  });
+
+  const { data: product } = useQuery({
+    queryKey: ['products', 'detail', local.productId],
+    queryFn: () => productsApi.getById(local.productId as string),
+    enabled: !!options.product && !!local.productId && open,
   });
 
   const set = <K extends keyof ReportFilters>(key: K, value: ReportFilters[K] | undefined) =>
@@ -99,6 +113,33 @@ export function ReportFilterSheet({ open, onOpenChange, filters, options, onAppl
                 <SelectContent>
                   <SelectItem value={ALL}>Tất cả chi nhánh</SelectItem>
                   {stores?.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
+          {options.product && (
+            <div className="space-y-2">
+              <Label>Sản phẩm{options.product.required ? ' (bắt buộc)' : ''}</Label>
+              {local.productId && (
+                <Badge variant="secondary" className="gap-1 pr-1">
+                  {product ? `${product.sku ?? ''} ${product.name}`.trim() : 'Đang tải…'}
+                  <button type="button" aria-label="Bỏ chọn sản phẩm" className="rounded-full p-0.5 hover:bg-muted-foreground/20" onClick={() => set('productId', undefined)}>
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              )}
+              <ProductSearchInput debounceMs={400} placeholder="Tìm sản phẩm theo tên, SKU hoặc mã vạch…" onProductSelect={(p) => set('productId', p.id)} />
+            </div>
+          )}
+
+          {options.typeChoice && (
+            <div className="space-y-2">
+              <Label>{options.typeChoice.label}</Label>
+              <Select value={local.type ?? options.typeChoice.options[0].value} onValueChange={(v) => set('type', v === options.typeChoice?.options[0].value ? undefined : v)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {options.typeChoice.options.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
