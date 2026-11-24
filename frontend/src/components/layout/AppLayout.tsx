@@ -26,6 +26,7 @@ import {
 import {
   LayoutDashboard,
   BookOpen,
+  Undo2,
   UsersRound,
   Wrench,
   Users,
@@ -281,6 +282,13 @@ export function AppLayout({ children }: AppLayoutProps) {
           href: '/sales/orders',
           icon: FileText,
           roles: ['sales', 'manager'],
+        },
+        {
+          name: 'Trả Hàng',
+          href: '/sales/returns',
+          icon: Undo2,
+          roles: ['sales', 'manager'],
+          permission: { resource: 'sales_returns', action: 'read' },
         },
         {
           name: 'Báo Cáo',

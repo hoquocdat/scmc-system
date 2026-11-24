@@ -20,15 +20,15 @@
 
 ## 4. Frontend
 
-- [ ] 4.1 API client `lib/api/sales-returns.ts`; `store_credit` in payment method types
-- [ ] 4.2 `ReturnSheet`: lookup, lines (quantity, reason, restock/damaged, location), exchange items, refund lines with account, live preview, confirm, return receipt; shadcn only
-- [ ] 4.3 POS: "Trả hàng" button (F7), store credit option in the payment sheet when the customer has credit
-- [ ] 4.4 Sales-order detail: "Trả hàng" button, returned quantities, the order's returns
-- [ ] 4.5 `/sales/returns` list with filter Sheet, badges, detail Sheet, export; navigation entry gated by `sales_returns:read`
-- [ ] 4.6 Customer page: credit balance and history
+- [x] 4.1 API client `lib/api/sales-returns.ts`; `store_credit` in payment method types
+- [x] 4.2 `ReturnSheet`: lookup, lines (quantity, reason, restock/damaged, location), exchange items, refund lines with account, live preview, confirm, return receipt; shadcn only
+- [x] 4.3 POS: "Trả hàng" button (F7), store credit option in the payment sheet when the customer has credit
+- [x] 4.4 Sales-order detail: "Trả hàng" button, returned quantities, the order's returns
+- [x] 4.5 `/sales/returns` list with filter Sheet, badges, detail Sheet, export; navigation entry gated by `sales_returns:read`
+- [x] 4.6 Customer page: credit balance and history
 
 ## 5. Checks
 
-- [ ] 5.1 End-to-end scenario test: sale with order discount and loyalty, partial cash return in a shift, exchange, credit refund then spend; verify drawer balance, shift expected cash, stock, points, receivable and credit against hand-computed figures
-- [ ] 5.2 All suites, both builds, lint on new files
-- [ ] 5.3 `docs/sales/RETURNS.md` (rules, refund examples, approval limit, behaviour for cashiers)
+- [x] 5.1 End-to-end scenario test: sale with order discount and loyalty, partial cash return in a shift, exchange, credit refund then spend; verify drawer balance, shift expected cash, stock, points, receivable and credit against hand-computed figures
+- [x] 5.2 All suites, both builds, lint on new files
+- [x] 5.3 `docs/sales/RETURNS.md` (rules, refund examples, approval limit, behaviour for cashiers)

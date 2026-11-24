@@ -49,6 +49,12 @@ import { PaymentDialog } from '@/components/sales-orders/PaymentDialog';
 import { InvoicePreviewModal } from '@/components/sales-orders/InvoicePreviewModal';
 import { ProductSearchInput } from '@/components/inventory/purchase-orders/ProductSearchInput';
 import { CustomerLoyaltyCard } from '@/components/loyalty/CustomerLoyaltyCard';
+import { OrderReturnsCard } from '@/components/returns/OrderReturnsCard';
+import { ReturnDoneDialog } from '@/components/returns/ReturnDoneDialog';
+import { ReturnSheet } from '@/components/returns/ReturnSheet';
+import type { SalesReturn } from '@/lib/api/sales-returns';
+import { usePermissions } from '@/hooks/usePermissions';
+import { Undo2 } from 'lucide-react';
 import { ReceiptDialog } from '@/components/pos/ReceiptDialog';
 import { posApi, type PosReceipt } from '@/lib/api/pos';
 import { formatCurrency, formatDateTime } from '@/lib/utils';
@@ -73,6 +79,9 @@ export function SalesOrderDetailPage() {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [posReceipt, setPosReceipt] = useState<PosReceipt | null>(null);
+  const [returnOpen, setReturnOpen] = useState(false);
+  const [returned, setReturned] = useState<SalesReturn | null>(null);
+  const { can } = usePermissions();
 
   // POS receipts are reprinted from server data; every reprint is logged
   const reprintMutation = useMutation({
@@ -269,6 +278,12 @@ export function SalesOrderDetailPage() {
               </Button>
               <ReceiptDialog open={!!posReceipt} onOpenChange={(o) => !o && setPosReceipt(null)} receipt={posReceipt} />
             </>
+          )}
+          {['confirmed', 'processing', 'ready', 'completed'].includes(order.status) && (order as { return_status?: string }).return_status !== 'full' && can('sales_returns', 'create') && (
+            <Button variant="outline" onClick={() => setReturnOpen(true)}>
+              <Undo2 className="mr-2 h-4 w-4" />
+              Trả hàng
+            </Button>
           )}
           {canCancel && (
             <Button variant="destructive" onClick={() => setIsCancelDialogOpen(true)} disabled={cancelMutation.isPending}>
@@ -594,6 +609,17 @@ export function SalesOrderDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      <div className="mt-6">
+        <OrderReturnsCard orderId={order.id} items={order.sales_order_items as { id: string; product_name: string; quantity: number; returned_quantity?: number | null }[]} />
+      </div>
+      <ReturnSheet
+        open={returnOpen}
+        onOpenChange={setReturnOpen}
+        orderCode={order.id}
+        onDone={(r) => { setReturned(r); void queryClient.invalidateQueries({ queryKey: ['sales-order', id] }); }}
+      />
+      <ReturnDoneDialog ret={returned} onOpenChange={(o) => !o && setReturned(null)} />
 
       {/* Confirm Dialog */}
       <AlertDialog open={isConfirmDialogOpen} onOpenChange={setIsConfirmDialogOpen}>

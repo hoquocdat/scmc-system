@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Keyboard, WifiOff, Wallet } from 'lucide-react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Keyboard, Undo2, WifiOff, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +19,9 @@ import { ProductSearch } from './ProductSearch';
 import { ReceiptDialog } from './ReceiptDialog';
 import { ShiftSheet } from './ShiftSheet';
 import { ShortcutsHelp } from './ShortcutsHelp';
+import { ReturnSheet } from '@/components/returns/ReturnSheet';
+import { ReturnDoneDialog } from '@/components/returns/ReturnDoneDialog';
+import { salesReturnsApi, type SalesReturn } from '@/lib/api/sales-returns';
 
 interface PosTerminalProps {
   shift: PosShift;
@@ -37,6 +40,10 @@ export function PosTerminal({ shift, userId }: PosTerminalProps) {
   const [helpOpen, setHelpOpen] = useState(false);
   const [approval, setApproval] = useState<{ requested: number; max: number; payments: CheckoutPaymentDto[] } | null>(null);
   const [receipt, setReceipt] = useState<PosReceipt | null>(null);
+  const [returnOpen, setReturnOpen] = useState(false);
+  const [returned, setReturned] = useState<SalesReturn | null>(null);
+  const customerId = cart.customer?.id;
+  const { data: credit } = useQuery({ queryKey: ['customers', customerId, 'credit'], queryFn: () => salesReturnsApi.customerCredit(customerId!), enabled: !!customerId });
   const [offline, setOffline] = useState(!navigator.onLine);
 
   useEffect(() => {
@@ -120,8 +127,9 @@ export function PosTerminal({ shift, userId }: PosTerminalProps) {
     newTab: carts.newTab,
     switchTab: (i: number) => carts.carts[i] && carts.switchTab(carts.carts[i].id),
     showHelp: () => setHelpOpen(true),
+    openReturn: () => setReturnOpen(true),
   }), [cart.lines.length, carts]);
-  usePosShortcuts(shortcuts, !paymentOpen && !customerOpen && !approval);
+  usePosShortcuts(shortcuts, !paymentOpen && !customerOpen && !approval && !returnOpen);
 
   const amountDue = Math.max(0, totals.afterLines - totals.orderDiscount); // loyalty discount is applied by the server; the sheet shows the pre-loyalty due and the server rejects overpayment
 
@@ -132,6 +140,7 @@ export function PosTerminal({ shift, userId }: PosTerminalProps) {
         <div className="flex items-center gap-2">
           {offline && <Badge variant="destructive" className="gap-1"><WifiOff className="h-3 w-3" /> Mất kết nối</Badge>}
           <Badge variant="outline">{shift.stores?.name} · {shift.session_number}</Badge>
+          <Button variant="outline" size="sm" onClick={() => setReturnOpen(true)}><Undo2 className="h-4 w-4" /> Trả hàng (F7)</Button>
           <Button variant="outline" size="sm" onClick={() => setShiftOpen(true)}><Wallet className="h-4 w-4" /> Ca làm việc</Button>
           <Button variant="ghost" size="icon" aria-label="Phím tắt (F1)" onClick={() => setHelpOpen(true)}><Keyboard className="h-4 w-4" /></Button>
         </div>
@@ -169,7 +178,9 @@ export function PosTerminal({ shift, userId }: PosTerminalProps) {
       </div>
 
       <CustomerLookupDialog open={customerOpen} onOpenChange={setCustomerOpen} onSelect={(c, n) => carts.setCustomer(c, n ?? null)} />
-      <PaymentSheet open={paymentOpen} onOpenChange={setPaymentOpen} amountDue={amountDue} hasCustomer={!!(cart.customer || cart.new_customer)} isSubmitting={checkout.isPending} onComplete={(p) => submit(p)} />
+      <PaymentSheet open={paymentOpen} onOpenChange={setPaymentOpen} amountDue={amountDue} hasCustomer={!!(cart.customer || cart.new_customer)} isSubmitting={checkout.isPending} onComplete={(p) => submit(p)} creditBalance={credit?.balance ?? 0} />
+      <ReturnSheet open={returnOpen} onOpenChange={setReturnOpen} onDone={setReturned} />
+      <ReturnDoneDialog ret={returned} onOpenChange={(o) => !o && setReturned(null)} />
       {approval && (
         <ApprovalDialog
           open

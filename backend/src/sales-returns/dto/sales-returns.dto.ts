@@ -179,6 +179,12 @@ export class ReturnListQueryDto {
   @ApiPropertyOptional() @IsOptional() @IsDateString() to?: string;
   @ApiPropertyOptional() @IsOptional() @IsUUID() storeId?: string;
   @ApiPropertyOptional() @IsOptional() @IsUUID() customerId?: string;
+  @ApiPropertyOptional({
+    description: 'Returns of one order (ignores the period)',
+  })
+  @IsOptional()
+  @IsUUID()
+  orderId?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() search?: string;
   @ApiPropertyOptional({ enum: ['return', 'exchange'] })
   @IsOptional()

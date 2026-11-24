@@ -14,6 +14,7 @@ import { CustomerServiceHistoryTab } from '@/components/customers/CustomerServic
 import { CustomerReceivablesTab } from '@/components/customers/CustomerReceivablesTab';
 import { CustomerSalesOrdersTab } from '@/components/customers/CustomerSalesOrdersTab';
 import { CustomerLoyaltyTab } from '@/components/customers/CustomerLoyaltyTab';
+import { CustomerCreditTab } from '@/components/customers/CustomerCreditTab';
 import { CustomerEditSheet } from '@/components/customers/CustomerEditSheet';
 import { AddBikeSheet } from '@/components/customers/AddBikeSheet';
 
@@ -127,6 +128,10 @@ export function CustomerDetailPage() {
               <span className="hidden sm:inline">Công Nợ</span>
               <span className="sm:hidden">Nợ</span>
             </TabsTrigger>
+            <TabsTrigger value="credit" className="whitespace-nowrap">
+              <span className="hidden sm:inline">Tiền Trả Hàng</span>
+              <span className="sm:hidden">Trả hàng</span>
+            </TabsTrigger>
             <TabsTrigger value="orders" className="whitespace-nowrap">
               <span className="hidden sm:inline">Đơn Hàng</span>
               <span className="sm:hidden">Đơn</span>
@@ -155,6 +160,11 @@ export function CustomerDetailPage() {
         {/* Receivables Tab */}
         <TabsContent value="receivables">
           <CustomerReceivablesTab customerId={id!} />
+        </TabsContent>
+
+        {/* Store credit from returns */}
+        <TabsContent value="credit">
+          <CustomerCreditTab customerId={id!} />
         </TabsContent>
 
         {/* Sales Orders Tab */}

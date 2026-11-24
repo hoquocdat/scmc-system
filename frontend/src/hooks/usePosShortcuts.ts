@@ -8,12 +8,14 @@ export interface PosShortcutHandlers {
   newTab: () => void;
   switchTab: (index: number) => void;
   showHelp: () => void;
+  openReturn: () => void;
 }
 
 /** One place for every POS key binding; shown to the user by ShortcutsHelp. */
 export const POS_SHORTCUTS: { keys: string; label: string }[] = [
   { keys: 'F2', label: 'Tìm sản phẩm / quét mã' },
   { keys: 'F4', label: 'Chọn khách hàng' },
+  { keys: 'F7', label: 'Trả hàng / đổi hàng' },
   { keys: 'F9', label: 'Thanh toán' },
   { keys: 'Ctrl + Enter', label: 'Hoàn tất thanh toán' },
   { keys: 'Ctrl + T', label: 'Đơn mới (tab)' },
@@ -27,6 +29,7 @@ export function usePosShortcuts(handlers: PosShortcutHandlers, enabled = true) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'F2') { e.preventDefault(); handlers.focusSearch(); return; }
       if (e.key === 'F4') { e.preventDefault(); handlers.openCustomer(); return; }
+      if (e.key === 'F7') { e.preventDefault(); handlers.openReturn(); return; }
       if (e.key === 'F9') { e.preventDefault(); handlers.openPayment(); return; }
       if (e.key === 'F1') { e.preventDefault(); handlers.showHelp(); return; }
       if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); handlers.completePayment(); return; }

@@ -229,7 +229,9 @@ export class SalesReturnsService {
     });
     const search = q.search?.trim();
     const where: Prisma.sales_returnsWhereInput = {
-      created_at: { gte: scope.start, lt: scope.endExclusive },
+      ...(q.orderId
+        ? { sales_order_id: q.orderId }
+        : { created_at: { gte: scope.start, lt: scope.endExclusive } }),
       ...(q.storeId ? { store_id: q.storeId } : {}),
       ...(q.customerId ? { customer_id: q.customerId } : {}),
       ...(q.kind ? { kind: q.kind } : {}),

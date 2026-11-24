@@ -18,6 +18,8 @@ interface PaymentSheetProps {
   hasCustomer: boolean;
   isSubmitting: boolean;
   onComplete: (payments: CheckoutPaymentDto[]) => void;
+  /** Customer's store credit (tiền trả hàng); the method is offered only when positive. */
+  creditBalance?: number;
 }
 
 interface PaymentRow extends CheckoutPaymentDto {
@@ -36,7 +38,7 @@ const CASH_QUICK = [20_000, 50_000, 100_000, 200_000, 500_000];
  * amount tendered and shows the change; a remaining balance is a credit sale
  * (allowed for known customers with permission; the server enforces it).
  */
-export function PaymentSheet({ open, onOpenChange, amountDue, hasCustomer, isSubmitting, onComplete }: PaymentSheetProps) {
+export function PaymentSheet({ open, onOpenChange, amountDue, hasCustomer, isSubmitting, onComplete, creditBalance = 0 }: PaymentSheetProps) {
   const [rows, setRows] = useState<PaymentRow[]>([]);
 
   useEffect(() => {
@@ -49,7 +51,10 @@ export function PaymentSheet({ open, onOpenChange, amountDue, hasCustomer, isSub
   const cashRow = rows.find((r) => r.method === 'cash');
   const change = cashRow && cashRow.amount_tendered != null ? Math.max(0, cashRow.amount_tendered - cashRow.amount) : 0;
   const nonCashOver = rows.some((r) => r.method !== 'cash') && over > 0;
-  const canComplete = rows.every((r) => r.amount > 0 && (r.method !== 'cash' || (r.amount_tendered ?? 0) >= r.amount)) && !nonCashOver && (remaining === 0 || hasCustomer);
+  const creditUsed = rows.filter((r) => r.method === 'store_credit').reduce((s, r) => s + (r.amount || 0), 0);
+  const creditOver = creditUsed > creditBalance;
+  const methods = METHODS.filter((m) => m !== 'store_credit' || creditBalance > 0);
+  const canComplete = rows.every((r) => r.amount > 0 && (r.method !== 'cash' || (r.amount_tendered ?? 0) >= r.amount)) && !nonCashOver && !creditOver && (remaining === 0 || hasCustomer);
 
   const update = (id: number, patch: Partial<PaymentRow>) =>
     setRows((rs) => rs.map((r) => {
@@ -88,7 +93,11 @@ export function PaymentSheet({ open, onOpenChange, amountDue, hasCustomer, isSub
                 <Select value={row.method} onValueChange={(m) => update(row.id, { method: m as PosPaymentMethod })}>
                   <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {METHODS.map((m) => <SelectItem key={m} value={m}>{POS_PAYMENT_METHOD_LABELS[m]}</SelectItem>)}
+                    {methods.map((m) => (
+                      <SelectItem key={m} value={m}>
+                        {POS_PAYMENT_METHOD_LABELS[m]}{m === 'store_credit' ? ` · ${formatCurrency(creditBalance)}` : ''}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
                 <CurrencyInput aria-label="Số tiền" value={row.amount} onValueChange={(v) => update(row.id, { amount: v ?? 0 })} className="flex-1" />
@@ -133,6 +142,7 @@ export function PaymentSheet({ open, onOpenChange, amountDue, hasCustomer, isSub
             )}
             {remaining > 0 && !hasCustomer && <Badge variant="destructive">Khách lẻ phải thanh toán đủ</Badge>}
             {nonCashOver && <Badge variant="destructive">Thanh toán không phải tiền mặt vượt quá số tiền cần trả</Badge>}
+            {creditOver && <Badge variant="destructive">Vượt số dư tiền trả hàng ({formatCurrency(creditBalance)})</Badge>}
           </div>
         </div>
 

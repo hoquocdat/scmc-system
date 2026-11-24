@@ -94,7 +94,7 @@ export interface PosShiftQueryParams {
 
 // ==================== CHECKOUT ====================
 
-export type PosPaymentMethod = 'cash' | 'card' | 'bank_transfer' | 'ewallet_momo' | 'ewallet_zalopay' | 'ewallet_vnpay';
+export type PosPaymentMethod = 'cash' | 'card' | 'bank_transfer' | 'ewallet_momo' | 'ewallet_zalopay' | 'ewallet_vnpay' | 'store_credit';
 
 export const POS_PAYMENT_METHOD_LABELS: Record<PosPaymentMethod, string> = {
   cash: 'Tiền mặt',
@@ -103,6 +103,7 @@ export const POS_PAYMENT_METHOD_LABELS: Record<PosPaymentMethod, string> = {
   ewallet_momo: 'MoMo',
   ewallet_zalopay: 'ZaloPay',
   ewallet_vnpay: 'VNPay',
+  store_credit: 'Tiền trả hàng (số dư)',
 };
 
 export interface CheckoutLineDto {
