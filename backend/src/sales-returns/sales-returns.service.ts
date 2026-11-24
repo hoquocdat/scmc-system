@@ -18,6 +18,14 @@ import {
   SalesPostingService,
 } from '../sales/sales-posting.service';
 import { moveCustomerCredit } from './customer-credit';
+import {
+  EngineLine,
+  EnginePromotion,
+  EngineTarget,
+  evaluateLinePromotion,
+  spread,
+} from '../promotions/promotion-engine';
+import { productAttributes } from '../promotions/promotion-loader';
 import { ReturnListQueryDto, ReturnRequestDto } from './dto/sales-returns.dto';
 import {
   allocateOrderReductions,
@@ -411,8 +419,7 @@ export class SalesReturnsService {
           throw new ReturnApprovalRequiredException(
             plan.approvalReasons.join('; '),
           );
-        if (plan.goodsAmount <= 0 && !dto.exchange)
-          throw new ReturnRuleException('Giá trị hàng trả bằng 0');
+        // A zero refund is valid: e.g. the paid item of a broken buy-2-get-1 (D7)
 
         const shift = order.store_id
           ? await tx.pos_sessions.findFirst({
@@ -580,8 +587,12 @@ export class SalesReturnsService {
         discount_amount: num(i.discount_amount),
         tax_amount: num(i.tax_amount),
         quantity: i.quantity,
+        promotion_discount: num(i.promotion_discount),
       })),
-      num(order.discount_amount) + num(order.loyalty_discount_amount),
+      num(order.discount_amount) +
+        num(order.loyalty_discount_amount) +
+        num(order.promotion_discount_amount) +
+        num(order.voucher_discount_amount),
     );
   }
 
@@ -681,6 +692,7 @@ export class SalesReturnsService {
       });
     }
 
+    await this.clawBackBrokenPromotions(db, order, items);
     const goodsAmount = items.reduce((s, i) => s + i.lineRefund, 0);
     const receivableReduction = Math.min(
       goodsAmount,
@@ -735,6 +747,107 @@ export class SalesReturnsService {
       fullyReturned,
       approvalReasons,
     };
+  }
+
+  /**
+   * Buy-X-get-Y and bundle promotions are re-evaluated on the units the
+   * customer keeps; the discount they no longer qualify for comes off this
+   * refund, spread over the returned lines (promotions-vouchers D7).
+   */
+  private async clawBackBrokenPromotions(
+    db: Db,
+    order: LoadedOrder,
+    items: PlannedItem[],
+  ) {
+    const discounts = await db.sales_order_discounts.findMany({
+      where: {
+        sales_order_id: order.id,
+        source_type: 'promotion',
+        sales_order_item_id: { not: null },
+        promotions: { type: { in: ['buy_x_get_y', 'bundle'] } },
+      },
+      include: { promotions: { include: { promotion_targets: true } } },
+    });
+    if (!discounts.length) return;
+    const now = new Map(items.map((i) => [i.orderItem.id, i.quantity]));
+    const kept = (i: LoadedOrder['sales_order_items'][number]) =>
+      i.quantity - i.returned_quantity - (now.get(i.id) ?? 0);
+    const attrs = await productAttributes(db as Tx, [
+      ...new Set(
+        order.sales_order_items
+          .map((i) => i.product_id)
+          .filter((x): x is string => !!x),
+      ),
+    ]);
+    const keptLines: EngineLine[] = order.sales_order_items
+      .filter((i) => i.product_id && kept(i) > 0)
+      .map((i) => ({
+        key: i.id,
+        productId: i.product_id,
+        variantId: i.product_variant_id,
+        categoryId: attrs.get(i.product_id)?.categoryId ?? null,
+        brandId: attrs.get(i.product_id)?.brandId ?? null,
+        unitPrice: num(i.unit_price),
+        manualDiscount: num(i.discount_amount),
+        quantity: kept(i),
+      }));
+    let lost = 0;
+    const byPromotion = new Map<string, typeof discounts>();
+    for (const d of discounts)
+      byPromotion.set(d.promotion_id, [
+        ...(byPromotion.get(d.promotion_id) ?? []),
+        d,
+      ]);
+    for (const rows of byPromotion.values()) {
+      const p = rows[0].promotions;
+      // What the kept units still carry of this promotion, in proportion to their quantity
+      const carried = rows.reduce((s, d) => {
+        const it = order.sales_order_items.find(
+          (i) => i.id === d.sales_order_item_id,
+        );
+        return it
+          ? s + Math.round((num(d.amount) * kept(it)) / it.quantity)
+          : s;
+      }, 0);
+      const again = evaluateLinePromotion(
+        {
+          id: p.id,
+          code: p.code,
+          name: p.name,
+          type: p.type as EnginePromotion['type'],
+          priority: p.priority,
+          combinable: p.combinable,
+          discountKind: p.discount_kind as EnginePromotion['discountKind'],
+          discountValue: num(p.discount_value),
+          maxDiscount: p.max_discount == null ? null : num(p.max_discount),
+          minOrderAmount: null,
+          buyQuantity: p.buy_quantity,
+          getQuantity: p.get_quantity,
+          getDiscountPercent:
+            p.get_discount_percent == null ? null : num(p.get_discount_percent),
+          bundlePrice: p.bundle_price == null ? null : num(p.bundle_price),
+          targets: p.promotion_targets.map((t) => ({
+            role: t.role as EngineTarget['role'],
+            type: t.target_type as EngineTarget['type'],
+            id: t.target_id,
+            quantity: t.quantity,
+          })),
+        },
+        keptLines,
+      );
+      lost += Math.max(0, carried - (again?.total ?? 0));
+    }
+    const refund = items.reduce((s, i) => s + i.lineRefund, 0);
+    const cut = Math.min(lost, refund);
+    if (cut <= 0) return;
+    const share = spread(
+      cut,
+      new Map(items.map((i) => [i.orderItem.id, i.lineRefund])),
+    );
+    for (const i of items) {
+      i.lineRefund -= share.get(i.orderItem.id) ?? 0;
+      i.unitRefund = Math.round(i.lineRefund / i.quantity);
+    }
   }
 
   private async nextNumber(tx: Tx, at: Date): Promise<string> {

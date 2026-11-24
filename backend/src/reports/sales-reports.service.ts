@@ -25,6 +25,7 @@ export class SalesReportsService {
   private ordersInScope(scope: ReportScope): Prisma.Sql {
     return Prisma.sql`
       SELECT so.id, so.store_id, so.discount_amount, so.loyalty_discount_amount,
+             so.promotion_discount_amount, so.voucher_discount_amount,
              so.tax_amount, so.shipping_cost, so.total_amount,
              ${ReportScope.orderDate('so')} AS order_date
       FROM sales_orders so
@@ -40,6 +41,7 @@ export class SalesReportsService {
         SELECT soi.sales_order_id,
                SUM(soi.unit_price * soi.quantity) AS gross,
                SUM(COALESCE(soi.discount_amount, 0) * soi.quantity) AS line_discount,
+               SUM(COALESCE(soi.promotion_discount, 0)) AS line_promotion,
                SUM(soi.quantity) AS items
         FROM sales_order_items soi JOIN o ON o.id = soi.sales_order_id
         GROUP BY soi.sales_order_id
@@ -49,6 +51,8 @@ export class SalesReportsService {
              COALESCE(SUM(l.line_discount), 0) AS line_discounts,
              COALESCE(SUM(o.discount_amount), 0) AS order_discounts,
              COALESCE(SUM(o.loyalty_discount_amount), 0) AS loyalty_discounts,
+             COALESCE(SUM(l.line_promotion), 0) + COALESCE(SUM(o.promotion_discount_amount), 0) AS promotion_discounts,
+             COALESCE(SUM(o.voucher_discount_amount), 0) AS voucher_discounts,
              COALESCE(SUM(o.tax_amount), 0) AS tax,
              COALESCE(SUM(o.shipping_cost), 0) AS shipping,
              COALESCE(SUM(o.total_amount), 0) AS total,
@@ -58,7 +62,11 @@ export class SalesReportsService {
     const r = rows[0] ?? {};
     const grossSales = num(r.gross_sales);
     const discounts =
-      num(r.line_discounts) + num(r.order_discounts) + num(r.loyalty_discounts);
+      num(r.line_discounts) +
+      num(r.order_discounts) +
+      num(r.loyalty_discounts) +
+      num(r.promotion_discounts) +
+      num(r.voucher_discounts);
     const netSales = grossSales - discounts;
     const orders = num(r.orders);
     const summary = {
@@ -67,6 +75,8 @@ export class SalesReportsService {
       lineDiscounts: num(r.line_discounts),
       orderDiscounts: num(r.order_discounts),
       loyaltyDiscounts: num(r.loyalty_discounts),
+      promotionDiscounts: num(r.promotion_discounts),
+      voucherDiscounts: num(r.voucher_discounts),
       discounts,
       netSales,
       tax: num(r.tax),
@@ -109,7 +119,7 @@ export class SalesReportsService {
              COUNT(DISTINCT soi.sales_order_id)::int AS orders,
              SUM(soi.quantity)::int AS quantity,
              SUM(soi.unit_price * soi.quantity) AS gross_sales,
-             SUM((soi.unit_price - COALESCE(soi.discount_amount, 0)) * soi.quantity) AS net_sales
+             SUM((soi.unit_price - COALESCE(soi.discount_amount, 0)) * soi.quantity - COALESCE(soi.promotion_discount, 0)) AS net_sales
       FROM sales_order_items soi
       JOIN o ON o.id = soi.sales_order_id
       LEFT JOIN products p ON p.id = soi.product_id
@@ -198,7 +208,7 @@ export class SalesReportsService {
              COALESCE(pv.name, p.name) AS name,
              COUNT(DISTINCT soi.sales_order_id)::int AS orders,
              SUM(soi.quantity)::int AS quantity,
-             SUM((soi.unit_price - COALESCE(soi.discount_amount, 0)) * soi.quantity) AS net_sales
+             SUM((soi.unit_price - COALESCE(soi.discount_amount, 0)) * soi.quantity - COALESCE(soi.promotion_discount, 0)) AS net_sales
       FROM sales_order_items soi
       JOIN o ON o.id = soi.sales_order_id
       LEFT JOIN products p ON p.id = soi.product_id
@@ -237,15 +247,17 @@ export class SalesReportsService {
       l AS (
         SELECT soi.sales_order_id,
                SUM(soi.unit_price * soi.quantity) AS gross,
-               SUM(COALESCE(soi.discount_amount, 0) * soi.quantity) AS line_discount
+               SUM(COALESCE(soi.discount_amount, 0) * soi.quantity) AS line_discount,
+               SUM(COALESCE(soi.promotion_discount, 0)) AS line_promotion
         FROM sales_order_items soi JOIN o ON o.id = soi.sales_order_id
         GROUP BY soi.sales_order_id
       ),
       per_order AS (
         SELECT ${scope.periodKey(Prisma.sql`o.order_date`)} AS period,
                o.id,
-               COALESCE(l.gross, 0) - COALESCE(l.line_discount, 0)
-                 - COALESCE(o.discount_amount, 0) - COALESCE(o.loyalty_discount_amount, 0) AS net
+               COALESCE(l.gross, 0) - COALESCE(l.line_discount, 0) - COALESCE(l.line_promotion, 0)
+                 - COALESCE(o.discount_amount, 0) - COALESCE(o.loyalty_discount_amount, 0)
+                 - COALESCE(o.promotion_discount_amount, 0) - COALESCE(o.voucher_discount_amount, 0) AS net
         FROM o LEFT JOIN l ON l.sales_order_id = o.id
       )
       SELECT p.period,

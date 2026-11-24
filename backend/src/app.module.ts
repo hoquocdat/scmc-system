@@ -28,6 +28,7 @@ import { ReportsModule } from './reports/reports.module';
 import { CashBookModule } from './cash-book/cash-book.module';
 import { PriceBooksModule } from './price-books/price-books.module';
 import { SalesReturnsModule } from './sales-returns/sales-returns.module';
+import { PromotionsModule } from './promotions/promotions.module';
 import { ProductCategoriesModule } from './product-categories/product-categories.module';
 import { AttributeDefinitionsModule } from './attribute-definitions/attribute-definitions.module';
 import { PermissionsModule } from './permissions/permissions.module';
@@ -79,6 +80,7 @@ import { PayrollModule } from './payroll/payroll.module';
     CashBookModule,
     PriceBooksModule,
     SalesReturnsModule,
+    PromotionsModule,
     ProductCategoriesModule,
     AttributeDefinitionsModule,
     PermissionsModule,

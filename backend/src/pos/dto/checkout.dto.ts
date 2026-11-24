@@ -152,6 +152,17 @@ export class CheckoutDto {
   @IsUUID()
   price_book_id?: string;
 
+  @ApiPropertyOptional({ description: 'Voucher code (one per order)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  voucher_code?: string;
+
+  @ApiPropertyOptional({ description: 'Total the screen showed; refused with TOTAL_CHANGED when the server total differs' })
+  @IsOptional()
+  @IsNumber()
+  expected_total?: number;
+
   @ApiProperty({
     type: [CheckoutPaymentDto],
     description:

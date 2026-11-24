@@ -20,6 +20,7 @@ import { UserContextService } from '../auth/user-context.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
 import { PriceResolverService } from './pricing/price-resolver';
 import { spendCreditForPayment } from '../sales-returns/customer-credit';
+import { releaseVouchers } from '../promotions/promotion-loader';
 import { SalesPostingService } from './sales-posting.service';
 import { CashBookPostingService } from '../cash-book/cash-book-posting.service';
 
@@ -247,6 +248,9 @@ export class SalesService {
             },
           },
         });
+
+        // A voucher used by the order can be used again (promotions-vouchers D5)
+        await releaseVouchers(tx, id);
 
         // Return stock only if it was deducted (drafts never move stock)
         const wasPosted =

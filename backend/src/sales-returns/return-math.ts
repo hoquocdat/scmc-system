@@ -11,11 +11,14 @@ export interface AllocLine {
   /** Per-unit tax. */
   tax_amount: number;
   quantity: number;
+  /** Line promotions on the whole line (promotions-vouchers D7). */
+  promotion_discount?: number;
 }
 
 /** Value of a line before order-level reductions. */
 export const lineNet = (l: AllocLine) =>
-  Math.round((l.unit_price - l.discount_amount + l.tax_amount) * l.quantity);
+  Math.round((l.unit_price - l.discount_amount + l.tax_amount) * l.quantity) -
+  Math.round(l.promotion_discount ?? 0);
 
 /**
  * What the customer paid for each line: its value minus its share of the

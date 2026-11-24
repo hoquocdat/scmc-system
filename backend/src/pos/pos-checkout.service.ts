@@ -142,6 +142,8 @@ export class PosCheckoutService {
       client_request_id: dto.client_request_id,
       discount_approved_by: approvedBy,
       price_book_id: dto.price_book_id ?? null,
+      voucher_code: dto.voucher_code ?? null,
+      expected_total: dto.expected_total ?? null,
       lines: dto.lines.map((l) => ({
         product_id: l.product_id,
         product_variant_id: l.product_variant_id ?? null,
