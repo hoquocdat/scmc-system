@@ -1,3 +1,4 @@
+import { spendCreditForPayment } from '../sales-returns/customer-credit';
 import {
   BadRequestException,
   Injectable,
@@ -279,7 +280,15 @@ export class SalesPostingService {
           payment_date: draft.at ?? new Date(),
         },
       });
-      // Every completed payment is a cash book receipt in the same transaction
+      if (p.payment_method === 'store_credit')
+        await spendCreditForPayment(tx, {
+          customerId: order.customer_id,
+          paymentId: payment.id,
+          amount: p.amount,
+          orderNumber: order.order_number,
+          createdBy: draft.created_by,
+        });
+      // Every completed money payment is a cash book receipt in the same transaction
       await this.cashBook.postSalesOrderPayment(tx, {
         orderId: order.id,
         paymentId: payment.id,

@@ -19,6 +19,7 @@ import { Prisma } from '@prisma/client';
 import { UserContextService } from '../auth/user-context.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
 import { PriceResolverService } from './pricing/price-resolver';
+import { spendCreditForPayment } from '../sales-returns/customer-credit';
 import { SalesPostingService } from './sales-posting.service';
 import { CashBookPostingService } from '../cash-book/cash-book-posting.service';
 
@@ -347,6 +348,14 @@ export class SalesService {
           },
         });
 
+        if (createPaymentDto.payment_method === 'store_credit')
+          await spendCreditForPayment(tx, {
+            customerId: order.customer_id,
+            paymentId: payment.id,
+            amount: createPaymentDto.amount,
+            orderNumber: order.order_number,
+            createdBy: receivedBy,
+          });
         await this.cashBook.postSalesOrderPayment(tx, {
           orderId: order.id,
           paymentId: payment.id,

@@ -1,3 +1,4 @@
+import { NON_MONEY_METHODS } from '../sales-returns/customer-credit';
 import { Injectable } from '@nestjs/common';
 import { randomUUID } from 'crypto';
 import { Prisma } from '@prisma/client';
@@ -298,6 +299,8 @@ export class CashBookPostingService {
       at?: Date;
     },
   ) {
+    // Store credit and exchange value are not money: no cash book entry (sales-returns D9)
+    if (NON_MONEY_METHODS.has(input.method)) return null;
     const order = await tx.sales_orders.findFirst({
       where: { id: input.orderId },
       select: {

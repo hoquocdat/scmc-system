@@ -64,6 +64,7 @@ export enum CheckoutPaymentMethod {
   EWALLET_MOMO = 'ewallet_momo',
   EWALLET_ZALOPAY = 'ewallet_zalopay',
   EWALLET_VNPAY = 'ewallet_vnpay',
+  STORE_CREDIT = 'store_credit',
 }
 
 export class CheckoutPaymentDto {

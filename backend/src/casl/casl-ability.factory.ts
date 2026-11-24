@@ -67,6 +67,7 @@ export type Subjects =
   | 'cash_book'
   | 'price_books'
   | 'customer_groups'
+  | 'sales_returns'
   | 'all'; // Special subject that represents "any subject"
 
 export type AppAbility = Ability<[Action, Subjects]>;

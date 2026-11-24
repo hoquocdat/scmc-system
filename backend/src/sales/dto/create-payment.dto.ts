@@ -18,6 +18,7 @@ export enum PaymentMethod {
   EWALLET_ZALOPAY = 'ewallet_zalopay',
   EWALLET_VNPAY = 'ewallet_vnpay',
   BANK_TRANSFER = 'bank_transfer',
+  STORE_CREDIT = 'store_credit',
 }
 
 export class CreatePaymentDto {

@@ -135,14 +135,10 @@ export class LoyaltyService {
           where: { id: loyalty.current_tier_id },
         })
       : null;
-    const tierMultiplier = tier
-      ? Number(tier.points_multiplier)
-      : 1.0;
+    const tierMultiplier = tier ? Number(tier.points_multiplier) : 1.0;
 
     // Calculate points: floor(amount * points_per_currency * tier_multiplier)
-    const basePoints = Math.floor(
-      amount * Number(rules.points_per_currency),
-    );
+    const basePoints = Math.floor(amount * Number(rules.points_per_currency));
     const pointsEarned = Math.floor(basePoints * tierMultiplier);
 
     if (pointsEarned <= 0) {
@@ -315,7 +311,11 @@ export class LoyaltyService {
     tx?: Prisma.TransactionClient,
   ): Promise<void> {
     if (tx) {
-      return this.forTransaction(tx).reversePoints(customerId, orderId, orderType);
+      return this.forTransaction(tx).reversePoints(
+        customerId,
+        orderId,
+        orderType,
+      );
     }
     const loyalty = await this.prisma.customer_loyalty.findUnique({
       where: { customer_id: customerId },
@@ -370,6 +370,82 @@ export class LoyaltyService {
         },
       });
     }
+  }
+
+  /**
+   * Part of an order returned (sales-returns D6): takes back `reverse` earned
+   * points and gives back `restore` redeemed points, inside the return's
+   * transaction. The balance may go negative when earned points were spent.
+   */
+  async applyReturn(
+    tx: Prisma.TransactionClient,
+    input: {
+      customerId: string;
+      returnId: string;
+      returnNumber: string;
+      reverse: number;
+      restore: number;
+      createdBy?: string | null;
+    },
+  ): Promise<void> {
+    if (input.reverse <= 0 && input.restore <= 0) return;
+    const rows = await tx.$queryRaw<{ id: string }[]>`
+      SELECT id FROM customer_loyalty WHERE customer_id = ${input.customerId}::uuid FOR UPDATE`;
+    if (!rows.length) return;
+    const loyalty = await tx.customer_loyalty.findFirstOrThrow({
+      where: { id: rows[0].id },
+    });
+    let balance = loyalty.points_balance;
+    let lastId: string | null = null;
+    if (input.reverse > 0) {
+      balance -= input.reverse;
+      lastId = (
+        await tx.loyalty_point_transactions.create({
+          data: {
+            customer_loyalty_id: loyalty.id,
+            transaction_type: 'reverse',
+            points: -input.reverse,
+            points_balance_after: balance,
+            reference_type: 'sales_return',
+            reference_id: input.returnId,
+            reason: `Trả hàng ${input.returnNumber}: thu hồi điểm đã tích`,
+            created_by: input.createdBy ?? null,
+          },
+        })
+      ).id;
+    }
+    if (input.restore > 0) {
+      balance += input.restore;
+      lastId = (
+        await tx.loyalty_point_transactions.create({
+          data: {
+            customer_loyalty_id: loyalty.id,
+            transaction_type: 'adjust',
+            points: input.restore,
+            points_balance_after: balance,
+            reference_type: 'sales_return',
+            reference_id: input.returnId,
+            reason: `Trả hàng ${input.returnNumber}: hoàn điểm đã dùng`,
+            created_by: input.createdBy ?? null,
+          },
+        })
+      ).id;
+    }
+    await tx.customer_loyalty.update({
+      where: { id: loyalty.id },
+      data: {
+        points_balance: balance,
+        points_earned_lifetime:
+          loyalty.points_earned_lifetime - Math.max(0, input.reverse),
+        points_redeemed_lifetime: Math.max(
+          0,
+          loyalty.points_redeemed_lifetime - Math.max(0, input.restore),
+        ),
+        updated_at: new Date(),
+      },
+    });
+    if (lastId)
+      await this.forTransaction(tx).evaluateTier(input.customerId, lastId);
   }
 
   /**
@@ -466,7 +542,7 @@ export class LoyaltyService {
         reason: tx.reason ?? undefined,
         createdBy: tx.created_by ?? undefined,
         createdByName: tx.user_profiles?.full_name ?? undefined,
-        createdAt: tx.created_at!,
+        createdAt: tx.created_at,
       })),
       total,
       page,
@@ -584,7 +660,9 @@ export class LoyaltyService {
     return { upgraded: false };
   }
 
-  private async mapToCustomerLoyaltyDto(loyalty: any): Promise<CustomerLoyaltyDto> {
+  private async mapToCustomerLoyaltyDto(
+    loyalty: any,
+  ): Promise<CustomerLoyaltyDto> {
     const tiers = await this.prisma.loyalty_tiers.findMany({
       where: { is_active: true },
       orderBy: { min_points: 'asc' },

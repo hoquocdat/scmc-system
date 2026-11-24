@@ -27,6 +27,7 @@ import { PosModule } from './pos/pos.module';
 import { ReportsModule } from './reports/reports.module';
 import { CashBookModule } from './cash-book/cash-book.module';
 import { PriceBooksModule } from './price-books/price-books.module';
+import { SalesReturnsModule } from './sales-returns/sales-returns.module';
 import { ProductCategoriesModule } from './product-categories/product-categories.module';
 import { AttributeDefinitionsModule } from './attribute-definitions/attribute-definitions.module';
 import { PermissionsModule } from './permissions/permissions.module';
@@ -77,6 +78,7 @@ import { PayrollModule } from './payroll/payroll.module';
     ReportsModule,
     CashBookModule,
     PriceBooksModule,
+    SalesReturnsModule,
     ProductCategoriesModule,
     AttributeDefinitionsModule,
     PermissionsModule,
