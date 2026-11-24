@@ -41,6 +41,8 @@ export enum Action {
   Count = 'count',
   ApproveCount = 'approve_count',
   Labels = 'labels',
+  // QR payments
+  Confirm = 'confirm',
   // Report-specific actions
   Sales = 'sales',
   Inventory = 'inventory',
@@ -75,6 +77,7 @@ export type Subjects =
   | 'sales_returns'
   | 'promotions'
   | 'vouchers'
+  | 'qr_payments'
   | 'all'; // Special subject that represents "any subject"
 
 export type AppAbility = Ability<[Action, Subjects]>;
@@ -222,6 +225,7 @@ export class CaslAbilityFactory {
       count: Action.Count,
       approve_count: Action.ApproveCount,
       labels: Action.Labels,
+      confirm: Action.Confirm,
       sales: Action.Sales,
       inventory: Action.Inventory,
       financial: Action.Financial,

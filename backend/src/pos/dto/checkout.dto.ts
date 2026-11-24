@@ -95,6 +95,11 @@ export class CheckoutPaymentDto {
   @IsString()
   @MaxLength(255)
   reference?: string;
+
+  @ApiPropertyOptional({ description: 'Paid QR payment request (VietQR, MoMo, ZaloPay, VNPay)' })
+  @IsOptional()
+  @IsUUID()
+  qr_payment_request_id?: string;
 }
 
 export class NewCustomerDto {

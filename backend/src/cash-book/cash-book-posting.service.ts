@@ -293,6 +293,8 @@ export class CashBookPostingService {
       orderId: string;
       paymentId: string;
       method: string;
+      /** Explicit account (QR provider settings); default = branch mapping. */
+      accountId?: string | null;
       amount: number;
       categoryCode: 'sale' | 'receivable_collection';
       createdBy?: string | null;
@@ -317,6 +319,7 @@ export class CashBookPostingService {
     return this.post(tx, {
       storeId: order.store_id,
       method: input.method,
+      accountId: input.accountId ?? null,
       direction: 'in',
       amount: input.amount,
       categoryCode: input.categoryCode,

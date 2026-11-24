@@ -126,6 +126,7 @@ export class PosCheckoutService {
           ? Math.max(0, p.amount_tendered - p.amount)
           : undefined,
       transaction_id: p.reference,
+      qr_payment_request_id: p.qr_payment_request_id,
     }));
 
     const draft: PostingDraft = {

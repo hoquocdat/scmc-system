@@ -1,4 +1,5 @@
 import { spendCreditForPayment } from '../sales-returns/customer-credit';
+import { claimQrPayment, linkQrPayment } from '../qr-payments/qr-claim';
 import { assertAvailable, recomputeOrderReservations } from '../inventory/stock-helpers';
 import {
   AppliedPromotion,
@@ -57,6 +58,8 @@ export interface PostingLineInput {
 export interface PostingPaymentInput {
   payment_method: string;
   amount: number;
+  /** Paid QR request this payment uses (ewallet-qr-payments D4). */
+  qr_payment_request_id?: string;
   amount_tendered?: number;
   change_given?: number;
   transaction_id?: string;
@@ -339,9 +342,13 @@ export class SalesPostingService {
       });
     }
     for (const p of payments) {
+      const qr = p.qr_payment_request_id
+        ? await claimQrPayment(tx, { requestId: p.qr_payment_request_id, storeId: store.id, method: p.payment_method, amount: p.amount, clientRequestId: draft.client_request_id })
+        : null;
       const payment = await tx.sales_order_payments.create({
         data: {
           sales_order_id: order.id,
+          qr_payment_request_id: p.qr_payment_request_id ?? null,
           payment_method: p.payment_method,
           amount: new Prisma.Decimal(p.amount),
           amount_tendered:
@@ -350,7 +357,7 @@ export class SalesPostingService {
               : null,
           change_given:
             p.change_given != null ? new Prisma.Decimal(p.change_given) : null,
-          transaction_id: p.transaction_id,
+          transaction_id: qr?.providerRef ?? p.transaction_id,
           authorization_code: p.authorization_code,
           notes: p.notes,
           status: 'completed',
@@ -358,6 +365,7 @@ export class SalesPostingService {
           payment_date: draft.at ?? new Date(),
         },
       });
+      if (qr && p.qr_payment_request_id) await linkQrPayment(tx, p.qr_payment_request_id, order.id, payment.id);
       if (p.payment_method === 'store_credit')
         await spendCreditForPayment(tx, {
           customerId: order.customer_id,
@@ -371,6 +379,7 @@ export class SalesPostingService {
         orderId: order.id,
         paymentId: payment.id,
         method: p.payment_method,
+        accountId: qr?.cashAccountId ?? null,
         amount: p.amount,
         categoryCode: 'sale',
         createdBy: draft.created_by,

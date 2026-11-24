@@ -30,6 +30,7 @@ import { PriceBooksModule } from './price-books/price-books.module';
 import { SalesReturnsModule } from './sales-returns/sales-returns.module';
 import { PromotionsModule } from './promotions/promotions.module';
 import { StockOperationsModule } from './stock-operations/stock-operations.module';
+import { QrPaymentsModule } from './qr-payments/qr-payments.module';
 import { ProductCategoriesModule } from './product-categories/product-categories.module';
 import { AttributeDefinitionsModule } from './attribute-definitions/attribute-definitions.module';
 import { PermissionsModule } from './permissions/permissions.module';
@@ -83,6 +84,7 @@ import { PayrollModule } from './payroll/payroll.module';
     SalesReturnsModule,
     PromotionsModule,
     StockOperationsModule,
+    QrPaymentsModule,
     ProductCategoriesModule,
     AttributeDefinitionsModule,
     PermissionsModule,
