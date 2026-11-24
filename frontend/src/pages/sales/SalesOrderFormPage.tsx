@@ -24,6 +24,8 @@ import { PointRedemptionInput } from '@/components/loyalty/PointRedemptionInput'
 import { useStoreStore } from '@/store/storeStore';
 import { useQuotedItems } from '@/hooks/useQuotedItems';
 import { PriceBookPicker } from '@/components/price-books/PriceBookPicker';
+import { OrderPricingCard } from '@/components/promotions/OrderPricingCard';
+import { useCartBreakdown } from '@/hooks/useCartBreakdown';
 
 export function SalesOrderFormPage() {
   const navigate = useNavigate();
@@ -32,6 +34,7 @@ export function SalesOrderFormPage() {
 
   const [rawItems, setItems] = useState<SalesOrderItem[]>([]);
   const [priceBookId, setPriceBookId] = useState<string | null>(null);
+  const [voucherCode, setVoucherCode] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [customerName, setCustomerName] = useState('');
@@ -161,6 +164,23 @@ export function SalesOrderFormPage() {
     ? (subtotal * discountPercent) / 100
     : discountAmount;
 
+  // Server breakdown: promotions, voucher and points in the fixed discount order
+  const breakdown = useCartBreakdown(
+    selectedStoreId && items.length
+      ? {
+          store_id: selectedStoreId,
+          customer_id: selectedCustomerId || null,
+          price_book_id: priceBookId,
+          channel: 'retail_store',
+          discount_type: discountType,
+          discount_value: discountType === 'percent' ? discountPercent : discountAmount,
+          voucher_code: voucherCode,
+          points_to_redeem: pointsToRedeem,
+          lines: items.map((i) => ({ product_id: i.product_id, product_variant_id: i.product_variant_id, quantity: i.quantity })),
+        }
+      : null,
+  );
+
   // Handler for loyalty redemption changes
   const handleRedemptionChange = (points: number, discount: number) => {
     setPointsToRedeem(points);
@@ -199,6 +219,8 @@ export function SalesOrderFormPage() {
       points_to_redeem: pointsToRedeem > 0 ? pointsToRedeem : undefined,
       loyalty_discount_amount: loyaltyDiscountAmount > 0 ? loyaltyDiscountAmount : undefined,
       price_book_id: priceBookId ?? undefined,
+      voucher_code: voucherCode ?? undefined,
+      expected_total: breakdown.data?.total,
       items: items.map(({ tempId, product_name, product_sku, variant_name, ...item }) => ({
         product_id: item.product_id,
         product_variant_id: item.product_variant_id,
@@ -330,6 +352,8 @@ export function SalesOrderFormPage() {
             loyaltyDiscount={loyaltyDiscountAmount}
             loyaltyPointsUsed={pointsToRedeem}
           />
+
+          <OrderPricingCard breakdown={breakdown.data} loading={breakdown.isFetching} error={breakdown.error} voucherCode={voucherCode} onVoucher={setVoucherCode} />
 
           <SalesOrderNotesCard
             notes={notes}

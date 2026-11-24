@@ -12,6 +12,8 @@ import { loyaltyApi } from '@/lib/api/loyalty';
 import { formatCurrency } from '@/lib/utils';
 import type { Cart, CartTotals } from '@/hooks/usePosCarts';
 import { PriceBookPicker } from '@/components/price-books/PriceBookPicker';
+import { VoucherField } from '@/components/promotions/VoucherField';
+import { promotionError } from '@/lib/api/promotions';
 
 interface CartSummaryProps {
   cart: Cart;
@@ -23,18 +25,22 @@ interface CartSummaryProps {
   onPay: () => void;
   storeId?: string | null;
   onPriceBook: (priceBookId: string | null) => void;
+  onVoucher: (code: string | null) => void;
+  /** Server is re-pricing the cart. */
+  pricing?: boolean;
+  pricingError?: unknown;
 }
 
 /** Customer, discounts, loyalty redemption and the amount due. */
-export function CartSummary({ cart, totals, onOpenCustomer, onClearCustomer, onOrderDiscount, onPoints, onPay, storeId, onPriceBook }: CartSummaryProps) {
+export function CartSummary({ cart, totals, onOpenCustomer, onClearCustomer, onOrderDiscount, onPoints, onPay, storeId, onPriceBook, onVoucher, pricing, pricingError }: CartSummaryProps) {
   const customerId = cart.customer?.id;
   const preview = useQuery({
     queryKey: ['pos', 'loyalty-preview', customerId, totals.afterLines - totals.orderDiscount, cart.points_to_redeem],
     queryFn: () => loyaltyApi.calculateRedemption(customerId!, totals.afterLines - totals.orderDiscount, cart.points_to_redeem || 0),
     enabled: !!customerId && totals.afterLines > 0,
   });
-  const loyaltyDiscount = cart.points_to_redeem > 0 && preview.data ? cart.points_to_redeem * preview.data.redemptionRate : 0;
-  const total = Math.max(0, totals.afterLines - totals.orderDiscount - loyaltyDiscount);
+  const loyaltyDiscount = totals.server ? totals.loyaltyDiscount : cart.points_to_redeem > 0 && preview.data ? cart.points_to_redeem * preview.data.redemptionRate : 0;
+  const total = totals.server ? totals.total : Math.max(0, totals.afterLines - totals.orderDiscount - loyaltyDiscount);
 
   return (
     <div className="space-y-3">
@@ -64,6 +70,7 @@ export function CartSummary({ cart, totals, onOpenCustomer, onClearCustomer, onO
       <div className="space-y-1 text-sm">
         <Row label={`Tạm tính (${totals.itemCount} sp)`} value={formatCurrency(totals.subtotal)} />
         {totals.lineDiscounts > 0 && <Row label="Giảm theo dòng" value={`-${formatCurrency(totals.lineDiscounts)}`} muted />}
+        {totals.promotions.map((p) => <Row key={p.id} label={`KM: ${p.name}`} value={`-${formatCurrency(p.amount)}`} muted />)}
         <div className="flex items-center justify-between">
           <Popover>
             <PopoverTrigger asChild>
@@ -92,11 +99,13 @@ export function CartSummary({ cart, totals, onOpenCustomer, onClearCustomer, onO
           </Popover>
           <span className="tabular-nums">{totals.orderDiscount > 0 ? `-${formatCurrency(totals.orderDiscount)}` : '—'}</span>
         </div>
+        <VoucherField code={cart.voucher_code ?? null} result={totals.voucher} onApply={onVoucher} />
         {loyaltyDiscount > 0 && <Row label={`Điểm thưởng (${cart.points_to_redeem} điểm)`} value={`-${formatCurrency(loyaltyDiscount)}`} muted />}
+        {pricingError != null && <p className="text-xs text-destructive">{promotionError(pricingError).message}</p>}
         <Separator className="my-2" />
         <div className="flex items-baseline justify-between">
           <span className="text-base font-semibold">Khách cần trả</span>
-          <span className="text-2xl font-bold tabular-nums text-primary">{formatCurrency(total)}</span>
+          <span className={`text-2xl font-bold tabular-nums text-primary ${pricing ? 'opacity-60' : ''}`}>{formatCurrency(total)}</span>
         </div>
       </div>
 

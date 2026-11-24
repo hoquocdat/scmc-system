@@ -26,6 +26,8 @@ import {
 import {
   LayoutDashboard,
   BookOpen,
+  Percent,
+  Ticket,
   Undo2,
   UsersRound,
   Wrench,
@@ -212,6 +214,20 @@ export function AppLayout({ children }: AppLayoutProps) {
           icon: BookOpen,
           roles: ['sales', 'manager'],
           permission: { resource: 'price_books', action: 'read' },
+        },
+        {
+          name: 'Khuyến Mãi',
+          href: '/inventory/promotions',
+          icon: Percent,
+          roles: ['sales', 'manager'],
+          permission: { resource: 'promotions', action: 'read' },
+        },
+        {
+          name: 'Voucher',
+          href: '/inventory/vouchers',
+          icon: Ticket,
+          roles: ['sales', 'manager'],
+          permission: { resource: 'vouchers', action: 'read' },
         },
         {
           name: 'Đơn Đặt Hàng',

@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-export type PosErrorCode = 'PRICE_CHANGED' | 'INSUFFICIENT_STOCK' | 'DISCOUNT_APPROVAL_REQUIRED' | 'SHIFT_NOT_OPEN' | 'PAYMENT_RULE' | 'NETWORK' | 'OTHER';
+export type PosErrorCode = 'PRICE_CHANGED' | 'INSUFFICIENT_STOCK' | 'DISCOUNT_APPROVAL_REQUIRED' | 'SHIFT_NOT_OPEN' | 'PAYMENT_RULE' | 'TOTAL_CHANGED' | 'VOUCHER_REJECTED' | 'NETWORK' | 'OTHER';
 
 export interface PriceChange {
   product_id: string;
@@ -40,7 +40,7 @@ export function parsePosError(error: unknown): PosError {
     const code = (data.code as PosErrorCode) ?? 'OTHER';
     const message = Array.isArray(data.message) ? (data.message as string[]).join('; ') : ((data.message as string) ?? error.message);
     return {
-      code: ['PRICE_CHANGED', 'INSUFFICIENT_STOCK', 'DISCOUNT_APPROVAL_REQUIRED', 'SHIFT_NOT_OPEN', 'PAYMENT_RULE'].includes(code) ? code : 'OTHER',
+      code: ['PRICE_CHANGED', 'INSUFFICIENT_STOCK', 'DISCOUNT_APPROVAL_REQUIRED', 'SHIFT_NOT_OPEN', 'PAYMENT_RULE', 'TOTAL_CHANGED', 'VOUCHER_REJECTED'].includes(code) ? code : 'OTHER',
       status: error.response.status,
       message,
       changes: data.changes as PriceChange[] | undefined,

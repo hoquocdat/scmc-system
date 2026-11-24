@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Product, ProductVariant } from '@/lib/api/products';
-import { priceBooksApi, quoteKey } from '@/lib/api/price-books';
+import { promotionsApi, type CartBreakdown } from '@/lib/api/promotions';
 
 export interface CartCustomer {
   id: string;
@@ -28,6 +28,9 @@ export interface CartLine {
   price_book_name?: string | null;
   /** Price before the price book. */
   base_price?: number;
+  /** Line promotions on this line (whole line) and their names (server). */
+  promotion_discount?: number;
+  promotion_names?: string[];
 }
 
 export interface Cart {
@@ -43,6 +46,8 @@ export interface Cart {
   notes: string;
   /** Manually chosen price book for the whole sale; null = automatic. */
   price_book_id?: string | null;
+  /** Voucher code entered by the cashier. */
+  voucher_code?: string | null;
   /** Discount approval bound to client_request_id; dropped when the cart changes. */
   approval_token?: string;
   created_at: number;
@@ -116,6 +121,17 @@ export interface CartTotals {
   afterLines: number;
   orderDiscount: number;
   itemCount: number;
+  /** From the server breakdown (0 when computed locally). */
+  linePromotion: number;
+  orderPromotion: number;
+  voucherDiscount: number;
+  loyaltyDiscount: number;
+  /** What the customer pays. */
+  total: number;
+  promotions: CartBreakdown['promotions'];
+  voucher: CartBreakdown['voucher'];
+  /** True when the figures come from the server for the current cart. */
+  server: boolean;
 }
 
 export function cartTotals(cart: Cart): CartTotals {
@@ -127,7 +143,34 @@ export function cartTotals(cart: Cart): CartTotals {
     : cart.order_discount.type === 'percent'
       ? Math.round((afterLines * cart.order_discount.value) / 100)
       : Math.min(cart.order_discount.value, afterLines);
-  return { subtotal, lineDiscounts, afterLines, orderDiscount, itemCount: cart.lines.reduce((s, l) => s + l.quantity, 0) };
+  return {
+    subtotal, lineDiscounts, afterLines, orderDiscount, itemCount: cart.lines.reduce((s, l) => s + l.quantity, 0),
+    linePromotion: 0, orderPromotion: 0, voucherDiscount: 0, loyaltyDiscount: 0, total: Math.max(0, afterLines - orderDiscount),
+    promotions: [], voucher: null, server: false,
+  };
+}
+
+const keyOf = (productId: string, variantId: string | null | undefined) => `${productId}:${variantId ?? ''}`;
+
+/** Server totals for a cart, when the breakdown matches its lines. */
+function serverTotals(cart: Cart, b: CartBreakdown): CartTotals | null {
+  const keys = b.lines.map((l) => keyOf(l.product_id, l.product_variant_id)).join(',');
+  if (keys !== cart.lines.map((l) => l.key).join(',')) return null;
+  return {
+    subtotal: b.subtotal,
+    lineDiscounts: b.line_discounts,
+    afterLines: b.subtotal - b.line_discounts,
+    orderDiscount: b.order_discount,
+    itemCount: cart.lines.reduce((s, l) => s + l.quantity, 0),
+    linePromotion: b.line_promotion_discount,
+    orderPromotion: b.order_promotion_discount,
+    voucherDiscount: b.voucher_discount,
+    loyaltyDiscount: b.loyalty_discount,
+    total: b.total,
+    promotions: b.promotions,
+    voucher: b.voucher,
+    server: true,
+  };
 }
 
 /**
@@ -152,30 +195,42 @@ export function usePosCarts(userId: string | undefined, storeId: string | undefi
 
   const rawActive = useMemo(() => state.carts.find((c) => c.id === state.activeId) ?? state.carts[0], [state]);
 
-  // Server prices (base price + price books) for the active cart (price-books D5)
+  // Server prices, promotions, voucher and totals for the active cart (promotions-vouchers D8)
   const queryClient = useQueryClient();
-  const lineKeys = rawActive?.lines.map((l) => l.key).sort().join(',') ?? '';
+  const request = rawActive && storeId && rawActive.lines.length > 0
+    ? {
+        store_id: storeId,
+        customer_id: rawActive.customer?.id ?? null,
+        price_book_id: rawActive.price_book_id ?? null,
+        channel: 'pos',
+        discount_type: rawActive.order_discount?.type ?? 'fixed',
+        discount_value: rawActive.order_discount?.value ?? 0,
+        voucher_code: rawActive.voucher_code ?? null,
+        points_to_redeem: rawActive.points_to_redeem || 0,
+        lines: rawActive.lines.map((l) => ({ product_id: l.product_id, product_variant_id: l.product_variant_id, quantity: l.quantity, discount_amount: l.discount_amount || 0 })),
+      } as const
+    : null;
   const quote = useQuery({
-    queryKey: ['pos', 'quote', storeId, rawActive?.customer?.id ?? null, rawActive?.price_book_id ?? null, lineKeys],
-    queryFn: () =>
-      priceBooksApi.quote({
-        store_id: storeId!,
-        customer_id: rawActive?.customer?.id ?? null,
-        price_book_id: rawActive?.price_book_id ?? null,
-        items: rawActive!.lines.map((l) => ({ product_id: l.product_id, product_variant_id: l.product_variant_id })),
-      }),
-    enabled: !!storeId && !!rawActive && rawActive.lines.length > 0,
+    queryKey: ['pos', 'cart', request],
+    queryFn: () => promotionsApi.cart(request!),
+    enabled: !!request,
     placeholderData: keepPreviousData,
-    staleTime: 30_000,
+    staleTime: 15_000,
+    retry: false,
   });
   const active = useMemo(() => {
     if (!rawActive || !quote.data) return rawActive;
-    const byKey = new Map(quote.data.items.map((q) => [quoteKey(q), q]));
+    const b = quote.data;
+    const byKey = new Map(b.lines.map((q) => [keyOf(q.product_id, q.product_variant_id), q]));
+    const names = new Map<number, string[]>();
+    for (const p of b.promotions) for (const l of p.lines) names.set(l.index, [...(names.get(l.index) ?? []), p.name]);
     return {
       ...rawActive,
       lines: rawActive.lines.map((l) => {
         const q = byKey.get(l.key);
-        return q ? { ...l, unit_price: q.unit_price, base_price: q.base_price, price_book_name: q.price_book_name } : l;
+        return q
+          ? { ...l, unit_price: q.unit_price, price_book_name: q.price_book_name, promotion_discount: q.promotion_discount, promotion_names: names.get(q.index) ?? [] }
+          : l;
       }),
     };
   }, [rawActive, quote.data]);
@@ -236,6 +291,7 @@ export function usePosCarts(userId: string | undefined, storeId: string | undefi
     [updateActive],
   );
 
+  const setVoucher = useCallback((voucher_code: string | null) => updateActive((cart) => ({ ...cart, voucher_code })), [updateActive]);
   const setPriceBook = useCallback((price_book_id: string | null) => updateActive((cart) => ({ ...cart, price_book_id })), [updateActive]);
   const setOrderDiscount = useCallback((order_discount: Cart['order_discount']) => updateActive((cart) => ({ ...cart, order_discount })), [updateActive]);
   const setPoints = useCallback((points_to_redeem: number) => updateActive((cart) => ({ ...cart, points_to_redeem })), [updateActive]);
@@ -253,7 +309,7 @@ export function usePosCarts(userId: string | undefined, storeId: string | undefi
           return change ? { ...l, unit_price: change.unit_price } : l;
         }),
       }));
-      void queryClient.invalidateQueries({ queryKey: ['pos', 'quote'] });
+      void queryClient.invalidateQueries({ queryKey: ['pos', 'cart'] });
     },
     [updateActive, queryClient],
   );
@@ -300,14 +356,17 @@ export function usePosCarts(userId: string | undefined, storeId: string | undefi
   return {
     carts: state.carts,
     active,
-    totals: active ? cartTotals(active) : cartTotals(newCart(0)),
+    totals: active ? ((quote.data && serverTotals(active, quote.data)) || cartTotals(active)) : cartTotals(newCart(0)),
     addLine,
     setQuantity,
     setLineDiscount,
     setCustomer,
     setPriceBook,
+    setVoucher,
     /** True while server prices for the active cart are being fetched. */
     pricing: quote.isFetching,
+    /** Why the server could not price the cart (e.g. points below the minimum). */
+    pricingError: quote.error,
     setOrderDiscount,
     setPoints,
     setNotes,

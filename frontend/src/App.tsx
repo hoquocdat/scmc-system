@@ -42,6 +42,9 @@ import { PriceBooksPage } from './pages/inventory/PriceBooksPage';
 import { PriceBookDetailPage } from './pages/inventory/PriceBookDetailPage';
 import { CustomerGroupsPage } from './pages/CustomerGroupsPage';
 import { SalesReturnsPage } from './pages/sales/SalesReturnsPage';
+import { PromotionsPage } from './pages/inventory/PromotionsPage';
+import { VouchersPage } from './pages/inventory/VouchersPage';
+import { VoucherCampaignPage } from './pages/inventory/VoucherCampaignPage';
 import { CashBookSettingsPage } from './pages/finance/CashBookSettingsPage';
 import { EmployeeEditPage } from './pages/EmployeeEditPage';
 import { SalaryConfigsPage } from './pages/hrm/SalaryConfigsPage';
@@ -320,6 +323,36 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <EmployeeDetailPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/promotions"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <PromotionsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/vouchers"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <VouchersPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/vouchers/:id"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <VoucherCampaignPage />
               </AppLayout>
             </ProtectedRoute>
           }

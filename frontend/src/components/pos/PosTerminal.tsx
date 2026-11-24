@@ -6,7 +6,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { CURRENT_SHIFT_KEY, posApi, type CheckoutDto, type CheckoutPaymentDto, type PosReceipt, type PosShift } from '@/lib/api/pos';
-import { cartTotals, usePosCarts } from '@/hooks/usePosCarts';
+import { usePosCarts } from '@/hooks/usePosCarts';
 import { usePosShortcuts } from '@/hooks/usePosShortcuts';
 import { ApprovalDialog } from './ApprovalDialog';
 import { CartLines } from './CartLines';
@@ -68,10 +68,12 @@ export function PosTerminal({ shift, userId }: PosTerminalProps) {
     order_discount: cart.order_discount ?? undefined,
     points_to_redeem: cart.points_to_redeem || undefined,
     price_book_id: cart.price_book_id ?? undefined,
+    voucher_code: cart.voucher_code ?? undefined,
+    expected_total: totals.server ? totals.total : undefined,
     payments,
     discount_approval_token: token ?? cart.approval_token,
     notes: cart.notes || undefined,
-  }), [cart]);
+  }), [cart, totals]);
 
   const checkout = useMutation({
     mutationFn: (dto: CheckoutDto) => posApi.checkout(dto),
@@ -90,6 +92,16 @@ export function PosTerminal({ shift, userId }: PosTerminalProps) {
         case 'PRICE_CHANGED':
           carts.applyPriceChanges(e.changes ?? []);
           toast.warning(`${e.message}. Giá trong giỏ đã được cập nhật, kiểm tra lại rồi thanh toán.`);
+          setPaymentOpen(false);
+          return;
+        case 'TOTAL_CHANGED':
+          void queryClient.invalidateQueries({ queryKey: ['pos', 'cart'] });
+          toast.warning(`${e.message}. Kiểm tra lại giỏ hàng rồi thanh toán.`);
+          setPaymentOpen(false);
+          return;
+        case 'VOUCHER_REJECTED':
+          void queryClient.invalidateQueries({ queryKey: ['pos', 'cart'] });
+          toast.error(e.message);
           setPaymentOpen(false);
           return;
         case 'INSUFFICIENT_STOCK':
@@ -131,7 +143,8 @@ export function PosTerminal({ shift, userId }: PosTerminalProps) {
   }), [cart.lines.length, carts]);
   usePosShortcuts(shortcuts, !paymentOpen && !customerOpen && !approval && !returnOpen);
 
-  const amountDue = Math.max(0, totals.afterLines - totals.orderDiscount); // loyalty discount is applied by the server; the sheet shows the pre-loyalty due and the server rejects overpayment
+  // Server total (promotions, voucher, points) when available; checkout re-checks it with expected_total
+  const amountDue = totals.total;
 
   return (
     <div className="flex h-[calc(100vh-4rem)] flex-col">
@@ -164,7 +177,10 @@ export function PosTerminal({ shift, userId }: PosTerminalProps) {
           <div className="border-t bg-card p-4">
             <CartSummary
               cart={cart}
-              totals={cartTotals(cart)}
+              totals={totals}
+              pricing={carts.pricing}
+              pricingError={carts.pricingError}
+              onVoucher={carts.setVoucher}
               onOpenCustomer={() => setCustomerOpen(true)}
               onClearCustomer={() => carts.setCustomer(null)}
               onOrderDiscount={carts.setOrderDiscount}

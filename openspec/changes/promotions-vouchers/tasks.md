@@ -25,14 +25,14 @@
 
 ## 5. Frontend
 
-- [ ] 5.1 API clients `lib/api/promotions.ts`, `lib/api/vouchers.ts`
-- [ ] 5.2 `/inventory/promotions`: list with status and usage, form Sheet per type with target pickers, activate/deactivate, delete
-- [ ] 5.3 `/inventory/vouchers`: campaigns list and form, campaign detail with codes, generate, export
-- [ ] 5.4 POS: cart totals from `/pricing/cart`, applied promotions per line and order, voucher field with reason, `voucher_code` + `expected_total` at checkout, `TOTAL_CHANGED` handling
-- [ ] 5.5 Sales-order form: same breakdown and voucher field
-- [ ] 5.6 Navigation gated by `promotions:read` / `vouchers:read`
+- [x] 5.1 API clients `lib/api/promotions.ts`, `lib/api/vouchers.ts`
+- [x] 5.2 `/inventory/promotions`: list with status and usage, form Sheet per type with target pickers, activate/deactivate, delete
+- [x] 5.3 `/inventory/vouchers`: campaigns list and form, campaign detail with codes, generate, export
+- [x] 5.4 POS: cart totals from `/pricing/cart`, applied promotions per line and order, voucher field with reason, `voucher_code` + `expected_total` at checkout, `TOTAL_CHANGED` handling
+- [x] 5.5 Sales-order form: same breakdown and voucher field
+- [x] 5.6 Navigation gated by `promotions:read` / `vouchers:read`
 
 ## 6. Checks
 
-- [ ] 6.1 All suites, both builds, lint on new files
-- [ ] 6.2 `docs/pricing/PROMOTIONS_VOUCHERS.md` (types, combination rule, discount order with the worked example, voucher limits, returns)
+- [x] 6.1 All suites, both builds, lint on new files
+- [x] 6.2 `docs/pricing/PROMOTIONS_VOUCHERS.md` (types, combination rule, discount order with the worked example, voucher limits, returns)

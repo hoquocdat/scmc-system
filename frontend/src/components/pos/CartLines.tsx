@@ -35,6 +35,9 @@ export function CartLines({ lines, onQuantity, onLineDiscount }: CartLinesProps)
                 {line.sku}
                 {line.stock !== null && <> · tồn {line.stock}</>}
               </div>
+              {!!line.promotion_discount && (
+                <div className="mt-1 text-xs text-emerald-700">KM {line.promotion_names?.join(', ')}: −{formatCurrency(line.promotion_discount)}</div>
+              )}
               {line.price_book_name && (
                 <Badge variant="secondary" className="mt-1 px-1.5 text-[11px]" title={line.base_price != null ? `Giá chung ${formatCurrency(line.base_price)}` : undefined}>
                   {line.price_book_name}
@@ -67,7 +70,7 @@ export function CartLines({ lines, onQuantity, onLineDiscount }: CartLinesProps)
               </Button>
             </div>
             <div className="text-right">
-              <div className="font-semibold tabular-nums">{formatCurrency((line.unit_price - line.discount_amount) * line.quantity)}</div>
+              <div className="font-semibold tabular-nums">{formatCurrency((line.unit_price - line.discount_amount) * line.quantity - (line.promotion_discount ?? 0))}</div>
               <Popover>
                 <PopoverTrigger asChild>
                   <button type="button" className="text-xs text-muted-foreground underline-offset-2 hover:underline">

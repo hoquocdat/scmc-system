@@ -131,6 +131,10 @@ export interface CheckoutDto {
   points_to_redeem?: number;
   /** Manually chosen price book (needs price_books:apply). */
   price_book_id?: string;
+  /** Voucher code (one per order). */
+  voucher_code?: string;
+  /** Total the cart showed; the server refuses a different total (TOTAL_CHANGED). */
+  expected_total?: number;
   payments: CheckoutPaymentDto[];
   discount_approval_token?: string;
   notes?: string;
