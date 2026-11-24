@@ -20,10 +20,10 @@
 
 ## 4. Frontend
 
-- [ ] 4.1 API client; QR dialog in the POS payment sheet with polling, countdown, check, confirm, cancel (D7)
-- [ ] 4.2 `/settings/qr-payments` per branch and provider; navigation gated by `qr_payments:configure`
+- [x] 4.1 API client; QR dialog in the POS payment sheet with polling, countdown, check, confirm, cancel (D7)
+- [x] 4.2 `/settings/qr-payments` per branch and provider; navigation gated by `qr_payments:configure`
 
 ## 5. Checks
 
-- [ ] 5.1 All suites, both builds, lint on new files
-- [ ] 5.2 `docs/payments/QR_PAYMENTS.md` (setup per provider, callback URLs, go-live checklist with sandbox tests)
+- [x] 5.1 All suites, both builds, lint on new files
+- [x] 5.2 `docs/payments/QR_PAYMENTS.md` (setup per provider, callback URLs, go-live checklist with sandbox tests)

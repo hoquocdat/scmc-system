@@ -26,6 +26,7 @@ import {
 import {
   LayoutDashboard,
   BookOpen,
+  QrCode,
   ArrowLeftRight,
   ScanLine,
   PackageMinus,
@@ -440,6 +441,13 @@ export function AppLayout({ children }: AppLayoutProps) {
           href: '/settings/loyalty',
           icon: Gift,
           roles: ['superadmin', 'manager'],
+        },
+        {
+          name: 'Thanh Toán QR',
+          href: '/settings/qr-payments',
+          icon: QrCode,
+          roles: ['superadmin', 'manager'],
+          permission: { resource: 'qr_payments', action: 'configure' },
         },
         {
           name: 'Sổ Quỹ',

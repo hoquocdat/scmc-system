@@ -121,6 +121,8 @@ export interface CheckoutPaymentDto {
   amount: number;
   amount_tendered?: number;
   reference?: string;
+  /** Paid QR payment request (VietQR, MoMo, ZaloPay, VNPay). */
+  qr_payment_request_id?: string;
 }
 
 export interface CheckoutDto {

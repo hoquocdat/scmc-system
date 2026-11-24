@@ -37,6 +37,7 @@ import { RolesPage } from './pages/settings/RolesPage';
 import { RoleDetailPage } from './pages/settings/RoleDetailPage';
 import { PermissionAuditPage } from './pages/settings/PermissionAuditPage';
 import { LoyaltySettingsPage } from './pages/settings/LoyaltySettingsPage';
+import { QrPaymentsSettingsPage } from './pages/settings/QrPaymentsSettingsPage';
 import { CashBookPage } from './pages/finance/CashBookPage';
 import { PriceBooksPage } from './pages/inventory/PriceBooksPage';
 import { PriceBookDetailPage } from './pages/inventory/PriceBookDetailPage';
@@ -619,6 +620,16 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <CashBookSettingsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings/qr-payments"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <QrPaymentsSettingsPage />
               </AppLayout>
             </ProtectedRoute>
           }

@@ -195,7 +195,7 @@ export function PosTerminal({ shift, userId }: PosTerminalProps) {
       </div>
 
       <CustomerLookupDialog open={customerOpen} onOpenChange={setCustomerOpen} onSelect={(c, n) => carts.setCustomer(c, n ?? null)} />
-      <PaymentSheet open={paymentOpen} onOpenChange={setPaymentOpen} amountDue={amountDue} hasCustomer={!!(cart.customer || cart.new_customer)} isSubmitting={checkout.isPending} onComplete={(p) => submit(p)} creditBalance={credit?.balance ?? 0} />
+      <PaymentSheet key={cart.id} open={paymentOpen} onOpenChange={setPaymentOpen} amountDue={amountDue} hasCustomer={!!(cart.customer || cart.new_customer)} isSubmitting={checkout.isPending} onComplete={(p) => submit(p)} creditBalance={credit?.balance ?? 0} storeId={shift.store_id} posSessionId={shift.id} />
       <ReturnSheet open={returnOpen} onOpenChange={setReturnOpen} onDone={setReturned} />
       <ReturnDoneDialog ret={returned} onOpenChange={(o) => !o && setReturned(null)} />
       {approval && (
