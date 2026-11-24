@@ -143,6 +143,14 @@ export class CheckoutDto {
   @Max(1_000_000)
   points_to_redeem?: number;
 
+  @ApiPropertyOptional({
+    description:
+      'Price book chosen manually for the whole sale (needs price_books:apply); absent = automatic',
+  })
+  @IsOptional()
+  @IsUUID()
+  price_book_id?: string;
+
   @ApiProperty({
     type: [CheckoutPaymentDto],
     description:

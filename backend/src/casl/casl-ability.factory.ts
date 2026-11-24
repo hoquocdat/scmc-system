@@ -34,6 +34,8 @@ export enum Action {
   Cancel = 'cancel',
   Configure = 'configure',
   Export = 'export',
+  // Price books
+  Apply = 'apply',
   // Report-specific actions
   Sales = 'sales',
   Inventory = 'inventory',
@@ -63,6 +65,8 @@ export type Subjects =
   | 'roles'
   | 'settings'
   | 'cash_book'
+  | 'price_books'
+  | 'customer_groups'
   | 'all'; // Special subject that represents "any subject"
 
 export type AppAbility = Ability<[Action, Subjects]>;
@@ -205,6 +209,7 @@ export class CaslAbilityFactory {
       cancel: Action.Cancel,
       configure: Action.Configure,
       export: Action.Export,
+      apply: Action.Apply,
       sales: Action.Sales,
       inventory: Action.Inventory,
       financial: Action.Financial,

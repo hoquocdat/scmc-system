@@ -12,6 +12,9 @@ import {
   Request,
 } from '@nestjs/common';
 import { SalesService } from './sales.service';
+import { CaslAbilityFactory } from '../casl/casl-ability.factory';
+import { CurrentUser, GetCurrentUser } from '../auth/current-user.decorator';
+import { assertCanApplyPriceBook } from './pricing/price-book-access';
 import { CreateSalesOrderDto, OrderStatus } from './dto/create-sales-order.dto';
 import { UpdateSalesOrderDto } from './dto/update-sales-order.dto';
 import { SalesOrderQueryDto } from './dto/sales-order-query.dto';
@@ -34,14 +37,22 @@ import {
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('sales')
 export class SalesController {
-  constructor(private readonly salesService: SalesService) {}
+  constructor(
+    private readonly salesService: SalesService,
+    private readonly casl: CaslAbilityFactory,
+  ) {}
 
   @Post()
   @Roles('manager', 'store_manager', 'sales_associate')
   @ApiOperation({ summary: 'Create a new sales order' })
   @ApiResponse({ status: 201, description: 'Sales order created successfully' })
   @ApiResponse({ status: 400, description: 'Bad request' })
-  create(@Body() createSalesOrderDto: CreateSalesOrderDto) {
+  async create(
+    @Body() createSalesOrderDto: CreateSalesOrderDto,
+    @GetCurrentUser() user: CurrentUser,
+  ) {
+    if (createSalesOrderDto.price_book_id)
+      await assertCanApplyPriceBook(this.casl, user?.id);
     return this.salesService.create(createSalesOrderDto);
   }
 

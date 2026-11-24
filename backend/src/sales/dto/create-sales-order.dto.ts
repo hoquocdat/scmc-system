@@ -200,6 +200,14 @@ export class CreateSalesOrderDto {
   @Min(0)
   points_to_redeem?: number;
 
+  @ApiPropertyOptional({
+    description:
+      'Price book chosen manually for the whole sale (needs price_books:apply); absent = automatic',
+  })
+  @IsOptional()
+  @IsUUID()
+  price_book_id?: string;
+
   @ApiPropertyOptional({ description: 'Loyalty discount amount (calculated from points)' })
   @IsNumber()
   @IsOptional()

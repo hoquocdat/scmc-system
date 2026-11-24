@@ -87,6 +87,12 @@ export class PosCheckoutService {
 
     const customerId = await this.resolveCustomer(dto, user);
     const ability = await this.casl.createForUser(user.id);
+    if (dto.price_book_id && !ability.can(Action.Apply, 'price_books')) {
+      throw new ForbiddenException({
+        code: 'PRICE_BOOK_FORBIDDEN',
+        message: 'Bạn không có quyền chọn bảng giá',
+      });
+    }
 
     // Discount limit: the biggest discount share this user's roles allow
     const requestedPercent = await this.requestedDiscountPercent(dto);
@@ -135,6 +141,7 @@ export class PosCheckoutService {
       pos_session_id: shift.id,
       client_request_id: dto.client_request_id,
       discount_approved_by: approvedBy,
+      price_book_id: dto.price_book_id ?? null,
       lines: dto.lines.map((l) => ({
         product_id: l.product_id,
         product_variant_id: l.product_variant_id ?? null,

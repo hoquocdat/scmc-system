@@ -18,6 +18,7 @@ import { AddOrderItemDto } from './dto/add-order-item.dto';
 import { Prisma } from '@prisma/client';
 import { UserContextService } from '../auth/user-context.service';
 import { LoyaltyService } from '../loyalty/loyalty.service';
+import { PriceResolverService } from './pricing/price-resolver';
 import { SalesPostingService } from './sales-posting.service';
 import { CashBookPostingService } from '../cash-book/cash-book-posting.service';
 
@@ -731,9 +732,20 @@ export class SalesService {
             },
           });
         } else {
-          // Create new item
+          // Create new item, priced by the server (price-books D4)
+          const price = (
+            await this.posting.prices.resolveMany(
+              [addItemDto],
+              {
+                storeId: order.store_id,
+                customerId: order.customer_id,
+                priceBookId: order.price_book_id,
+              },
+              tx,
+            )
+          ).get(PriceResolverService.key(addItemDto))!;
           const itemTotal =
-            (addItemDto.unit_price -
+            (price.unitPrice -
               (addItemDto.discount_amount || 0) +
               (addItemDto.tax_amount || 0)) *
             addItemDto.quantity;
@@ -745,9 +757,17 @@ export class SalesService {
               product_variants: addItemDto.product_variant_id
                 ? { connect: { id: addItemDto.product_variant_id } }
                 : undefined,
-              product_name: product.name,
+              product_name: price.name,
+              product_sku: price.sku,
+              variant_name: price.variantId ? price.name : null,
               quantity: addItemDto.quantity,
-              unit_price: new Prisma.Decimal(addItemDto.unit_price),
+              unit_price: new Prisma.Decimal(price.unitPrice),
+              base_unit_price: new Prisma.Decimal(price.basePrice),
+              unit_cost: new Prisma.Decimal(price.unitCost),
+              price_source: price.source,
+              price_books: price.priceBookId
+                ? { connect: { id: price.priceBookId } }
+                : undefined,
               discount_amount: addItemDto.discount_amount
                 ? new Prisma.Decimal(addItemDto.discount_amount)
                 : undefined,

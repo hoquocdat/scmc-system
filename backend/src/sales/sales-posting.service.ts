@@ -67,6 +67,8 @@ export interface PostingDraft {
   pos_session_id?: string;
   client_request_id?: string;
   discount_approved_by?: string;
+  /** Manually chosen price book (permission checked by the caller); absent = automatic. */
+  price_book_id?: string | null;
   lines: PostingLineInput[];
   payments?: PostingPaymentInput[];
   /** Reject when expected_unit_price differs from the resolved price (POS). */
@@ -124,7 +126,7 @@ const includeFull = {
 export class SalesPostingService {
   constructor(
     private readonly prisma: PrismaService,
-    private readonly prices: PriceResolverService,
+    readonly prices: PriceResolverService,
     private readonly loyalty: LoyaltyService,
     private readonly cashBook: CashBookPostingService,
   ) {}
@@ -154,6 +156,7 @@ export class SalesPostingService {
       shipping_city: dto.shipping_city,
       notes: dto.notes,
       created_by: dto.created_by ?? userId,
+      price_book_id: dto.price_book_id ?? null,
       lines: dto.items.map((i) => ({
         product_id: i.product_id,
         product_variant_id: i.product_variant_id ?? null,
@@ -222,6 +225,7 @@ export class SalesPostingService {
         pos_session_id: draft.pos_session_id,
         client_request_id: draft.client_request_id,
         discount_approved_by: draft.discount_approved_by,
+        price_book_id: draft.price_book_id ?? null,
         order_date: draft.at ?? new Date(),
       },
     });
@@ -241,6 +245,9 @@ export class SalesPostingService {
           tax_amount: new Prisma.Decimal(line.taxPerUnit),
           total_amount: new Prisma.Decimal(line.lineTotal),
           unit_cost: new Prisma.Decimal(line.price.unitCost),
+          base_unit_price: new Prisma.Decimal(line.price.basePrice),
+          price_book_id: line.price.priceBookId,
+          price_source: line.price.source,
           notes: line.input.notes,
         },
       });
@@ -490,7 +497,16 @@ export class SalesPostingService {
     customerId: string | null,
   ): Promise<ComputedTotals> {
     const at = draft.at ?? new Date();
-    const resolved = await this.prices.resolveMany(draft.lines, at, tx);
+    const resolved = await this.prices.resolveMany(
+      draft.lines,
+      {
+        at,
+        storeId: draft.store_id,
+        customerId,
+        priceBookId: draft.price_book_id ?? null,
+      },
+      tx,
+    );
     const changes: PriceChange[] = [];
     const lines: ComputedLine[] = draft.lines.map((input) => {
       if (!Number.isInteger(input.quantity) || input.quantity <= 0) {

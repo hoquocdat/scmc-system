@@ -20,12 +20,19 @@ export class CustomersService {
     private cashBook: CashBookPostingService,
   ) {}
 
-  async findAll(page: number = 1, limit: number = 10) {
+  async findAll(page: number = 1, limit: number = 10, groupId?: string) {
     const offset = (page - 1) * limit;
+    const where = groupId
+      ? { customer_group_members: { some: { group_id: groupId } } }
+      : {};
 
     const [data, count] = await Promise.all([
       this.prisma.customers.findMany({
+        where,
         include: {
+          customer_group_members: {
+            include: { customer_groups: { select: { id: true, name: true } } },
+          },
           salesperson: {
             select: {
               id: true,
@@ -42,7 +49,7 @@ export class CustomersService {
         skip: offset,
         take: limit,
       }),
-      this.prisma.customers.count(),
+      this.prisma.customers.count({ where }),
     ]);
 
     return {
