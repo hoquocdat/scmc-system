@@ -43,6 +43,12 @@ import { PriceBookDetailPage } from './pages/inventory/PriceBookDetailPage';
 import { CustomerGroupsPage } from './pages/CustomerGroupsPage';
 import { SalesReturnsPage } from './pages/sales/SalesReturnsPage';
 import { PromotionsPage } from './pages/inventory/PromotionsPage';
+import { TransfersPage } from './pages/inventory/TransfersPage';
+import { TransferDetailPage } from './pages/inventory/TransferDetailPage';
+import { CountsPage } from './pages/inventory/CountsPage';
+import { CountDetailPage } from './pages/inventory/CountDetailPage';
+import { WriteOffsPage } from './pages/inventory/WriteOffsPage';
+import { ReorderAlertsPage } from './pages/inventory/ReorderAlertsPage';
 import { VouchersPage } from './pages/inventory/VouchersPage';
 import { VoucherCampaignPage } from './pages/inventory/VoucherCampaignPage';
 import { CashBookSettingsPage } from './pages/finance/CashBookSettingsPage';
@@ -323,6 +329,66 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <EmployeeDetailPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/transfers"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <TransfersPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/transfers/:id"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <TransferDetailPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/counts"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <CountsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/counts/:id"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <CountDetailPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/write-offs"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <WriteOffsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/reorder-alerts"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <ReorderAlertsPage />
               </AppLayout>
             </ProtectedRoute>
           }

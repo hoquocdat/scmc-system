@@ -21,16 +21,16 @@
 
 ## 4. Frontend
 
-- [ ] 4.1 API clients (`lib/api/stock-transfers.ts`, `stock-counts.ts`, `write-offs.ts`, inventory extras)
-- [ ] 4.2 `/inventory/transfers` list, create Sheet, detail with ship/receive/cancel
-- [ ] 4.3 `/inventory/counts` list, start Sheet, scan-friendly count page, review and complete
-- [ ] 4.4 `/inventory/write-offs` list and create Sheet
-- [ ] 4.5 Barcode and units on the product form, label print dialog (products list, purchase order, transfer) with `jsbarcode`
-- [ ] 4.6 Reorder alerts page and dashboard card with "create purchase order"
-- [ ] 4.7 Reserved/available on stock levels and POS; pending orders ("Đặt hàng") on the sales-order form; unit choice on POS and sales-order lines
-- [ ] 4.8 Navigation entries gated by permissions
+- [x] 4.1 API clients (`lib/api/stock-transfers.ts`, `stock-counts.ts`, `write-offs.ts`, inventory extras)
+- [x] 4.2 `/inventory/transfers` list, create Sheet, detail with ship/receive/cancel
+- [x] 4.3 `/inventory/counts` list, start Sheet, scan-friendly count page, review and complete
+- [x] 4.4 `/inventory/write-offs` list and create Sheet
+- [x] 4.5 Barcode and units on the product form, label print dialog (products list, purchase order, transfer) with `jsbarcode`
+- [x] 4.6 Reorder alerts page and dashboard card with "create purchase order"
+- [x] 4.7 Reserved/available on stock levels and POS; pending orders ("Đặt hàng") on the sales-order form; unit choice on POS and sales-order lines
+- [x] 4.8 Navigation entries gated by permissions
 
 ## 5. Checks
 
-- [ ] 5.1 All suites, both builds, lint on new files
-- [ ] 5.2 `docs/inventory/INVENTORY_OPERATIONS.md`
+- [x] 5.1 All suites, both builds, lint on new files
+- [x] 5.2 `docs/inventory/INVENTORY_OPERATIONS.md`

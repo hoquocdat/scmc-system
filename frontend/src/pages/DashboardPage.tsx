@@ -1,3 +1,4 @@
+import { ReorderAlertCard } from '@/components/stock/ReorderAlertCard';
 import { useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '../lib/supabase';
@@ -41,6 +42,9 @@ export function DashboardPage() {
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
+        <div className="mb-4 max-w-sm sm:mb-6">
+          <ReorderAlertCard />
+        </div>
         {/* Stats */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4 md:gap-6 mb-4 sm:mb-6 md:mb-8">
           <div className="bg-white rounded-lg shadow p-4 sm:p-6">

@@ -11,10 +11,18 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { productsApi, type Product, type ProductVariant } from '@/lib/api/products';
 import { formatCurrency } from '@/lib/utils';
 import { branchStock, displayPrice } from '@/hooks/usePosCarts';
+import { stockOpsApi } from '@/lib/api/stock-operations';
+
+export interface PosUnit {
+  id: string;
+  name: string;
+  factor: number;
+  price: number | null;
+}
 
 interface ProductSearchProps {
   locationId: string;
-  onAdd: (product: Product, variant: ProductVariant | null, stock: number | null) => void;
+  onAdd: (product: Product, variant: ProductVariant | null, stock: number | null, unit?: PosUnit | null) => void;
 }
 
 /**
@@ -30,8 +38,8 @@ export const ProductSearch = forwardRef<HTMLInputElement, ProductSearchProps>(fu
   });
   const products = useMemo(() => data?.data ?? [], [data]);
 
-  const addProduct = (product: Product, variant: ProductVariant | null = null) => {
-    onAdd(product, variant, branchStock(product, locationId));
+  const addProduct = (product: Product, variant: ProductVariant | null = null, unit: PosUnit | null = null) => {
+    onAdd(product, variant, branchStock(product, locationId), unit);
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -52,12 +60,27 @@ export const ProductSearch = forwardRef<HTMLInputElement, ProductSearchProps>(fu
         return;
       }
     }
-    if (products.length === 1 && !(products[0].product_variants?.length)) {
-      addProduct(products[0]);
-      setQuery('');
-      return;
-    }
-    toast.error(`Không tìm thấy mã "${query.trim()}"`);
+    // Barcodes of products, variants and selling units (inventory-operations D5)
+    void stockOpsApi.lookup(query.trim()).then(
+      async (hit) => {
+        const p = products.find((x) => x.id === hit.product_id);
+        if (!p) return toast.error(`Không tìm thấy mã "${query.trim()}"`);
+        if (hit.kind === 'variant') addProduct(p, p.product_variants?.find((v) => v.id === hit.variant_id) ?? null);
+        else if (hit.kind === 'unit') {
+          const u = (await stockOpsApi.units(p.id)).units.find((x) => x.id === hit.unit_id);
+          addProduct(p, null, u ? { id: u.id, name: u.name, factor: u.factor, price: u.price } : null);
+        } else addProduct(p);
+        setQuery('');
+      },
+      () => {
+        if (products.length === 1 && !(products[0].product_variants?.length)) {
+          addProduct(products[0]);
+          setQuery('');
+          return;
+        }
+        toast.error(`Không tìm thấy mã "${query.trim()}"`);
+      },
+    );
   };
 
   return (

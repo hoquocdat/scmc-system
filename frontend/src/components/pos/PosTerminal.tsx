@@ -61,6 +61,7 @@ export function PosTerminal({ shift, userId }: PosTerminalProps) {
     lines: cart.lines.map((l) => ({
       product_id: l.product_id,
       product_variant_id: l.product_variant_id ?? undefined,
+      unit_id: l.unit_id ?? undefined,
       quantity: l.quantity,
       expected_unit_price: l.unit_price,
       discount_amount: l.discount_amount || undefined,
@@ -172,7 +173,7 @@ export function PosTerminal({ shift, userId }: PosTerminalProps) {
         </section>
         <aside className="flex min-h-0 flex-col">
           <div className="min-h-0 flex-1 overflow-y-auto px-4">
-            <CartLines lines={cart.lines} onQuantity={carts.setQuantity} onLineDiscount={carts.setLineDiscount} />
+            <CartLines lines={cart.lines} onQuantity={carts.setQuantity} onLineDiscount={carts.setLineDiscount} onUnit={carts.setLineUnit} />
           </div>
           <div className="border-t bg-card p-4">
             <CartSummary

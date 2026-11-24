@@ -64,6 +64,7 @@ export type PromotionInput = Partial<Omit<Promotion, 'id' | 'stores' | 'groups' 
 export interface CartLineInput {
   product_id: string;
   product_variant_id?: string | null;
+  unit_id?: string | null;
   quantity: number;
   discount_amount?: number;
 }
@@ -93,7 +94,7 @@ export interface CartBreakdown {
   total: number;
   promotions: { id: string; code: string; name: string; type: PromotionType; amount: number; lines: { index: number; amount: number }[] }[];
   voucher: { code: string; ok: boolean; amount: number; reason?: string; campaignName?: string } | null;
-  lines: { index: number; product_id: string; product_variant_id: string | null; unit_price: number; price_book_name: string | null; promotion_discount: number; line_total: number }[];
+  lines: { index: number; product_id: string; product_variant_id: string | null; unit_id: string | null; unit_name: string | null; unit_factor: number; unit_price: number; price_book_name: string | null; promotion_discount: number; line_total: number }[];
 }
 
 const clean = <T extends object>(o: T) =>

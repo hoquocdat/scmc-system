@@ -7,14 +7,17 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { formatCurrency } from '@/lib/utils';
 import type { CartLine } from '@/hooks/usePosCarts';
+import { LineUnitSelect } from '@/components/stock/LineUnitSelect';
+import type { ProductUnit } from '@/lib/api/stock-operations';
 
 interface CartLinesProps {
   lines: CartLine[];
   onQuantity: (key: string, quantity: number) => void;
   onLineDiscount: (key: string, discount: number) => void;
+  onUnit?: (key: string, unit: ProductUnit | null) => void;
 }
 
-export function CartLines({ lines, onQuantity, onLineDiscount }: CartLinesProps) {
+export function CartLines({ lines, onQuantity, onLineDiscount, onUnit }: CartLinesProps) {
   if (lines.length === 0) {
     return (
       <div className="flex h-full flex-col items-center justify-center text-muted-foreground">
@@ -35,6 +38,9 @@ export function CartLines({ lines, onQuantity, onLineDiscount }: CartLinesProps)
                 {line.sku}
                 {line.stock !== null && <> · tồn {line.stock}</>}
               </div>
+              {onUnit && !line.product_variant_id && (
+                <div className="mt-1"><LineUnitSelect productId={line.product_id} value={line.unit_id} onChange={(u) => onUnit(line.key, u)} /></div>
+              )}
               {!!line.promotion_discount && (
                 <div className="mt-1 text-xs text-emerald-700">KM {line.promotion_names?.join(', ')}: −{formatCurrency(line.promotion_discount)}</div>
               )}

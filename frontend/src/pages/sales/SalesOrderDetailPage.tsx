@@ -236,7 +236,7 @@ export function SalesOrderDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          {isDraft && (
+          {(isDraft || order.status === 'pending') && (
             <Button onClick={() => setIsConfirmDialogOpen(true)} disabled={confirmMutation.isPending}>
               <CheckCircle className="mr-2 h-4 w-4" />
               Xác nhận đơn

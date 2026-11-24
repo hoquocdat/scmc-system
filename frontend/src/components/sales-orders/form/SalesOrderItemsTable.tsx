@@ -1,3 +1,5 @@
+import { LineUnitSelect } from '@/components/stock/LineUnitSelect';
+import type { ProductUnit } from '@/lib/api/stock-operations';
 import { Badge } from '@/components/ui/badge';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -24,18 +26,22 @@ export interface SalesOrderItem {
   notes?: string;
   /** Price book that priced the line (server quote); null = base price. */
   price_book_name?: string | null;
+  /** Selling unit (product_units); absent = base unit. */
+  unit_id?: string | null;
 }
 
 interface SalesOrderItemsTableProps {
   items: SalesOrderItem[];
   onRemoveItem: (tempId: string) => void;
   onUpdateQuantity: (tempId: string, quantity: number) => void;
+  onUnit?: (tempId: string, unit: ProductUnit | null) => void;
 }
 
 export function SalesOrderItemsTable({
   items,
   onRemoveItem,
   onUpdateQuantity,
+  onUnit,
 }: SalesOrderItemsTableProps) {
   return (
     <Card className="p-6">
@@ -72,6 +78,9 @@ export function SalesOrderItemsTable({
                         <div className="text-sm text-muted-foreground">
                           {item.variant_name}
                         </div>
+                      )}
+                      {onUnit && !item.product_variant_id && (
+                        <div className="mt-1"><LineUnitSelect productId={item.product_id} value={item.unit_id} onChange={(u) => onUnit(item.tempId, u)} /></div>
                       )}
                     </div>
                   </TableCell>

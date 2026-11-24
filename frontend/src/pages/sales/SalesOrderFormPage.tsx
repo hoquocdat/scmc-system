@@ -59,7 +59,28 @@ export function SalesOrderFormPage() {
 
   const customers = customersData?.data || [];
   // Lines shown at server prices (base price + price books); the server prices the order again on save
-  const { items } = useQuotedItems(selectedStoreId, selectedCustomerId || null, priceBookId, rawItems);
+  const { items: quotedItems } = useQuotedItems(selectedStoreId, selectedCustomerId || null, priceBookId, rawItems);
+  // Server breakdown: promotions, voucher and points in the fixed discount order
+  const breakdown = useCartBreakdown(
+    selectedStoreId && rawItems.length
+      ? {
+          store_id: selectedStoreId,
+          customer_id: selectedCustomerId || null,
+          price_book_id: priceBookId,
+          channel: 'retail_store',
+          discount_type: discountType,
+          discount_value: discountType === 'percent' ? discountPercent : discountAmount,
+          voucher_code: voucherCode,
+          points_to_redeem: pointsToRedeem,
+          lines: rawItems.map((i) => ({ product_id: i.product_id, product_variant_id: i.product_variant_id, unit_id: i.unit_id ?? null, quantity: i.quantity })),
+        }
+      : null,
+  );
+  // Unit lines take the server's unit price (base price × factor or the unit's own price)
+  const items = quotedItems.map((it, i) => {
+    const line = breakdown.data?.lines[i];
+    return it.unit_id && line && line.product_id === it.product_id ? { ...it, unit_price: line.unit_price } : it;
+  });
 
   // Handle customer selection - auto-fill customer info
   useEffect(() => {
@@ -164,22 +185,7 @@ export function SalesOrderFormPage() {
     ? (subtotal * discountPercent) / 100
     : discountAmount;
 
-  // Server breakdown: promotions, voucher and points in the fixed discount order
-  const breakdown = useCartBreakdown(
-    selectedStoreId && items.length
-      ? {
-          store_id: selectedStoreId,
-          customer_id: selectedCustomerId || null,
-          price_book_id: priceBookId,
-          channel: 'retail_store',
-          discount_type: discountType,
-          discount_value: discountType === 'percent' ? discountPercent : discountAmount,
-          voucher_code: voucherCode,
-          points_to_redeem: pointsToRedeem,
-          lines: items.map((i) => ({ product_id: i.product_id, product_variant_id: i.product_variant_id, quantity: i.quantity })),
-        }
-      : null,
-  );
+
 
   // Handler for loyalty redemption changes
   const handleRedemptionChange = (points: number, discount: number) => {
@@ -224,6 +230,7 @@ export function SalesOrderFormPage() {
       items: items.map(({ tempId, product_name, product_sku, variant_name, ...item }) => ({
         product_id: item.product_id,
         product_variant_id: item.product_variant_id,
+        unit_id: item.unit_id ?? undefined,
         quantity: item.quantity,
         unit_price: item.unit_price,
         notes: item.notes,
@@ -236,6 +243,17 @@ export function SalesOrderFormPage() {
     const createDto = buildCreateDto();
     if (!createDto) return;
     createMutation.mutate(createDto);
+  };
+
+  // Customer order that holds stock until confirmed (inventory-operations D7)
+  const handleSubmitPending = () => {
+    const createDto = buildCreateDto();
+    if (!createDto) return;
+    if (!createDto.customer_id) {
+      toast.error('Đặt hàng giữ hàng cần chọn khách hàng');
+      return;
+    }
+    createMutation.mutate({ ...createDto, status: 'pending' as CreateSalesOrderDto['status'] });
   };
 
   // Submit form with payment
@@ -285,6 +303,9 @@ export function SalesOrderFormPage() {
             <Button variant="outline" onClick={handleSubmit} disabled={isLoading}>
               {createMutation.isPending ? 'Đang lưu...' : 'Lưu nháp'}
             </Button>
+            <Button variant="outline" onClick={handleSubmitPending} disabled={isLoading} title="Giữ hàng cho khách đến khi xác nhận">
+              Đặt hàng (giữ hàng)
+            </Button>
             <Button onClick={handleSubmitWithPayment} disabled={isLoading}>
               {isCreatingWithPayment ? (
                 <>
@@ -317,6 +338,7 @@ export function SalesOrderFormPage() {
             items={items}
             onRemoveItem={handleRemoveItem}
             onUpdateQuantity={handleUpdateQuantity}
+            onUnit={(tempId, unit) => setItems(rawItems.map((it) => (it.tempId === tempId ? { ...it, unit_id: unit?.id ?? null } : it)))}
           />
         </div>
 

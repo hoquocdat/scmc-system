@@ -28,6 +28,10 @@ export interface CartLine {
   price_book_name?: string | null;
   /** Price before the price book. */
   base_price?: number;
+  /** Selling unit (box of 10…); absent = base unit. */
+  unit_id?: string | null;
+  unit_name?: string | null;
+  unit_factor?: number;
   /** Line promotions on this line (whole line) and their names (server). */
   promotion_discount?: number;
   promotion_names?: string[];
@@ -93,10 +97,10 @@ function save(key: string, state: CartsState) {
   }
 }
 
-/** Stock on hand at the branch's selling location, when the product payload includes it. */
+/** Available stock (on hand − reserved by pending orders) at the branch's selling location. */
 export function branchStock(product: Product, locationId: string): number | null {
   const row = product.inventory?.find((i) => i.location_id === locationId);
-  return row ? Number(row.quantity_on_hand) : null;
+  return row ? Number(row.quantity_on_hand) - Number(row.quantity_reserved ?? 0) : null;
 }
 
 /** Client-side mirror of the server price rule (the server is authoritative). */
@@ -150,11 +154,14 @@ export function cartTotals(cart: Cart): CartTotals {
   };
 }
 
-const keyOf = (productId: string, variantId: string | null | undefined) => `${productId}:${variantId ?? ''}`;
+/** Cart line key: product, variant and (when not the base unit) the selling unit. */
+export const lineKey = (productId: string, variantId: string | null | undefined, unitId?: string | null) =>
+  `${productId}:${variantId ?? ''}${unitId ? `:${unitId}` : ''}`;
+const keyOf = lineKey;
 
 /** Server totals for a cart, when the breakdown matches its lines. */
 function serverTotals(cart: Cart, b: CartBreakdown): CartTotals | null {
-  const keys = b.lines.map((l) => keyOf(l.product_id, l.product_variant_id)).join(',');
+  const keys = b.lines.map((l) => keyOf(l.product_id, l.product_variant_id, l.unit_id)).join(','); 
   if (keys !== cart.lines.map((l) => l.key).join(',')) return null;
   return {
     subtotal: b.subtotal,
@@ -207,7 +214,7 @@ export function usePosCarts(userId: string | undefined, storeId: string | undefi
         discount_value: rawActive.order_discount?.value ?? 0,
         voucher_code: rawActive.voucher_code ?? null,
         points_to_redeem: rawActive.points_to_redeem || 0,
-        lines: rawActive.lines.map((l) => ({ product_id: l.product_id, product_variant_id: l.product_variant_id, quantity: l.quantity, discount_amount: l.discount_amount || 0 })),
+        lines: rawActive.lines.map((l) => ({ product_id: l.product_id, product_variant_id: l.product_variant_id, unit_id: l.unit_id ?? null, quantity: l.quantity, discount_amount: l.discount_amount || 0 })),
       } as const
     : null;
   const quote = useQuery({
@@ -221,7 +228,7 @@ export function usePosCarts(userId: string | undefined, storeId: string | undefi
   const active = useMemo(() => {
     if (!rawActive || !quote.data) return rawActive;
     const b = quote.data;
-    const byKey = new Map(b.lines.map((q) => [keyOf(q.product_id, q.product_variant_id), q]));
+    const byKey = new Map(b.lines.map((q) => [keyOf(q.product_id, q.product_variant_id, q.unit_id), q]));
     const names = new Map<number, string[]>();
     for (const p of b.promotions) for (const l of p.lines) names.set(l.index, [...(names.get(l.index) ?? []), p.name]);
     return {
@@ -247,8 +254,8 @@ export function usePosCarts(userId: string | undefined, storeId: string | undefi
   }, []);
 
   const addLine = useCallback(
-    (product: Product, variant: ProductVariant | null, stock: number | null) => {
-      const key = `${product.id}:${variant?.id ?? ''}`;
+    (product: Product, variant: ProductVariant | null, stock: number | null, unit?: { id: string; name: string; factor: number; price: number | null } | null) => {
+      const key = lineKey(product.id, variant?.id, unit?.id);
       updateActive((cart) => {
         const existing = cart.lines.find((l) => l.key === key);
         if (existing) {
@@ -258,9 +265,12 @@ export function usePosCarts(userId: string | undefined, storeId: string | undefi
           key,
           product_id: product.id,
           product_variant_id: variant?.id ?? null,
-          name: variant ? `${product.name} / ${variant.name}` : product.name,
+          name: variant ? `${product.name} / ${variant.name}` : unit ? `${product.name} (${unit.name})` : product.name,
           sku: variant?.sku ?? product.sku,
-          unit_price: displayPrice(product, variant),
+          unit_price: unit ? (unit.price ?? displayPrice(product, null) * unit.factor) : displayPrice(product, variant),
+          unit_id: unit?.id ?? null,
+          unit_name: unit?.name ?? null,
+          unit_factor: unit?.factor ?? 1,
           quantity: 1,
           discount_amount: 0,
           stock,
@@ -277,6 +287,34 @@ export function usePosCarts(userId: string | undefined, storeId: string | undefi
         ...cart,
         lines: quantity <= 0 ? cart.lines.filter((l) => l.key !== key) : cart.lines.map((l) => (l.key === key ? { ...l, quantity, shortage: undefined } : l)),
       })),
+    [updateActive],
+  );
+
+  /** Switches a line between the base unit and a conversion unit (merges with an existing line of that unit). */
+  const setLineUnit = useCallback(
+    (key: string, unit: { id: string; name: string; factor: number; price: number | null } | null) =>
+      updateActive((cart) => {
+        const line = cart.lines.find((l) => l.key === key);
+        if (!line) return cart;
+        const baseName = line.unit_name ? line.name.replace(` (${line.unit_name})`, '') : line.name;
+        const basePrice = line.unit_factor && line.unit_factor > 1 ? line.unit_price / line.unit_factor : line.unit_price;
+        const nextKey = lineKey(line.product_id, line.product_variant_id, unit?.id);
+        const next: CartLine = {
+          ...line,
+          key: nextKey,
+          name: unit ? `${baseName} (${unit.name})` : baseName,
+          unit_id: unit?.id ?? null,
+          unit_name: unit?.name ?? null,
+          unit_factor: unit?.factor ?? 1,
+          unit_price: unit ? (unit.price ?? basePrice * unit.factor) : basePrice,
+          discount_amount: 0,
+        };
+        const other = cart.lines.find((l) => l.key === nextKey && l.key !== key);
+        const lines = other
+          ? cart.lines.filter((l) => l.key !== key).map((l) => (l.key === nextKey ? { ...l, quantity: l.quantity + line.quantity } : l))
+          : cart.lines.map((l) => (l.key === key ? next : l));
+        return { ...cart, lines };
+      }),
     [updateActive],
   );
 
@@ -360,6 +398,7 @@ export function usePosCarts(userId: string | undefined, storeId: string | undefi
     addLine,
     setQuantity,
     setLineDiscount,
+    setLineUnit,
     setCustomer,
     setPriceBook,
     setVoucher,

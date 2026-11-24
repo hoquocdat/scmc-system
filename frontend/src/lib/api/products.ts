@@ -9,6 +9,9 @@ export interface Product {
   brand_id?: string;
   supplier_id?: string;
   cost_price?: number;
+  /** Scannable barcode (inventory-operations D5). */
+  barcode?: string | null;
+  base_unit?: string;
   retail_price: number;
   sale_price?: number;
   sale_price_start_date?: string;

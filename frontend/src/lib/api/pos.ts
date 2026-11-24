@@ -113,6 +113,7 @@ export interface CheckoutLineDto {
   expected_unit_price: number;
   discount_amount?: number;
   notes?: string;
+  unit_id?: string;
 }
 
 export interface CheckoutPaymentDto {

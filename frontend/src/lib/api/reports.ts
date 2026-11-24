@@ -137,6 +137,7 @@ export const REPORT_ENDPOINTS = {
   'workshop.turnaround': '/reports/workshop/turnaround',
   'finance.cash-book': '/cash-book/entries',
   'sales.returns': '/sales-returns',
+  'inventory.write-offs': '/stock-write-offs',
 } as const;
 
 export type ReportKey = keyof typeof REPORT_ENDPOINTS;

@@ -9,6 +9,7 @@ import {
   XCircle,
   Plus,
   Edit,
+  Printer,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -32,6 +33,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { purchaseOrdersApi, type PurchaseOrderStatus } from '@/lib/api/purchase-orders';
+import { LabelPrintDialog } from '@/components/stock/LabelPrintDialog';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from 'sonner';
@@ -51,6 +53,7 @@ export function PurchaseOrderDetailsPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [labelsOpen, setLabelsOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
@@ -181,6 +184,10 @@ export function PurchaseOrderDetailsPage() {
           </Badge>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setLabelsOpen(true)}>
+            <Printer className="mr-2 h-4 w-4" />
+            In tem
+          </Button>
           {isDraft && (
             <>
               <Button
@@ -527,6 +534,22 @@ export function PurchaseOrderDetailsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <LabelPrintDialog
+        open={labelsOpen}
+        onOpenChange={setLabelsOpen}
+        items={(purchaseOrder.purchase_order_items ?? []).map((item) => {
+          const v = item.product_variants as { barcode?: string | null; sku?: string; retail_price_override?: number | null } | null | undefined;
+          const p = item.products as { barcode?: string | null; sku?: string; retail_price?: number } | null | undefined;
+          return {
+            key: item.id,
+            name: item.product_name + (item.variant_name ? ` / ${item.variant_name}` : ''),
+            sku: item.product_sku ?? v?.sku ?? p?.sku ?? '',
+            barcode: v?.barcode ?? p?.barcode ?? null,
+            price: Number(v?.retail_price_override ?? p?.retail_price ?? 0),
+            quantity: item.quantity_ordered * ((item as { unit_factor?: number }).unit_factor ?? 1),
+          };
+        })}
+      />
     </div>
   );
 }
