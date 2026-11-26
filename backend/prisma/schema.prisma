@@ -76,29 +76,34 @@ model brands {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model customers {
-  id                                                   String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  full_name                                            String                 @db.VarChar(255)
-  phone                                                String                 @unique(map: "customers_phone_unique_idx") @db.VarChar(20)
-  email                                                String?                @db.VarChar(255)
-  id_number                                            String?                @db.VarChar(50)
+  id                                                   String                         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  full_name                                            String                         @db.VarChar(255)
+  phone                                                String                         @unique(map: "customers_phone_unique_idx") @db.VarChar(20)
+  email                                                String?                        @db.VarChar(255)
+  id_number                                            String?                        @db.VarChar(50)
   address                                              String?
   notes                                                String?
-  created_at                                           DateTime?              @default(now()) @db.Timestamptz(6)
-  updated_at                                           DateTime?              @default(now()) @db.Timestamptz(6)
-  birthday                                             DateTime?              @db.Date
-  facebook                                             String?                @db.VarChar(255)
-  instagram                                            String?                @db.VarChar(255)
-  salesperson_id                                       String?                @db.Uuid
-  created_by_id                                        String?                @db.Uuid
-  updated_by_id                                        String?                @db.Uuid
+  created_at                                           DateTime?                      @default(now()) @db.Timestamptz(6)
+  updated_at                                           DateTime?                      @default(now()) @db.Timestamptz(6)
+  birthday                                             DateTime?                      @db.Date
+  facebook                                             String?                        @db.VarChar(255)
+  instagram                                            String?                        @db.VarChar(255)
+  salesperson_id                                       String?                        @db.Uuid
+  created_by_id                                        String?                        @db.Uuid
+  updated_by_id                                        String?                        @db.Uuid
+  credit_balance                                       Decimal                        @default(0) @db.Decimal(14, 2)
   bikes                                                bikes[]
+  customer_credit_transactions                         customer_credit_transactions[]
+  customer_group_members                               customer_group_members[]
   customer_loyalty                                     customer_loyalty?
   customer_receivables                                 customer_receivables[]
-  user_profiles_customers_created_by_idTouser_profiles user_profiles?         @relation("customers_created_by_idTouser_profiles", fields: [created_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  salesperson                                          user_profiles?         @relation("customer_salesperson", fields: [salesperson_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  user_profiles_customers_updated_by_idTouser_profiles user_profiles?         @relation("customers_updated_by_idTouser_profiles", fields: [updated_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_profiles_customers_created_by_idTouser_profiles user_profiles?                 @relation("customers_created_by_idTouser_profiles", fields: [created_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  salesperson                                          user_profiles?                 @relation("customer_salesperson", fields: [salesperson_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_profiles_customers_updated_by_idTouser_profiles user_profiles?                 @relation("customers_updated_by_idTouser_profiles", fields: [updated_by_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
   sales_orders                                         sales_orders[]
+  sales_returns                                        sales_returns[]
   service_orders                                       service_orders[]
+  voucher_redemptions                                  voucher_redemptions[]
 
   @@index([birthday], map: "idx_customers_birthday")
   @@index([salesperson_id], map: "idx_customers_salesperson")
@@ -136,7 +141,7 @@ model parts {
   description         String?
   quantity_in_stock   Int?            @default(0)
   minimum_stock_level Int?            @default(0)
-  unit_cost           Decimal?        @db.Decimal(10, 2)
+  unit_cost           Decimal?        @db.Decimal(15, 2)
   supplier            String?         @db.VarChar(255)
   created_at          DateTime?       @default(now()) @db.Timestamptz(6)
   updated_at          DateTime?       @default(now()) @db.Timestamptz(6)
@@ -155,7 +160,7 @@ model parts {
 model payments {
   id               String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   service_order_id String         @db.Uuid
-  amount           Decimal        @db.Decimal(10, 2)
+  amount           Decimal        @db.Decimal(15, 2)
   payment_method   payment_method
   is_deposit       Boolean?       @default(false)
   payment_date     DateTime?      @default(now()) @db.Timestamptz(6)
@@ -176,8 +181,8 @@ model service_items {
   name                 String          @db.VarChar(255)
   description          String?
   status               service_status? @default(pending)
-  labor_cost           Decimal?        @default(0) @db.Decimal(10, 2)
-  parts_cost           Decimal?        @default(0) @db.Decimal(10, 2)
+  labor_cost           Decimal?        @default(0) @db.Decimal(15, 2)
+  parts_cost           Decimal?        @default(0) @db.Decimal(15, 2)
   hours_worked         Decimal?        @default(0) @db.Decimal(5, 2)
   created_at           DateTime?       @default(now()) @db.Timestamptz(6)
   updated_at           DateTime?       @default(now()) @db.Timestamptz(6)
@@ -237,6 +242,7 @@ model service_orders {
   status                                                    service_status?           @default(pending)
   priority                                                  priority_level?           @default(normal)
   description                                               String?
+  customer_demand                                           String?
   mileage_in                                                Int?
   mileage_out                                               Int?
   drop_off_date                                             DateTime?                 @default(now()) @db.Timestamptz(6)
@@ -245,15 +251,14 @@ model service_orders {
   pickup_date                                               DateTime?                 @db.Timestamptz(6)
   picked_up_by                                              String?                   @db.VarChar(255)
   pickup_id_verified                                        Boolean?                  @default(false)
-  estimated_cost                                            Decimal?                  @db.Decimal(10, 2)
-  final_cost                                                Decimal?                  @db.Decimal(10, 2)
+  estimated_cost                                            Decimal?                  @db.Decimal(15, 2)
+  final_cost                                                Decimal?                  @db.Decimal(15, 2)
   created_at                                                DateTime?                 @default(now()) @db.Timestamptz(6)
   updated_at                                                DateTime?                 @default(now()) @db.Timestamptz(6)
   image_url                                                 String?
-  created_by_id                                             String?                   @db.Uuid
-  customer_demand                                           String?
-  updated_by_id                                             String?                   @db.Uuid
   store_id                                                  String?                   @db.Uuid
+  created_by_id                                             String?                   @db.Uuid
+  updated_by_id                                             String?                   @db.Uuid
   payments                                                  payments[]
   service_items                                             service_items[]
   service_order_comments                                    service_order_comments[]
@@ -284,8 +289,8 @@ model service_parts {
   service_item_id  String?        @db.Uuid
   part_id          String         @db.Uuid
   quantity_used    Int
-  unit_cost        Decimal        @db.Decimal(10, 2)
-  total_cost       Decimal?       @db.Decimal(10, 2)
+  unit_cost        Decimal        @db.Decimal(15, 2)
+  total_cost       Decimal?       @db.Decimal(15, 2)
   created_at       DateTime?      @default(now()) @db.Timestamptz(6)
   parts            parts          @relation(fields: [part_id], references: [id], onUpdate: NoAction)
   service_items    service_items? @relation(fields: [service_item_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -322,70 +327,93 @@ model suppliers {
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 /// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
 model user_profiles {
-  id                                                                           String                       @id @db.Uuid
+  id                                                                           String                         @id @db.Uuid
   role                                                                         user_role
-  full_name                                                                    String                       @db.VarChar(255)
-  phone                                                                        String?                      @db.VarChar(20)
-  email                                                                        String?                      @db.VarChar(255)
-  is_active                                                                    Boolean?                     @default(true)
-  created_at                                                                   DateTime?                    @default(now()) @db.Timestamptz(6)
-  updated_at                                                                   DateTime?                    @default(now()) @db.Timestamptz(6)
-  employee_code                                                                String?                      @unique @db.VarChar(5)
+  full_name                                                                    String                         @db.VarChar(255)
+  phone                                                                        String?                        @db.VarChar(20)
+  email                                                                        String?                        @db.VarChar(255)
+  is_active                                                                    Boolean?                       @default(true)
+  created_at                                                                   DateTime?                      @default(now()) @db.Timestamptz(6)
+  updated_at                                                                   DateTime?                      @default(now()) @db.Timestamptz(6)
+  employee_code                                                                String?                        @unique @db.VarChar(5)
   activity_logs                                                                activity_logs[]
   ai_usage_logs                                                                ai_usage_logs[]
   attendance_import_logs                                                       attendance_import_logs[]
   attendance_records                                                           attendance_records[]
-  bikes_bikes_created_by_idTouser_profiles                                     bikes[]                      @relation("bikes_created_by_idTouser_profiles")
-  bikes_bikes_updated_by_idTouser_profiles                                     bikes[]                      @relation("bikes_updated_by_idTouser_profiles")
-  customers_customers_created_by_idTouser_profiles                             customers[]                  @relation("customers_created_by_idTouser_profiles")
-  customers_salesperson                                                        customers[]                  @relation("customer_salesperson")
-  customers_customers_updated_by_idTouser_profiles                             customers[]                  @relation("customers_updated_by_idTouser_profiles")
-  employee_salary_configs_employee_salary_configs_created_by_idTouser_profiles employee_salary_configs[]    @relation("employee_salary_configs_created_by_idTouser_profiles")
-  employee_salary_configs_employee_salary_configs_employee_idTouser_profiles   employee_salary_configs?     @relation("employee_salary_configs_employee_idTouser_profiles")
-  employee_salary_configs_employee_salary_configs_updated_by_idTouser_profiles employee_salary_configs[]    @relation("employee_salary_configs_updated_by_idTouser_profiles")
+  bikes_bikes_created_by_idTouser_profiles                                     bikes[]                        @relation("bikes_created_by_idTouser_profiles")
+  bikes_bikes_updated_by_idTouser_profiles                                     bikes[]                        @relation("bikes_updated_by_idTouser_profiles")
+  cash_book_entries_cash_book_entries_cancelled_byTouser_profiles              cash_book_entries[]            @relation("cash_book_entries_cancelled_byTouser_profiles")
+  cash_book_entries_cash_book_entries_created_byTouser_profiles                cash_book_entries[]            @relation("cash_book_entries_created_byTouser_profiles")
+  customer_credit_transactions                                                 customer_credit_transactions[]
+  customer_groups                                                              customer_groups[]
+  customers_customers_created_by_idTouser_profiles                             customers[]                    @relation("customers_created_by_idTouser_profiles")
+  customers_salesperson                                                        customers[]                    @relation("customer_salesperson")
+  customers_customers_updated_by_idTouser_profiles                             customers[]                    @relation("customers_updated_by_idTouser_profiles")
+  employee_salary_configs_employee_salary_configs_created_by_idTouser_profiles employee_salary_configs[]      @relation("employee_salary_configs_created_by_idTouser_profiles")
+  employee_salary_configs_employee_salary_configs_employee_idTouser_profiles   employee_salary_configs?       @relation("employee_salary_configs_employee_idTouser_profiles")
+  employee_salary_configs_employee_salary_configs_updated_by_idTouser_profiles employee_salary_configs[]      @relation("employee_salary_configs_updated_by_idTouser_profiles")
   images                                                                       images[]
   inventory_transactions                                                       inventory_transactions[]
   loyalty_point_transactions                                                   loyalty_point_transactions[]
   loyalty_rule_versions                                                        loyalty_rule_versions[]
   payments                                                                     payments[]
   payroll_adjustments                                                          payroll_adjustments[]
-  payroll_periods_payroll_periods_created_by_idTouser_profiles                 payroll_periods[]            @relation("payroll_periods_created_by_idTouser_profiles")
-  payroll_periods_payroll_periods_finalized_byTouser_profiles                  payroll_periods[]            @relation("payroll_periods_finalized_byTouser_profiles")
-  payroll_periods_payroll_periods_paid_byTouser_profiles                       payroll_periods[]            @relation("payroll_periods_paid_byTouser_profiles")
-  payroll_periods_payroll_periods_published_byTouser_profiles                  payroll_periods[]            @relation("payroll_periods_published_byTouser_profiles")
-  payroll_periods_payroll_periods_updated_by_idTouser_profiles                 payroll_periods[]            @relation("payroll_periods_updated_by_idTouser_profiles")
-  payroll_slips_payroll_slips_adjusted_byTouser_profiles                       payroll_slips[]              @relation("payroll_slips_adjusted_byTouser_profiles")
-  payroll_slips_payroll_slips_dispute_resolved_byTouser_profiles               payroll_slips[]              @relation("payroll_slips_dispute_resolved_byTouser_profiles")
-  payroll_slips_payroll_slips_employee_idTouser_profiles                       payroll_slips[]              @relation("payroll_slips_employee_idTouser_profiles")
-  payroll_slips_payroll_slips_finalized_byTouser_profiles                      payroll_slips[]              @relation("payroll_slips_finalized_byTouser_profiles")
-  payroll_slips_payroll_slips_paid_byTouser_profiles                           payroll_slips[]              @relation("payroll_slips_paid_byTouser_profiles")
-  permission_audit_log_permission_audit_log_performed_byTouser_profiles        permission_audit_log[]       @relation("permission_audit_log_performed_byTouser_profiles")
-  permission_audit_log_permission_audit_log_user_idTouser_profiles             permission_audit_log[]       @relation("permission_audit_log_user_idTouser_profiles")
+  payroll_periods_payroll_periods_created_by_idTouser_profiles                 payroll_periods[]              @relation("payroll_periods_created_by_idTouser_profiles")
+  payroll_periods_payroll_periods_finalized_byTouser_profiles                  payroll_periods[]              @relation("payroll_periods_finalized_byTouser_profiles")
+  payroll_periods_payroll_periods_paid_byTouser_profiles                       payroll_periods[]              @relation("payroll_periods_paid_byTouser_profiles")
+  payroll_periods_payroll_periods_published_byTouser_profiles                  payroll_periods[]              @relation("payroll_periods_published_byTouser_profiles")
+  payroll_periods_payroll_periods_updated_by_idTouser_profiles                 payroll_periods[]              @relation("payroll_periods_updated_by_idTouser_profiles")
+  payroll_slips_payroll_slips_adjusted_byTouser_profiles                       payroll_slips[]                @relation("payroll_slips_adjusted_byTouser_profiles")
+  payroll_slips_payroll_slips_dispute_resolved_byTouser_profiles               payroll_slips[]                @relation("payroll_slips_dispute_resolved_byTouser_profiles")
+  payroll_slips_payroll_slips_employee_idTouser_profiles                       payroll_slips[]                @relation("payroll_slips_employee_idTouser_profiles")
+  payroll_slips_payroll_slips_finalized_byTouser_profiles                      payroll_slips[]                @relation("payroll_slips_finalized_byTouser_profiles")
+  payroll_slips_payroll_slips_paid_byTouser_profiles                           payroll_slips[]                @relation("payroll_slips_paid_byTouser_profiles")
+  permission_audit_log_permission_audit_log_performed_byTouser_profiles        permission_audit_log[]         @relation("permission_audit_log_performed_byTouser_profiles")
+  permission_audit_log_permission_audit_log_user_idTouser_profiles             permission_audit_log[]         @relation("permission_audit_log_user_idTouser_profiles")
+  pos_sessions_pos_sessions_closed_byTouser_profiles                           pos_sessions[]                 @relation("pos_sessions_closed_byTouser_profiles")
   pos_sessions                                                                 pos_sessions[]
-  purchase_orders_purchase_orders_approved_byTouser_profiles                   purchase_orders[]            @relation("purchase_orders_approved_byTouser_profiles")
-  purchase_orders_purchase_orders_created_by_idTouser_profiles                 purchase_orders[]            @relation("purchase_orders_created_by_idTouser_profiles")
-  purchase_orders_purchase_orders_rejected_byTouser_profiles                   purchase_orders[]            @relation("purchase_orders_rejected_byTouser_profiles")
-  purchase_orders_purchase_orders_submitted_byTouser_profiles                  purchase_orders[]            @relation("purchase_orders_submitted_byTouser_profiles")
-  purchase_orders_purchase_orders_updated_by_idTouser_profiles                 purchase_orders[]            @relation("purchase_orders_updated_by_idTouser_profiles")
+  price_books_price_books_created_byTouser_profiles                            price_books[]                  @relation("price_books_created_byTouser_profiles")
+  price_books_price_books_updated_byTouser_profiles                            price_books[]                  @relation("price_books_updated_byTouser_profiles")
+  promotions_promotions_created_byTouser_profiles                              promotions[]                   @relation("promotions_created_byTouser_profiles")
+  promotions_promotions_updated_byTouser_profiles                              promotions[]                   @relation("promotions_updated_byTouser_profiles")
+  purchase_orders_purchase_orders_approved_byTouser_profiles                   purchase_orders[]              @relation("purchase_orders_approved_byTouser_profiles")
+  purchase_orders_purchase_orders_created_by_idTouser_profiles                 purchase_orders[]              @relation("purchase_orders_created_by_idTouser_profiles")
+  purchase_orders_purchase_orders_rejected_byTouser_profiles                   purchase_orders[]              @relation("purchase_orders_rejected_byTouser_profiles")
+  purchase_orders_purchase_orders_submitted_byTouser_profiles                  purchase_orders[]              @relation("purchase_orders_submitted_byTouser_profiles")
+  purchase_orders_purchase_orders_updated_by_idTouser_profiles                 purchase_orders[]              @relation("purchase_orders_updated_by_idTouser_profiles")
+  qr_payment_events                                                            qr_payment_events[]
+  qr_payment_requests_qr_payment_requests_confirmed_byTouser_profiles          qr_payment_requests[]          @relation("qr_payment_requests_confirmed_byTouser_profiles")
+  qr_payment_requests_qr_payment_requests_created_byTouser_profiles            qr_payment_requests[]          @relation("qr_payment_requests_created_byTouser_profiles")
+  qr_provider_settings                                                         qr_provider_settings[]
   sales_order_payments                                                         sales_order_payments[]
-  sales_orders_sales_orders_created_byTouser_profiles                          sales_orders[]               @relation("sales_orders_created_byTouser_profiles")
-  sales_orders_sales_orders_processed_byTouser_profiles                        sales_orders[]               @relation("sales_orders_processed_byTouser_profiles")
+  sales_orders_sales_orders_created_byTouser_profiles                          sales_orders[]                 @relation("sales_orders_created_byTouser_profiles")
+  sales_orders_sales_orders_discount_approved_byTouser_profiles                sales_orders[]                 @relation("sales_orders_discount_approved_byTouser_profiles")
+  sales_orders_sales_orders_processed_byTouser_profiles                        sales_orders[]                 @relation("sales_orders_processed_byTouser_profiles")
+  sales_returns_sales_returns_approved_byTouser_profiles                       sales_returns[]                @relation("sales_returns_approved_byTouser_profiles")
+  sales_returns_sales_returns_created_byTouser_profiles                        sales_returns[]                @relation("sales_returns_created_byTouser_profiles")
   service_items                                                                service_items[]
   service_order_comments                                                       service_order_comments[]
   service_order_employees                                                      service_order_employees[]
-  service_orders_assigned_employee                                             service_orders[]             @relation("assigned_employee")
-  service_orders_service_orders_created_by_idTouser_profiles                   service_orders[]             @relation("service_orders_created_by_idTouser_profiles")
-  service_orders_service_orders_updated_by_idTouser_profiles                   service_orders[]             @relation("service_orders_updated_by_idTouser_profiles")
+  service_orders_assigned_employee                                             service_orders[]               @relation("assigned_employee")
+  service_orders_service_orders_created_by_idTouser_profiles                   service_orders[]               @relation("service_orders_created_by_idTouser_profiles")
+  service_orders_service_orders_updated_by_idTouser_profiles                   service_orders[]               @relation("service_orders_updated_by_idTouser_profiles")
+  stock_count_items                                                            stock_count_items[]
+  stock_counts_stock_counts_completed_byTouser_profiles                        stock_counts[]                 @relation("stock_counts_completed_byTouser_profiles")
+  stock_counts_stock_counts_created_byTouser_profiles                          stock_counts[]                 @relation("stock_counts_created_byTouser_profiles")
+  stock_write_offs                                                             stock_write_offs[]
   supplier_payments                                                            supplier_payments[]
-  supplier_returns_supplier_returns_approved_by_idTouser_profiles              supplier_returns[]           @relation("supplier_returns_approved_by_idTouser_profiles")
-  supplier_returns_supplier_returns_created_by_idTouser_profiles               supplier_returns[]           @relation("supplier_returns_created_by_idTouser_profiles")
-  transfer_orders_transfer_orders_received_byTouser_profiles                   transfer_orders[]            @relation("transfer_orders_received_byTouser_profiles")
-  transfer_orders_transfer_orders_requested_byTouser_profiles                  transfer_orders[]            @relation("transfer_orders_requested_byTouser_profiles")
-  transfer_orders_transfer_orders_shipped_byTouser_profiles                    transfer_orders[]            @relation("transfer_orders_shipped_byTouser_profiles")
-  user_permissions_user_permissions_assigned_byTouser_profiles                 user_permissions[]           @relation("user_permissions_assigned_byTouser_profiles")
-  user_permissions_user_permissions_user_idTouser_profiles                     user_permissions[]           @relation("user_permissions_user_idTouser_profiles")
-  user_roles_user_roles_assigned_byTouser_profiles                             user_roles[]                 @relation("user_roles_assigned_byTouser_profiles")
-  user_roles_user_roles_user_idTouser_profiles                                 user_roles[]                 @relation("user_roles_user_idTouser_profiles")
+  supplier_returns_supplier_returns_approved_by_idTouser_profiles              supplier_returns[]             @relation("supplier_returns_approved_by_idTouser_profiles")
+  supplier_returns_supplier_returns_created_by_idTouser_profiles               supplier_returns[]             @relation("supplier_returns_created_by_idTouser_profiles")
+  transfer_orders_transfer_orders_cancelled_byTouser_profiles                  transfer_orders[]              @relation("transfer_orders_cancelled_byTouser_profiles")
+  transfer_orders_transfer_orders_received_byTouser_profiles                   transfer_orders[]              @relation("transfer_orders_received_byTouser_profiles")
+  transfer_orders_transfer_orders_requested_byTouser_profiles                  transfer_orders[]              @relation("transfer_orders_requested_byTouser_profiles")
+  transfer_orders_transfer_orders_shipped_byTouser_profiles                    transfer_orders[]              @relation("transfer_orders_shipped_byTouser_profiles")
+  user_permissions_user_permissions_assigned_byTouser_profiles                 user_permissions[]             @relation("user_permissions_assigned_byTouser_profiles")
+  user_permissions_user_permissions_user_idTouser_profiles                     user_permissions[]             @relation("user_permissions_user_idTouser_profiles")
+  user_roles_user_roles_assigned_byTouser_profiles                             user_roles[]                   @relation("user_roles_assigned_byTouser_profiles")
+  user_roles_user_roles_user_idTouser_profiles                                 user_roles[]                   @relation("user_roles_user_idTouser_profiles")
+  voucher_campaigns_voucher_campaigns_created_byTouser_profiles                voucher_campaigns[]            @relation("voucher_campaigns_created_byTouser_profiles")
+  voucher_campaigns_voucher_campaigns_updated_byTouser_profiles                voucher_campaigns[]            @relation("voucher_campaigns_updated_byTouser_profiles")
 
   @@schema("public")
 }
@@ -419,8 +447,8 @@ model inventory_transactions {
   product_variant_id String?           @db.Uuid
   transaction_type   String            @db.VarChar(50)
   quantity           Int
-  unit_cost          Decimal?          @db.Decimal(10, 2)
-  total_cost         Decimal?          @db.Decimal(10, 2)
+  unit_cost          Decimal?          @db.Decimal(15, 2)
+  total_cost         Decimal?          @db.Decimal(15, 2)
   reference_type     String?           @db.VarChar(50)
   reference_id       String?           @db.Uuid
   reason_code        String?           @db.VarChar(50)
@@ -438,6 +466,9 @@ model inventory_transactions {
   @@index([reference_type, reference_id], map: "idx_inventory_transactions_reference")
   @@index([transaction_type], map: "idx_inventory_transactions_type")
   @@index([product_variant_id], map: "idx_inventory_transactions_variant")
+  @@index([product_id, location_id, created_at], map: "idx_inventory_transactions_product_date")
+  @@index([transaction_type, created_at], map: "idx_inventory_transactions_type_date")
+  @@index([product_variant_id, location_id, created_at], map: "idx_inventory_transactions_variant_date")
   @@schema("public")
 }
 
@@ -446,7 +477,7 @@ model pos_session_transactions {
   id               String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   pos_session_id   String       @db.Uuid
   transaction_type String       @db.VarChar(50)
-  amount           Decimal      @db.Decimal(10, 2)
+  amount           Decimal      @db.Decimal(15, 2)
   reason           String?
   notes            String?
   created_at       DateTime?    @default(now()) @db.Timestamptz(6)
@@ -459,29 +490,38 @@ model pos_session_transactions {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model pos_sessions {
-  id                       String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  session_number           String                     @unique @db.VarChar(50)
-  location_id              String                     @db.Uuid
-  user_id                  String                     @db.Uuid
-  status                   String?                    @default("open") @db.VarChar(50)
-  opening_cash             Decimal?                   @default(0) @db.Decimal(10, 2)
-  closing_cash             Decimal?                   @db.Decimal(10, 2)
-  expected_cash            Decimal?                   @db.Decimal(10, 2)
-  cash_difference          Decimal?                   @db.Decimal(10, 2)
-  opened_at                DateTime?                  @default(now()) @db.Timestamptz(6)
-  closed_at                DateTime?                  @db.Timestamptz(6)
-  notes                    String?
-  created_at               DateTime?                  @default(now()) @db.Timestamptz(6)
-  updated_at               DateTime?                  @default(now()) @db.Timestamptz(6)
-  pos_session_transactions pos_session_transactions[]
-  stock_locations          stock_locations            @relation(fields: [location_id], references: [id], onUpdate: NoAction)
-  user_profiles            user_profiles              @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+  id                                                  String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  session_number                                      String                     @unique @db.VarChar(50)
+  location_id                                         String                     @db.Uuid
+  user_id                                             String                     @db.Uuid
+  status                                              String?                    @default("open") @db.VarChar(50)
+  opening_cash                                        Decimal?                   @default(0) @db.Decimal(15, 2)
+  closing_cash                                        Decimal?                   @db.Decimal(15, 2)
+  expected_cash                                       Decimal?                   @db.Decimal(15, 2)
+  cash_difference                                     Decimal?                   @db.Decimal(15, 2)
+  opened_at                                           DateTime?                  @default(now()) @db.Timestamptz(6)
+  closed_at                                           DateTime?                  @db.Timestamptz(6)
+  notes                                               String?
+  created_at                                          DateTime?                  @default(now()) @db.Timestamptz(6)
+  updated_at                                          DateTime?                  @default(now()) @db.Timestamptz(6)
+  store_id                                            String?                    @db.Uuid
+  closed_by                                           String?                    @db.Uuid
+  cash_book_entries                                   cash_book_entries[]
+  pos_session_transactions                            pos_session_transactions[]
+  user_profiles_pos_sessions_closed_byTouser_profiles user_profiles?             @relation("pos_sessions_closed_byTouser_profiles", fields: [closed_by], references: [id], onUpdate: NoAction)
+  stock_locations                                     stock_locations            @relation(fields: [location_id], references: [id], onUpdate: NoAction)
+  stores                                              stores?                    @relation(fields: [store_id], references: [id], onUpdate: NoAction)
+  user_profiles                                       user_profiles              @relation(fields: [user_id], references: [id], onUpdate: NoAction)
+  qr_payment_requests                                 qr_payment_requests[]
+  sales_orders                                        sales_orders[]
+  sales_returns                                       sales_returns[]
 
   @@index([location_id], map: "idx_pos_sessions_location")
   @@index([session_number], map: "idx_pos_sessions_number")
   @@index([opened_at(sort: Desc)], map: "idx_pos_sessions_opened_at")
   @@index([status], map: "idx_pos_sessions_status")
   @@index([user_id], map: "idx_pos_sessions_user")
+  @@index([store_id], map: "idx_pos_sessions_store")
   @@schema("public")
 }
 
@@ -512,17 +552,22 @@ model product_variants {
   sku                    String                   @unique @db.VarChar(100)
   name                   String                   @db.VarChar(255)
   attributes             Json?
-  price_adjustment       Decimal?                 @default(0) @db.Decimal(10, 2)
-  cost_price_override    Decimal?                 @db.Decimal(10, 2)
-  retail_price_override  Decimal?                 @db.Decimal(10, 2)
+  price_adjustment       Decimal?                 @default(0) @db.Decimal(15, 2)
+  cost_price_override    Decimal?                 @db.Decimal(15, 2)
+  retail_price_override  Decimal?                 @db.Decimal(15, 2)
   is_active              Boolean?                 @default(true)
   created_at             DateTime?                @default(now()) @db.Timestamptz(6)
   updated_at             DateTime?                @default(now()) @db.Timestamptz(6)
+  barcode                String?                  @db.VarChar(64)
   inventory              inventory[]
   inventory_transactions inventory_transactions[]
+  price_book_entries     price_book_entries[]
   products               products                 @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   purchase_order_items   purchase_order_items[]
   sales_order_items      sales_order_items[]
+  sales_return_items     sales_return_items[]
+  stock_count_items      stock_count_items[]
+  stock_write_off_items  stock_write_off_items[]
   supplier_return_items  supplier_return_items[]
   transfer_order_items   transfer_order_items[]
 
@@ -542,9 +587,9 @@ model products {
   category_id             String?                  @db.Uuid
   brand_id                String?                  @db.Uuid
   supplier_id             String?                  @db.Uuid
-  cost_price              Decimal?                 @default(0) @db.Decimal(10, 2)
-  retail_price            Decimal                  @db.Decimal(10, 2)
-  sale_price              Decimal?                 @db.Decimal(10, 2)
+  cost_price              Decimal?                 @default(0) @db.Decimal(15, 2)
+  retail_price            Decimal                  @db.Decimal(15, 2)
+  sale_price              Decimal?                 @db.Decimal(15, 2)
   sale_price_start_date   DateTime?                @db.Timestamptz(6)
   sale_price_end_date     DateTime?                @db.Timestamptz(6)
   reorder_point           Int?                     @default(0)
@@ -562,8 +607,12 @@ model products {
   is_master               Boolean?                 @default(true)
   variant_generation_type String?                  @default("manual") @db.VarChar(50)
   attributes              Json?                    @default("{}")
+  barcode                 String?                  @db.VarChar(64)
+  base_unit               String                   @default("cái") @db.VarChar(30)
   inventory               inventory[]
   inventory_transactions  inventory_transactions[]
+  price_book_entries      price_book_entries[]
+  product_units           product_units[]
   product_variants        product_variants[]
   brands                  brands?                  @relation(fields: [brand_id], references: [id], onUpdate: NoAction)
   product_categories      product_categories?      @relation(fields: [category_id], references: [id], onUpdate: NoAction)
@@ -572,6 +621,9 @@ model products {
   suppliers               suppliers?               @relation(fields: [supplier_id], references: [id], onUpdate: NoAction)
   purchase_order_items    purchase_order_items[]
   sales_order_items       sales_order_items[]
+  sales_return_items      sales_return_items[]
+  stock_count_items       stock_count_items[]
+  stock_write_off_items   stock_write_off_items[]
   supplier_return_items   supplier_return_items[]
   transfer_order_items    transfer_order_items[]
 
@@ -587,48 +639,63 @@ model products {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model sales_order_items {
-  id                 String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  sales_order_id     String            @db.Uuid
-  product_id         String?           @db.Uuid
-  product_variant_id String?           @db.Uuid
-  product_name       String            @db.VarChar(255)
-  product_sku        String?           @db.VarChar(100)
-  variant_name       String?           @db.VarChar(255)
-  quantity           Int
-  unit_price         Decimal           @db.Decimal(10, 2)
-  discount_amount    Decimal?          @default(0) @db.Decimal(10, 2)
-  tax_amount         Decimal?          @default(0) @db.Decimal(10, 2)
-  total_amount       Decimal           @db.Decimal(10, 2)
-  unit_cost          Decimal?          @db.Decimal(10, 2)
-  notes              String?
-  created_at         DateTime?         @default(now()) @db.Timestamptz(6)
-  products           products?         @relation(fields: [product_id], references: [id], onUpdate: NoAction)
-  product_variants   product_variants? @relation(fields: [product_variant_id], references: [id], onUpdate: NoAction)
-  sales_orders       sales_orders      @relation(fields: [sales_order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                    String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sales_order_id        String                  @db.Uuid
+  product_id            String?                 @db.Uuid
+  product_variant_id    String?                 @db.Uuid
+  product_name          String                  @db.VarChar(255)
+  product_sku           String?                 @db.VarChar(100)
+  variant_name          String?                 @db.VarChar(255)
+  quantity              Int
+  unit_price            Decimal                 @db.Decimal(15, 2)
+  discount_amount       Decimal?                @default(0) @db.Decimal(15, 2)
+  tax_amount            Decimal?                @default(0) @db.Decimal(15, 2)
+  total_amount          Decimal                 @db.Decimal(15, 2)
+  unit_cost             Decimal?                @db.Decimal(15, 2)
+  notes                 String?
+  created_at            DateTime?               @default(now()) @db.Timestamptz(6)
+  price_book_id         String?                 @db.Uuid
+  base_unit_price       Decimal?                @db.Decimal(12, 2)
+  price_source          String?                 @db.VarChar(30)
+  returned_quantity     Int                     @default(0)
+  returned_amount       Decimal                 @default(0) @db.Decimal(14, 2)
+  promotion_discount    Decimal                 @default(0) @db.Decimal(14, 2)
+  unit_name             String?                 @db.VarChar(30)
+  unit_factor           Int                     @default(1)
+  sales_order_discounts sales_order_discounts[]
+  price_books           price_books?            @relation(fields: [price_book_id], references: [id], onUpdate: NoAction)
+  products              products?               @relation(fields: [product_id], references: [id], onUpdate: NoAction)
+  product_variants      product_variants?       @relation(fields: [product_variant_id], references: [id], onUpdate: NoAction)
+  sales_orders          sales_orders            @relation(fields: [sales_order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  sales_return_items    sales_return_items[]
 
   @@index([sales_order_id], map: "idx_sales_order_items_order")
   @@index([product_id], map: "idx_sales_order_items_product")
   @@index([product_variant_id], map: "idx_sales_order_items_variant")
+  @@index([price_book_id], map: "idx_sales_order_items_price_book")
   @@schema("public")
 }
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model sales_order_payments {
-  id                 String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  sales_order_id     String         @db.Uuid
-  payment_method     String         @db.VarChar(50)
-  amount             Decimal        @db.Decimal(10, 2)
-  payment_date       DateTime?      @default(now()) @db.Timestamptz(6)
-  transaction_id     String?        @db.VarChar(255)
-  authorization_code String?        @db.VarChar(100)
-  amount_tendered    Decimal?       @db.Decimal(10, 2)
-  change_given       Decimal?       @db.Decimal(10, 2)
-  status             String?        @default("completed") @db.VarChar(50)
-  notes              String?
-  received_by        String?        @db.Uuid
-  created_at         DateTime?      @default(now()) @db.Timestamptz(6)
-  user_profiles      user_profiles? @relation(fields: [received_by], references: [id], onUpdate: NoAction)
-  sales_orders       sales_orders   @relation(fields: [sales_order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                                                                                   String                @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sales_order_id                                                                       String                @db.Uuid
+  payment_method                                                                       String                @db.VarChar(50)
+  amount                                                                               Decimal               @db.Decimal(15, 2)
+  payment_date                                                                         DateTime?             @default(now()) @db.Timestamptz(6)
+  transaction_id                                                                       String?               @db.VarChar(255)
+  authorization_code                                                                   String?               @db.VarChar(100)
+  amount_tendered                                                                      Decimal?              @db.Decimal(15, 2)
+  change_given                                                                         Decimal?              @db.Decimal(15, 2)
+  status                                                                               String?               @default("completed") @db.VarChar(50)
+  notes                                                                                String?
+  received_by                                                                          String?               @db.Uuid
+  created_at                                                                           DateTime?             @default(now()) @db.Timestamptz(6)
+  qr_payment_request_id                                                                String?               @db.Uuid
+  qr_payment_requests_qr_payment_requests_sales_order_payment_idTosales_order_payments qr_payment_requests[] @relation("qr_payment_requests_sales_order_payment_idTosales_order_payments")
+  qr_payment_requests_sales_order_payments_qr_payment_request_idToqr_payment_requests  qr_payment_requests?  @relation("sales_order_payments_qr_payment_request_idToqr_payment_requests", fields: [qr_payment_request_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_profiles                                                                        user_profiles?        @relation(fields: [received_by], references: [id], onUpdate: NoAction)
+  sales_orders                                                                         sales_orders          @relation(fields: [sales_order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([payment_date(sort: Desc)], map: "idx_sales_order_payments_date")
   @@index([payment_method], map: "idx_sales_order_payments_method")
@@ -639,50 +706,67 @@ model sales_order_payments {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model sales_orders {
-  id                                                     String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  order_number                                           String                 @unique @db.VarChar(50)
-  customer_id                                            String?                @db.Uuid
-  customer_name                                          String                 @db.VarChar(255)
-  customer_phone                                         String?                @db.VarChar(20)
-  customer_email                                         String?                @db.VarChar(255)
-  channel                                                String                 @db.VarChar(50)
-  location_id                                            String?                @db.Uuid
-  status                                                 String?                @default("pending") @db.VarChar(50)
-  payment_status                                         String?                @default("unpaid") @db.VarChar(50)
-  shipping_address                                       String?
-  shipping_city                                          String?                @db.VarChar(100)
-  shipping_method                                        String?                @db.VarChar(50)
-  tracking_number                                        String?                @db.VarChar(100)
-  order_date                                             DateTime?              @default(now()) @db.Timestamptz(6)
-  payment_date                                           DateTime?              @db.Timestamptz(6)
-  shipped_date                                           DateTime?              @db.Timestamptz(6)
-  delivered_date                                         DateTime?              @db.Timestamptz(6)
-  subtotal                                               Decimal?               @default(0) @db.Decimal(10, 2)
-  discount_amount                                        Decimal?               @default(0) @db.Decimal(10, 2)
-  tax_amount                                             Decimal?               @default(0) @db.Decimal(10, 2)
-  shipping_cost                                          Decimal?               @default(0) @db.Decimal(10, 2)
-  total_amount                                           Decimal                @db.Decimal(10, 2)
-  paid_amount                                            Decimal?               @default(0) @db.Decimal(10, 2)
-  notes                                                  String?
-  internal_notes                                         String?
-  created_by                                             String?                @db.Uuid
-  processed_by                                           String?                @db.Uuid
-  created_at                                             DateTime?              @default(now()) @db.Timestamptz(6)
-  updated_at                                             DateTime?              @default(now()) @db.Timestamptz(6)
-  discount_type                                          String?                @default("fixed") @db.VarChar(20)
-  discount_percent                                       Decimal?               @default(0) @db.Decimal(5, 2)
-  store_id                                               String?                @db.Uuid
-  loyalty_points_redeemed                                Int?                   @default(0)
-  loyalty_discount_amount                                Decimal?               @default(0) @db.Decimal(10, 2)
-  loyalty_points_earned                                  Int?                   @default(0)
-  customer_receivables                                   customer_receivables?
-  sales_order_items                                      sales_order_items[]
-  sales_order_payments                                   sales_order_payments[]
-  user_profiles_sales_orders_created_byTouser_profiles   user_profiles?         @relation("sales_orders_created_byTouser_profiles", fields: [created_by], references: [id], onUpdate: NoAction)
-  customers                                              customers?             @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
-  stock_locations                                        stock_locations?       @relation(fields: [location_id], references: [id], onUpdate: NoAction)
-  user_profiles_sales_orders_processed_byTouser_profiles user_profiles?         @relation("sales_orders_processed_byTouser_profiles", fields: [processed_by], references: [id], onUpdate: NoAction)
-  stores                                                 stores?                @relation(fields: [store_id], references: [id], onUpdate: NoAction)
+  id                                                             String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  order_number                                                   String                  @unique @db.VarChar(50)
+  customer_id                                                    String?                 @db.Uuid
+  customer_name                                                  String                  @db.VarChar(255)
+  customer_phone                                                 String?                 @db.VarChar(20)
+  customer_email                                                 String?                 @db.VarChar(255)
+  channel                                                        String                  @db.VarChar(50)
+  location_id                                                    String?                 @db.Uuid
+  status                                                         String?                 @default("pending") @db.VarChar(50)
+  payment_status                                                 String?                 @default("unpaid") @db.VarChar(50)
+  shipping_address                                               String?
+  shipping_city                                                  String?                 @db.VarChar(100)
+  shipping_method                                                String?                 @db.VarChar(50)
+  tracking_number                                                String?                 @db.VarChar(100)
+  order_date                                                     DateTime?               @default(now()) @db.Timestamptz(6)
+  payment_date                                                   DateTime?               @db.Timestamptz(6)
+  shipped_date                                                   DateTime?               @db.Timestamptz(6)
+  delivered_date                                                 DateTime?               @db.Timestamptz(6)
+  subtotal                                                       Decimal?                @default(0) @db.Decimal(15, 2)
+  discount_amount                                                Decimal?                @default(0) @db.Decimal(15, 2)
+  tax_amount                                                     Decimal?                @default(0) @db.Decimal(15, 2)
+  shipping_cost                                                  Decimal?                @default(0) @db.Decimal(15, 2)
+  total_amount                                                   Decimal                 @db.Decimal(15, 2)
+  paid_amount                                                    Decimal?                @default(0) @db.Decimal(15, 2)
+  notes                                                          String?
+  internal_notes                                                 String?
+  created_by                                                     String?                 @db.Uuid
+  processed_by                                                   String?                 @db.Uuid
+  created_at                                                     DateTime?               @default(now()) @db.Timestamptz(6)
+  updated_at                                                     DateTime?               @default(now()) @db.Timestamptz(6)
+  store_id                                                       String?                 @db.Uuid
+  discount_type                                                  String?                 @default("fixed") @db.VarChar(20)
+  discount_percent                                               Decimal?                @default(0) @db.Decimal(5, 2)
+  loyalty_points_redeemed                                        Int?                    @default(0)
+  loyalty_discount_amount                                        Decimal?                @default(0) @db.Decimal(15, 2)
+  loyalty_points_earned                                          Int?                    @default(0)
+  pos_session_id                                                 String?                 @db.Uuid
+  client_request_id                                              String?                 @db.Uuid
+  discount_approved_by                                           String?                 @db.Uuid
+  price_book_id                                                  String?                 @db.Uuid
+  returned_amount                                                Decimal                 @default(0) @db.Decimal(14, 2)
+  return_status                                                  String                  @default("none") @db.VarChar(10)
+  promotion_discount_amount                                      Decimal                 @default(0) @db.Decimal(14, 2)
+  voucher_discount_amount                                        Decimal                 @default(0) @db.Decimal(14, 2)
+  voucher_code                                                   String?                 @db.VarChar(40)
+  customer_receivables                                           customer_receivables?
+  qr_payment_requests                                            qr_payment_requests[]
+  sales_order_discounts                                          sales_order_discounts[]
+  sales_order_items                                              sales_order_items[]
+  sales_order_payments                                           sales_order_payments[]
+  user_profiles_sales_orders_created_byTouser_profiles           user_profiles?          @relation("sales_orders_created_byTouser_profiles", fields: [created_by], references: [id], onUpdate: NoAction)
+  customers                                                      customers?              @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
+  user_profiles_sales_orders_discount_approved_byTouser_profiles user_profiles?          @relation("sales_orders_discount_approved_byTouser_profiles", fields: [discount_approved_by], references: [id], onUpdate: NoAction)
+  stock_locations                                                stock_locations?        @relation(fields: [location_id], references: [id], onUpdate: NoAction)
+  pos_sessions                                                   pos_sessions?           @relation(fields: [pos_session_id], references: [id], onUpdate: NoAction)
+  price_books                                                    price_books?            @relation(fields: [price_book_id], references: [id], onUpdate: NoAction)
+  user_profiles_sales_orders_processed_byTouser_profiles         user_profiles?          @relation("sales_orders_processed_byTouser_profiles", fields: [processed_by], references: [id], onUpdate: NoAction)
+  stores                                                         stores?                 @relation(fields: [store_id], references: [id], onUpdate: NoAction)
+  sales_returns_sales_returns_exchange_order_idTosales_orders    sales_returns[]         @relation("sales_returns_exchange_order_idTosales_orders")
+  sales_returns_sales_returns_sales_order_idTosales_orders       sales_returns[]         @relation("sales_returns_sales_order_idTosales_orders")
+  voucher_redemptions                                            voucher_redemptions[]
 
   @@index([channel], map: "idx_sales_orders_channel")
   @@index([customer_id], map: "idx_sales_orders_customer")
@@ -693,6 +777,8 @@ model sales_orders {
   @@index([payment_status], map: "idx_sales_orders_payment_status")
   @@index([status], map: "idx_sales_orders_status")
   @@index([store_id], map: "idx_sales_orders_store")
+  @@index([pos_session_id], map: "idx_sales_orders_pos_session")
+  @@index([created_by], map: "idx_sales_orders_created_by")
   @@schema("public")
 }
 
@@ -711,6 +797,9 @@ model stock_locations {
   inventory_transactions                                            inventory_transactions[]
   pos_sessions                                                      pos_sessions[]
   sales_orders                                                      sales_orders[]
+  sales_return_items                                                sales_return_items[]
+  stock_counts                                                      stock_counts[]
+  stock_write_offs                                                  stock_write_offs[]
   stores                                                            stores[]
   transfer_orders_transfer_orders_from_location_idTostock_locations transfer_orders[]        @relation("transfer_orders_from_location_idTostock_locations")
   transfer_orders_transfer_orders_to_location_idTostock_locations   transfer_orders[]        @relation("transfer_orders_to_location_idTostock_locations")
@@ -722,19 +811,21 @@ model stock_locations {
 
 /// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model transfer_order_items {
-  id                 String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  transfer_order_id  String            @db.Uuid
-  product_id         String?           @db.Uuid
-  product_variant_id String?           @db.Uuid
-  quantity_requested Int
-  quantity_shipped   Int?              @default(0)
-  quantity_received  Int?              @default(0)
-  notes              String?
-  created_at         DateTime?         @default(now()) @db.Timestamptz(6)
-  updated_at         DateTime?         @default(now()) @db.Timestamptz(6)
-  products           products?         @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  product_variants   product_variants? @relation(fields: [product_variant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  transfer_orders    transfer_orders   @relation(fields: [transfer_order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                   String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  transfer_order_id    String            @db.Uuid
+  product_id           String?           @db.Uuid
+  product_variant_id   String?           @db.Uuid
+  quantity_requested   Int
+  quantity_shipped     Int?              @default(0)
+  quantity_received    Int?              @default(0)
+  notes                String?
+  created_at           DateTime?         @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime?         @default(now()) @db.Timestamptz(6)
+  quantity_discrepancy Int               @default(0)
+  unit_cost            Decimal?          @db.Decimal(12, 2)
+  products             products?         @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  product_variants     product_variants? @relation(fields: [product_variant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  transfer_orders      transfer_orders   @relation(fields: [transfer_order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@index([product_id], map: "idx_transfer_order_items_product")
   @@index([transfer_order_id], map: "idx_transfer_order_items_transfer")
@@ -748,7 +839,7 @@ model transfer_orders {
   transfer_number                                                   String                 @unique @db.VarChar(50)
   from_location_id                                                  String                 @db.Uuid
   to_location_id                                                    String                 @db.Uuid
-  status                                                            String?                @default("pending") @db.VarChar(50)
+  status                                                            String                 @default("pending") @db.VarChar(50)
   requested_date                                                    DateTime?              @default(now()) @db.Timestamptz(6)
   shipped_date                                                      DateTime?              @db.Timestamptz(6)
   received_date                                                     DateTime?              @db.Timestamptz(6)
@@ -758,7 +849,11 @@ model transfer_orders {
   notes                                                             String?
   created_at                                                        DateTime?              @default(now()) @db.Timestamptz(6)
   updated_at                                                        DateTime?              @default(now()) @db.Timestamptz(6)
+  cancelled_at                                                      DateTime?              @db.Timestamptz(6)
+  cancelled_by                                                      String?                @db.Uuid
+  cancel_reason                                                     String?
   transfer_order_items                                              transfer_order_items[]
+  user_profiles_transfer_orders_cancelled_byTouser_profiles         user_profiles?         @relation("transfer_orders_cancelled_byTouser_profiles", fields: [cancelled_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
   stock_locations_transfer_orders_from_location_idTostock_locations stock_locations        @relation("transfer_orders_from_location_idTostock_locations", fields: [from_location_id], references: [id], onUpdate: NoAction)
   user_profiles_transfer_orders_received_byTouser_profiles          user_profiles?         @relation("transfer_orders_received_byTouser_profiles", fields: [received_by], references: [id], onUpdate: NoAction)
   user_profiles_transfer_orders_requested_byTouser_profiles         user_profiles?         @relation("transfer_orders_requested_byTouser_profiles", fields: [requested_by], references: [id], onUpdate: NoAction)
@@ -875,14 +970,15 @@ model role_permissions {
 
 /// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model roles {
-  id               String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name             String             @unique @db.VarChar(100)
-  description      String?
-  is_system        Boolean?           @default(false)
-  created_at       DateTime           @default(now()) @db.Timestamptz(6)
-  updated_at       DateTime           @default(now()) @db.Timestamptz(6)
-  role_permissions role_permissions[]
-  user_roles       user_roles[]
+  id                   String             @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String             @unique @db.VarChar(100)
+  description          String?
+  is_system            Boolean?           @default(false)
+  created_at           DateTime           @default(now()) @db.Timestamptz(6)
+  updated_at           DateTime           @default(now()) @db.Timestamptz(6)
+  max_discount_percent Decimal?           @db.Decimal(5, 2)
+  role_permissions     role_permissions[]
+  user_roles           user_roles[]
 
   @@schema("public")
 }
@@ -961,11 +1057,13 @@ model purchase_order_items {
   quantity_ordered      Int
   quantity_received     Int?                    @default(0)
   quantity_returned     Int?                    @default(0)
-  unit_cost             Decimal                 @db.Decimal(10, 2)
-  total_cost            Decimal                 @db.Decimal(10, 2)
+  unit_cost             Decimal                 @db.Decimal(15, 2)
+  total_cost            Decimal                 @db.Decimal(15, 2)
   notes                 String?
   created_at            DateTime?               @default(now()) @db.Timestamptz(6)
   updated_at            DateTime?               @default(now()) @db.Timestamptz(6)
+  unit_name             String?                 @db.VarChar(30)
+  unit_factor           Int                     @default(1)
   products              products?               @relation(fields: [product_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
   product_variants      product_variants?       @relation(fields: [product_variant_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
   purchase_orders       purchase_orders         @relation(fields: [purchase_order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -985,12 +1083,12 @@ model purchase_orders {
   supplier_id                                                String                         @db.Uuid
   status                                                     purchase_order_status          @default(draft)
   payment_status                                             purchase_order_payment_status  @default(unpaid)
-  subtotal                                                   Decimal                        @default(0) @db.Decimal(10, 2)
-  tax_amount                                                 Decimal?                       @default(0) @db.Decimal(10, 2)
-  shipping_cost                                              Decimal?                       @default(0) @db.Decimal(10, 2)
-  discount_amount                                            Decimal?                       @default(0) @db.Decimal(10, 2)
-  total_amount                                               Decimal                        @default(0) @db.Decimal(10, 2)
-  paid_amount                                                Decimal                        @default(0) @db.Decimal(10, 2)
+  subtotal                                                   Decimal                        @default(0) @db.Decimal(15, 2)
+  tax_amount                                                 Decimal?                       @default(0) @db.Decimal(15, 2)
+  shipping_cost                                              Decimal?                       @default(0) @db.Decimal(15, 2)
+  discount_amount                                            Decimal?                       @default(0) @db.Decimal(15, 2)
+  total_amount                                               Decimal                        @default(0) @db.Decimal(15, 2)
+  paid_amount                                                Decimal                        @default(0) @db.Decimal(15, 2)
   order_date                                                 DateTime?                      @default(now()) @db.Timestamptz(6)
   expected_delivery_date                                     DateTime?                      @db.Timestamptz(6)
   actual_delivery_date                                       DateTime?                      @db.Timestamptz(6)
@@ -1036,7 +1134,7 @@ model supplier_payment_allocations {
   id                  String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   supplier_payment_id String            @db.Uuid
   purchase_order_id   String            @db.Uuid
-  amount_allocated    Decimal           @db.Decimal(10, 2)
+  amount_allocated    Decimal           @db.Decimal(15, 2)
   created_at          DateTime?         @default(now()) @db.Timestamptz(6)
   purchase_orders     purchase_orders   @relation(fields: [purchase_order_id], references: [id], onUpdate: NoAction)
   supplier_payments   supplier_payments @relation(fields: [supplier_payment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
@@ -1053,7 +1151,7 @@ model supplier_payments {
   id                           String                         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   supplier_id                  String                         @db.Uuid
   payment_number               String                         @unique @db.VarChar(50)
-  amount                       Decimal                        @db.Decimal(10, 2)
+  amount                       Decimal                        @db.Decimal(15, 2)
   payment_method               payment_method
   payment_date                 DateTime?                      @default(now()) @db.Timestamptz(6)
   transaction_id               String?                        @db.VarChar(255)
@@ -1083,8 +1181,8 @@ model supplier_return_items {
   product_id             String?              @db.Uuid
   product_variant_id     String?              @db.Uuid
   quantity_returned      Int
-  unit_cost              Decimal              @db.Decimal(10, 2)
-  total_cost             Decimal              @db.Decimal(10, 2)
+  unit_cost              Decimal              @db.Decimal(15, 2)
+  total_cost             Decimal              @db.Decimal(15, 2)
   reason                 String?
   created_at             DateTime?            @default(now()) @db.Timestamptz(6)
   products               products?            @relation(fields: [product_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
@@ -1107,7 +1205,7 @@ model supplier_returns {
   supplier_id                                                  String                  @db.Uuid
   purchase_order_id                                            String                  @db.Uuid
   return_date                                                  DateTime?               @default(now()) @db.Timestamptz(6)
-  total_return_amount                                          Decimal                 @default(0) @db.Decimal(10, 2)
+  total_return_amount                                          Decimal                 @default(0) @db.Decimal(15, 2)
   reason                                                       String?
   notes                                                        String?
   status                                                       String?                 @default("pending") @db.VarChar(50)
@@ -1133,9 +1231,9 @@ model customer_receivables {
   id              String       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   customer_id     String       @db.Uuid
   sales_order_id  String       @unique @db.Uuid
-  original_amount Decimal      @db.Decimal(10, 2)
-  paid_amount     Decimal?     @default(0) @db.Decimal(10, 2)
-  balance         Decimal      @db.Decimal(10, 2)
+  original_amount Decimal      @db.Decimal(15, 2)
+  paid_amount     Decimal?     @default(0) @db.Decimal(15, 2)
+  balance         Decimal      @db.Decimal(15, 2)
   status          String?      @default("unpaid") @db.VarChar(20)
   due_date        DateTime?    @db.Timestamptz(6)
   created_at      DateTime?    @default(now()) @db.Timestamptz(6)
@@ -1150,21 +1248,31 @@ model customer_receivables {
 }
 
 model stores {
-  id                   String           @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
-  name                 String           @db.VarChar(100)
-  code                 String           @unique @db.VarChar(20)
-  address              String?
-  city                 String?          @db.VarChar(100)
-  phone                String?          @db.VarChar(20)
-  email                String?          @db.VarChar(255)
-  is_active            Boolean          @default(true)
-  is_default           Boolean          @default(false)
-  default_warehouse_id String?          @db.Uuid
-  created_at           DateTime         @default(now()) @db.Timestamptz(6)
-  updated_at           DateTime         @default(now()) @db.Timestamptz(6)
-  sales_orders         sales_orders[]
-  service_orders       service_orders[]
-  stock_locations      stock_locations? @relation(fields: [default_warehouse_id], references: [id], onUpdate: NoAction)
+  id                        String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                      String                      @db.VarChar(100)
+  code                      String                      @unique @db.VarChar(20)
+  address                   String?
+  city                      String?                     @db.VarChar(100)
+  phone                     String?                     @db.VarChar(20)
+  email                     String?                     @db.VarChar(255)
+  is_active                 Boolean                     @default(true)
+  is_default                Boolean                     @default(false)
+  default_warehouse_id      String?                     @db.Uuid
+  created_at                DateTime                    @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime                    @default(now()) @db.Timestamptz(6)
+  cash_book_accounts        cash_book_accounts[]
+  cash_book_entries         cash_book_entries[]
+  cash_book_method_accounts cash_book_method_accounts[]
+  pos_sessions              pos_sessions[]
+  price_book_stores         price_book_stores[]
+  promotion_stores          promotion_stores[]
+  qr_payment_requests       qr_payment_requests[]
+  qr_provider_settings      qr_provider_settings[]
+  sales_orders              sales_orders[]
+  sales_returns             sales_returns[]
+  service_orders            service_orders[]
+  stock_locations           stock_locations?            @relation(fields: [default_warehouse_id], references: [id], onUpdate: NoAction)
+  voucher_campaign_stores   voucher_campaign_stores[]
 
   @@index([code], map: "idx_stores_code")
   @@index([is_active], map: "idx_stores_is_active")
@@ -1527,6 +1635,647 @@ model payroll_slips {
   @@schema("public")
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model document_counters {
+  doc_type   String   @db.VarChar(20)
+  period     String   @db.VarChar(20)
+  last_value Int      @default(0)
+  updated_at DateTime @default(now()) @db.Timestamptz(6)
+
+  @@id([doc_type, period])
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model cash_book_accounts {
+  id                        String                      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  store_id                  String                      @db.Uuid
+  code                      String                      @unique @db.VarChar(30)
+  name                      String                      @db.VarChar(150)
+  type                      String                      @db.VarChar(10)
+  is_pos_drawer             Boolean                     @default(false)
+  bank_name                 String?                     @db.VarChar(150)
+  account_number            String?                     @db.VarChar(50)
+  is_active                 Boolean                     @default(true)
+  notes                     String?
+  created_at                DateTime                    @default(now()) @db.Timestamptz(6)
+  updated_at                DateTime                    @default(now()) @db.Timestamptz(6)
+  stores                    stores                      @relation(fields: [store_id], references: [id], onUpdate: NoAction)
+  cash_book_entries         cash_book_entries[]
+  cash_book_method_accounts cash_book_method_accounts[]
+  qr_provider_settings      qr_provider_settings[]
+  sales_return_refunds      sales_return_refunds[]
+
+  @@index([store_id], map: "idx_cash_book_accounts_store")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model cash_book_categories {
+  id                String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  code              String              @db.VarChar(50)
+  name              String              @db.VarChar(100)
+  direction         String              @db.VarChar(3)
+  is_system         Boolean             @default(false)
+  is_active         Boolean             @default(true)
+  created_at        DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at        DateTime            @default(now()) @db.Timestamptz(6)
+  cash_book_entries cash_book_entries[]
+
+  @@unique([code, direction])
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model cash_book_entries {
+  id                                                          String               @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  entry_number                                                String               @unique @db.VarChar(30)
+  account_id                                                  String               @db.Uuid
+  store_id                                                    String               @db.Uuid
+  direction                                                   String               @db.VarChar(3)
+  amount                                                      Decimal              @db.Decimal(14, 2)
+  entry_date                                                  DateTime             @default(now()) @db.Timestamptz(6)
+  category_id                                                 String               @db.Uuid
+  counterparty_type                                           String?              @db.VarChar(10)
+  counterparty_id                                             String?              @db.Uuid
+  counterparty_name                                           String?              @db.VarChar(200)
+  source_type                                                 String?              @db.VarChar(40)
+  source_id                                                   String?              @db.Uuid
+  pos_session_id                                              String?              @db.Uuid
+  transfer_group_id                                           String?              @db.Uuid
+  reverses_entry_id                                           String?              @db.Uuid
+  is_automatic                                                Boolean              @default(false)
+  is_opening                                                  Boolean              @default(false)
+  status                                                      String               @default("posted") @db.VarChar(10)
+  cancelled_at                                                DateTime?            @db.Timestamptz(6)
+  cancelled_by                                                String?              @db.Uuid
+  cancel_reason                                               String?
+  note                                                        String?
+  created_by                                                  String?              @db.Uuid
+  created_at                                                  DateTime             @default(now()) @db.Timestamptz(6)
+  cash_book_accounts                                          cash_book_accounts   @relation(fields: [account_id], references: [id], onUpdate: NoAction)
+  user_profiles_cash_book_entries_cancelled_byTouser_profiles user_profiles?       @relation("cash_book_entries_cancelled_byTouser_profiles", fields: [cancelled_by], references: [id], onUpdate: NoAction)
+  cash_book_categories                                        cash_book_categories @relation(fields: [category_id], references: [id], onUpdate: NoAction)
+  user_profiles_cash_book_entries_created_byTouser_profiles   user_profiles?       @relation("cash_book_entries_created_byTouser_profiles", fields: [created_by], references: [id], onUpdate: NoAction)
+  pos_sessions                                                pos_sessions?        @relation(fields: [pos_session_id], references: [id], onUpdate: NoAction)
+  cash_book_entries                                           cash_book_entries?   @relation("cash_book_entriesTocash_book_entries", fields: [reverses_entry_id], references: [id], onDelete: Restrict, onUpdate: NoAction)
+  other_cash_book_entries                                     cash_book_entries[]  @relation("cash_book_entriesTocash_book_entries")
+  stores                                                      stores               @relation(fields: [store_id], references: [id], onUpdate: NoAction)
+
+  @@index([account_id, entry_date], map: "idx_cash_book_entries_account_date")
+  @@index([pos_session_id], map: "idx_cash_book_entries_session")
+  @@index([source_type, source_id], map: "idx_cash_book_entries_source")
+  @@index([store_id, entry_date], map: "idx_cash_book_entries_store_date")
+  @@index([transfer_group_id], map: "idx_cash_book_entries_transfer")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model cash_book_method_accounts {
+  store_id           String             @db.Uuid
+  payment_method     String             @db.VarChar(30)
+  account_id         String             @db.Uuid
+  updated_at         DateTime           @default(now()) @db.Timestamptz(6)
+  cash_book_accounts cash_book_accounts @relation(fields: [account_id], references: [id], onUpdate: NoAction)
+  stores             stores             @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([store_id, payment_method])
+  @@schema("public")
+}
+
+model customer_group_members {
+  customer_id     String          @db.Uuid
+  group_id        String          @db.Uuid
+  created_at      DateTime        @default(now()) @db.Timestamptz(6)
+  customers       customers       @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  customer_groups customer_groups @relation(fields: [group_id], references: [id], onUpdate: NoAction)
+
+  @@id([customer_id, group_id])
+  @@index([group_id], map: "idx_customer_group_members_group")
+  @@schema("public")
+}
+
+model customer_groups {
+  id                         String                       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  code                       String                       @unique @db.VarChar(30)
+  name                       String                       @db.VarChar(100)
+  description                String?
+  is_active                  Boolean                      @default(true)
+  created_by                 String?                      @db.Uuid
+  created_at                 DateTime                     @default(now()) @db.Timestamptz(6)
+  updated_at                 DateTime                     @default(now()) @db.Timestamptz(6)
+  customer_group_members     customer_group_members[]
+  user_profiles              user_profiles?               @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  price_book_customer_groups price_book_customer_groups[]
+  promotion_customer_groups  promotion_customer_groups[]
+
+  @@schema("public")
+}
+
+model price_book_customer_groups {
+  price_book_id   String          @db.Uuid
+  group_id        String          @db.Uuid
+  customer_groups customer_groups @relation(fields: [group_id], references: [id], onUpdate: NoAction)
+  price_books     price_books     @relation(fields: [price_book_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([price_book_id, group_id])
+  @@index([group_id], map: "idx_price_book_customer_groups_group")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model price_book_entries {
+  id                 String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  price_book_id      String            @db.Uuid
+  product_id         String            @db.Uuid
+  product_variant_id String?           @db.Uuid
+  mode               String            @db.VarChar(20)
+  value              Decimal           @db.Decimal(12, 2)
+  created_at         DateTime          @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime          @default(now()) @db.Timestamptz(6)
+  price_books        price_books       @relation(fields: [price_book_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  products           products          @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  product_variants   product_variants? @relation(fields: [product_variant_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([product_id], map: "idx_price_book_entries_product")
+  @@index([product_variant_id], map: "idx_price_book_entries_variant")
+  @@schema("public")
+}
+
+model price_book_stores {
+  price_book_id String      @db.Uuid
+  store_id      String      @db.Uuid
+  price_books   price_books @relation(fields: [price_book_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  stores        stores      @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([price_book_id, store_id])
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model price_books {
+  id                                                  String                       @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  code                                                String                       @unique @db.VarChar(30)
+  name                                                String                       @db.VarChar(150)
+  priority                                            Int                          @default(0)
+  is_active                                           Boolean                      @default(true)
+  start_at                                            DateTime?                    @db.Timestamptz(6)
+  end_at                                              DateTime?                    @db.Timestamptz(6)
+  all_stores                                          Boolean                      @default(true)
+  all_customers                                       Boolean                      @default(true)
+  allow_manual                                        Boolean                      @default(false)
+  notes                                               String?
+  created_by                                          String?                      @db.Uuid
+  updated_by                                          String?                      @db.Uuid
+  created_at                                          DateTime                     @default(now()) @db.Timestamptz(6)
+  updated_at                                          DateTime                     @default(now()) @db.Timestamptz(6)
+  price_book_customer_groups                          price_book_customer_groups[]
+  price_book_entries                                  price_book_entries[]
+  price_book_stores                                   price_book_stores[]
+  user_profiles_price_books_created_byTouser_profiles user_profiles?               @relation("price_books_created_byTouser_profiles", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_profiles_price_books_updated_byTouser_profiles user_profiles?               @relation("price_books_updated_byTouser_profiles", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sales_order_items                                   sales_order_items[]
+  sales_orders                                        sales_orders[]
+
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model customer_credit_transactions {
+  id            String         @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  customer_id   String         @db.Uuid
+  amount        Decimal        @db.Decimal(14, 2)
+  balance_after Decimal        @db.Decimal(14, 2)
+  source_type   String         @db.VarChar(30)
+  source_id     String?        @db.Uuid
+  note          String?
+  created_by    String?        @db.Uuid
+  created_at    DateTime       @default(now()) @db.Timestamptz(6)
+  user_profiles user_profiles? @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customers     customers      @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([customer_id, created_at], map: "idx_customer_credit_tx_customer")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model sales_return_items {
+  id                  String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sales_return_id     String            @db.Uuid
+  sales_order_item_id String            @db.Uuid
+  product_id          String?           @db.Uuid
+  product_variant_id  String?           @db.Uuid
+  product_name        String            @db.VarChar(255)
+  product_sku         String?           @db.VarChar(100)
+  quantity            Int
+  unit_refund         Decimal           @db.Decimal(14, 2)
+  line_refund         Decimal           @db.Decimal(14, 2)
+  unit_cost           Decimal?          @db.Decimal(14, 2)
+  restock             Boolean           @default(true)
+  location_id         String?           @db.Uuid
+  reason_code         String            @default("other") @db.VarChar(20)
+  reason_note         String?
+  stock_locations     stock_locations?  @relation(fields: [location_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  products            products?         @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product_variants    product_variants? @relation(fields: [product_variant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sales_order_items   sales_order_items @relation(fields: [sales_order_item_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sales_returns       sales_returns     @relation(fields: [sales_return_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([sales_order_item_id], map: "idx_sales_return_items_order_item")
+  @@index([sales_return_id], map: "idx_sales_return_items_return")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model sales_return_refunds {
+  id                 String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sales_return_id    String              @db.Uuid
+  method             String              @db.VarChar(30)
+  amount             Decimal             @db.Decimal(14, 2)
+  cash_account_id    String?             @db.Uuid
+  cash_book_accounts cash_book_accounts? @relation(fields: [cash_account_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sales_returns      sales_returns       @relation(fields: [sales_return_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([sales_return_id], map: "idx_sales_return_refunds_return")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model sales_returns {
+  id                                                         String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  return_number                                              String                 @unique @db.VarChar(30)
+  sales_order_id                                             String                 @db.Uuid
+  store_id                                                   String?                @db.Uuid
+  customer_id                                                String?                @db.Uuid
+  pos_session_id                                             String?                @db.Uuid
+  kind                                                       String                 @default("return") @db.VarChar(10)
+  exchange_order_id                                          String?                @db.Uuid
+  goods_amount                                               Decimal                @db.Decimal(14, 2)
+  receivable_reduction                                       Decimal                @default(0) @db.Decimal(14, 2)
+  refund_amount                                              Decimal                @default(0) @db.Decimal(14, 2)
+  points_reversed                                            Int                    @default(0)
+  points_restored                                            Int                    @default(0)
+  reason                                                     String?
+  notes                                                      String?
+  approved_by                                                String?                @db.Uuid
+  created_by                                                 String?                @db.Uuid
+  created_at                                                 DateTime               @default(now()) @db.Timestamptz(6)
+  sales_return_items                                         sales_return_items[]
+  sales_return_refunds                                       sales_return_refunds[]
+  user_profiles_sales_returns_approved_byTouser_profiles     user_profiles?         @relation("sales_returns_approved_byTouser_profiles", fields: [approved_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_profiles_sales_returns_created_byTouser_profiles      user_profiles?         @relation("sales_returns_created_byTouser_profiles", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customers                                                  customers?             @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sales_orders_sales_returns_exchange_order_idTosales_orders sales_orders?          @relation("sales_returns_exchange_order_idTosales_orders", fields: [exchange_order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pos_sessions                                               pos_sessions?          @relation(fields: [pos_session_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sales_orders_sales_returns_sales_order_idTosales_orders    sales_orders           @relation("sales_returns_sales_order_idTosales_orders", fields: [sales_order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  stores                                                     stores?                @relation(fields: [store_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([customer_id], map: "idx_sales_returns_customer")
+  @@index([sales_order_id], map: "idx_sales_returns_order")
+  @@index([store_id, created_at], map: "idx_sales_returns_store_date")
+  @@index([created_at], map: "idx_sales_returns_created")
+  @@schema("public")
+}
+
+model promotion_customer_groups {
+  promotion_id    String          @db.Uuid
+  group_id        String          @db.Uuid
+  customer_groups customer_groups @relation(fields: [group_id], references: [id], onUpdate: NoAction)
+  promotions      promotions      @relation(fields: [promotion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([promotion_id, group_id])
+  @@schema("public")
+}
+
+model promotion_stores {
+  promotion_id String     @db.Uuid
+  store_id     String     @db.Uuid
+  promotions   promotions @relation(fields: [promotion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  stores       stores     @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([promotion_id, store_id])
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model promotion_targets {
+  id           String     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  promotion_id String     @db.Uuid
+  role         String     @default("target") @db.VarChar(10)
+  target_type  String     @db.VarChar(10)
+  target_id    String     @db.Uuid
+  quantity     Int        @default(1)
+  promotions   promotions @relation(fields: [promotion_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([promotion_id], map: "idx_promotion_targets_promotion")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model promotions {
+  id                                                 String                      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  code                                               String                      @unique @db.VarChar(30)
+  name                                               String                      @db.VarChar(150)
+  type                                               String                      @db.VarChar(20)
+  is_active                                          Boolean                     @default(true)
+  priority                                           Int                         @default(0)
+  start_at                                           DateTime?                   @db.Timestamptz(6)
+  end_at                                             DateTime?                   @db.Timestamptz(6)
+  days_of_week                                       Int[]                       @db.SmallInt
+  time_from                                          DateTime?                   @db.Time(6)
+  time_to                                            DateTime?                   @db.Time(6)
+  all_stores                                         Boolean                     @default(true)
+  all_customers                                      Boolean                     @default(true)
+  channels                                           String[]
+  combinable                                         Boolean                     @default(true)
+  discount_kind                                      String?                     @db.VarChar(20)
+  discount_value                                     Decimal?                    @db.Decimal(14, 2)
+  max_discount                                       Decimal?                    @db.Decimal(14, 2)
+  min_order_amount                                   Decimal?                    @db.Decimal(14, 2)
+  buy_quantity                                       Int?
+  get_quantity                                       Int?
+  get_discount_percent                               Decimal?                    @db.Decimal(5, 2)
+  bundle_price                                       Decimal?                    @db.Decimal(14, 2)
+  notes                                              String?
+  created_by                                         String?                     @db.Uuid
+  updated_by                                         String?                     @db.Uuid
+  created_at                                         DateTime                    @default(now()) @db.Timestamptz(6)
+  updated_at                                         DateTime                    @default(now()) @db.Timestamptz(6)
+  promotion_customer_groups                          promotion_customer_groups[]
+  promotion_stores                                   promotion_stores[]
+  promotion_targets                                  promotion_targets[]
+  user_profiles_promotions_created_byTouser_profiles user_profiles?              @relation("promotions_created_byTouser_profiles", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_profiles_promotions_updated_byTouser_profiles user_profiles?              @relation("promotions_updated_byTouser_profiles", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sales_order_discounts                              sales_order_discounts[]
+
+  @@index([is_active, start_at, end_at], map: "idx_promotions_active")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model sales_order_discounts {
+  id                  String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  sales_order_id      String             @db.Uuid
+  sales_order_item_id String?            @db.Uuid
+  source_type         String             @db.VarChar(10)
+  promotion_id        String?            @db.Uuid
+  voucher_id          String?            @db.Uuid
+  amount              Decimal            @db.Decimal(14, 2)
+  description         String?            @db.VarChar(255)
+  created_at          DateTime           @default(now()) @db.Timestamptz(6)
+  promotions          promotions?        @relation(fields: [promotion_id], references: [id], onUpdate: NoAction)
+  sales_orders        sales_orders       @relation(fields: [sales_order_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  sales_order_items   sales_order_items? @relation(fields: [sales_order_item_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  vouchers            vouchers?          @relation(fields: [voucher_id], references: [id], onUpdate: NoAction)
+
+  @@index([sales_order_id], map: "idx_sales_order_discounts_order")
+  @@index([promotion_id], map: "idx_sales_order_discounts_promotion")
+  @@index([voucher_id], map: "idx_sales_order_discounts_voucher")
+  @@schema("public")
+}
+
+model voucher_campaign_stores {
+  campaign_id       String            @db.Uuid
+  store_id          String            @db.Uuid
+  voucher_campaigns voucher_campaigns @relation(fields: [campaign_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  stores            stores            @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@id([campaign_id, store_id])
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model voucher_campaigns {
+  id                                                        String                    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  code                                                      String                    @unique @db.VarChar(30)
+  name                                                      String                    @db.VarChar(150)
+  discount_kind                                             String                    @db.VarChar(10)
+  discount_value                                            Decimal                   @db.Decimal(14, 2)
+  max_discount                                              Decimal?                  @db.Decimal(14, 2)
+  min_order_amount                                          Decimal?                  @db.Decimal(14, 2)
+  start_at                                                  DateTime?                 @db.Timestamptz(6)
+  end_at                                                    DateTime?                 @db.Timestamptz(6)
+  all_stores                                                Boolean                   @default(true)
+  channels                                                  String[]
+  uses_per_code                                             Int                       @default(1)
+  uses_per_customer                                         Int?
+  combinable_with_promotions                                Boolean                   @default(true)
+  is_active                                                 Boolean                   @default(true)
+  notes                                                     String?
+  created_by                                                String?                   @db.Uuid
+  updated_by                                                String?                   @db.Uuid
+  created_at                                                DateTime                  @default(now()) @db.Timestamptz(6)
+  updated_at                                                DateTime                  @default(now()) @db.Timestamptz(6)
+  voucher_campaign_stores                                   voucher_campaign_stores[]
+  user_profiles_voucher_campaigns_created_byTouser_profiles user_profiles?            @relation("voucher_campaigns_created_byTouser_profiles", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_profiles_voucher_campaigns_updated_byTouser_profiles user_profiles?            @relation("voucher_campaigns_updated_byTouser_profiles", fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  voucher_redemptions                                       voucher_redemptions[]
+  vouchers                                                  vouchers[]
+
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model voucher_redemptions {
+  id                String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  voucher_id        String            @db.Uuid
+  campaign_id       String            @db.Uuid
+  sales_order_id    String            @db.Uuid
+  customer_id       String?           @db.Uuid
+  amount            Decimal           @db.Decimal(14, 2)
+  status            String            @default("applied") @db.VarChar(10)
+  released_at       DateTime?         @db.Timestamptz(6)
+  created_at        DateTime          @default(now()) @db.Timestamptz(6)
+  voucher_campaigns voucher_campaigns @relation(fields: [campaign_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customers         customers?        @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sales_orders      sales_orders      @relation(fields: [sales_order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  vouchers          vouchers          @relation(fields: [voucher_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([voucher_id, sales_order_id], map: "uq_voucher_redemptions_order")
+  @@index([campaign_id, customer_id, status], map: "idx_voucher_redemptions_customer")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model vouchers {
+  id                    String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  campaign_id           String                  @db.Uuid
+  code                  String                  @unique @db.VarChar(40)
+  is_active             Boolean                 @default(true)
+  used_count            Int                     @default(0)
+  created_at            DateTime                @default(now()) @db.Timestamptz(6)
+  sales_order_discounts sales_order_discounts[]
+  voucher_redemptions   voucher_redemptions[]
+  voucher_campaigns     voucher_campaigns       @relation(fields: [campaign_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([campaign_id], map: "idx_vouchers_campaign")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model product_units {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  product_id String   @db.Uuid
+  name       String   @db.VarChar(30)
+  factor     Int
+  barcode    String?  @db.VarChar(64)
+  price      Decimal? @db.Decimal(12, 2)
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz(6)
+  products   products @relation(fields: [product_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([product_id, name], map: "uq_product_units_name")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model stock_count_items {
+  id                 String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  stock_count_id     String            @db.Uuid
+  product_id         String?           @db.Uuid
+  product_variant_id String?           @db.Uuid
+  system_quantity    Int
+  counted_quantity   Int?
+  system_at_count    Int?
+  counted_at         DateTime?         @db.Timestamptz(6)
+  counted_by         String?           @db.Uuid
+  unit_cost          Decimal?          @db.Decimal(12, 2)
+  adjustment         Int?
+  user_profiles      user_profiles?    @relation(fields: [counted_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  products           products?         @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product_variants   product_variants? @relation(fields: [product_variant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  stock_counts       stock_counts      @relation(fields: [stock_count_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model stock_counts {
+  id                                                     String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  count_number                                           String              @unique @db.VarChar(30)
+  location_id                                            String              @db.Uuid
+  status                                                 String              @default("counting") @db.VarChar(12)
+  scope                                                  Json                @default("{}")
+  note                                                   String?
+  created_by                                             String?             @db.Uuid
+  created_at                                             DateTime            @default(now()) @db.Timestamptz(6)
+  completed_by                                           String?             @db.Uuid
+  completed_at                                           DateTime?           @db.Timestamptz(6)
+  stock_count_items                                      stock_count_items[]
+  user_profiles_stock_counts_completed_byTouser_profiles user_profiles?      @relation("stock_counts_completed_byTouser_profiles", fields: [completed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_profiles_stock_counts_created_byTouser_profiles   user_profiles?      @relation("stock_counts_created_byTouser_profiles", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  stock_locations                                        stock_locations     @relation(fields: [location_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model stock_write_off_items {
+  id                 String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  write_off_id       String            @db.Uuid
+  product_id         String?           @db.Uuid
+  product_variant_id String?           @db.Uuid
+  quantity           Int
+  unit_cost          Decimal?          @db.Decimal(12, 2)
+  products           products?         @relation(fields: [product_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  product_variants   product_variants? @relation(fields: [product_variant_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  stock_write_offs   stock_write_offs  @relation(fields: [write_off_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model stock_write_offs {
+  id                    String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  write_off_number      String                  @unique @db.VarChar(30)
+  location_id           String                  @db.Uuid
+  reason                String                  @db.VarChar(20)
+  note                  String?
+  total_cost            Decimal                 @default(0) @db.Decimal(14, 2)
+  created_by            String?                 @db.Uuid
+  created_at            DateTime                @default(now()) @db.Timestamptz(6)
+  stock_write_off_items stock_write_off_items[]
+  user_profiles         user_profiles?          @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  stock_locations       stock_locations         @relation(fields: [location_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@index([location_id, created_at], map: "idx_stock_write_offs_location_date")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model qr_payment_events {
+  id                  String               @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  request_id          String?              @db.Uuid
+  provider            String               @db.VarChar(10)
+  kind                String               @db.VarChar(20)
+  signature_ok        Boolean?
+  payload             Json                 @default("{}")
+  created_by          String?              @db.Uuid
+  created_at          DateTime             @default(now()) @db.Timestamptz(6)
+  user_profiles       user_profiles?       @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  qr_payment_requests qr_payment_requests? @relation(fields: [request_id], references: [id], onUpdate: NoAction)
+
+  @@index([request_id, created_at], map: "idx_qr_payment_events_request")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model qr_payment_requests {
+  id                                                                                    String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  code                                                                                  String                 @unique @db.VarChar(20)
+  store_id                                                                              String                 @db.Uuid
+  pos_session_id                                                                        String?                @db.Uuid
+  provider                                                                              String                 @db.VarChar(10)
+  method                                                                                String                 @db.VarChar(20)
+  amount                                                                                Decimal                @db.Decimal(14, 2)
+  status                                                                                String                 @default("pending") @db.VarChar(10)
+  qr_content                                                                            String?
+  pay_url                                                                               String?
+  provider_ref                                                                          String?                @db.VarChar(100)
+  client_request_id                                                                     String?                @db.Uuid
+  sales_order_id                                                                        String?                @db.Uuid
+  sales_order_payment_id                                                                String?                @db.Uuid
+  expires_at                                                                            DateTime               @db.Timestamptz(6)
+  paid_at                                                                               DateTime?              @db.Timestamptz(6)
+  confirmed_by                                                                          String?                @db.Uuid
+  failure_reason                                                                        String?
+  created_by                                                                            String?                @db.Uuid
+  created_at                                                                            DateTime               @default(now()) @db.Timestamptz(6)
+  updated_at                                                                            DateTime               @default(now()) @db.Timestamptz(6)
+  qr_payment_events                                                                     qr_payment_events[]
+  user_profiles_qr_payment_requests_confirmed_byTouser_profiles                         user_profiles?         @relation("qr_payment_requests_confirmed_byTouser_profiles", fields: [confirmed_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  user_profiles_qr_payment_requests_created_byTouser_profiles                           user_profiles?         @relation("qr_payment_requests_created_byTouser_profiles", fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  pos_sessions                                                                          pos_sessions?          @relation(fields: [pos_session_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sales_orders                                                                          sales_orders?          @relation(fields: [sales_order_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sales_order_payments_qr_payment_requests_sales_order_payment_idTosales_order_payments sales_order_payments?  @relation("qr_payment_requests_sales_order_payment_idTosales_order_payments", fields: [sales_order_payment_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  stores                                                                                stores                 @relation(fields: [store_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  sales_order_payments_sales_order_payments_qr_payment_request_idToqr_payment_requests  sales_order_payments[] @relation("sales_order_payments_qr_payment_request_idToqr_payment_requests")
+
+  @@index([store_id, status, created_at], map: "idx_qr_payment_requests_store_status")
+  @@schema("public")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model qr_provider_settings {
+  id                 String              @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  store_id           String              @db.Uuid
+  provider           String              @db.VarChar(10)
+  is_enabled         Boolean             @default(false)
+  config             Json                @default("{}")
+  secrets            String?
+  cash_account_id    String?             @db.Uuid
+  updated_by         String?             @db.Uuid
+  created_at         DateTime            @default(now()) @db.Timestamptz(6)
+  updated_at         DateTime            @default(now()) @db.Timestamptz(6)
+  cash_book_accounts cash_book_accounts? @relation(fields: [cash_account_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  stores             stores              @relation(fields: [store_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user_profiles      user_profiles?      @relation(fields: [updated_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([store_id, provider], map: "uq_qr_provider_settings")
+  @@schema("public")
+}
+
 enum owner_type {
   individual
   company
@@ -1578,6 +2327,7 @@ enum user_role {
   store_manager
   sales_associate
   warehouse_staff
+  superadmin
 
   @@schema("public")
 }
@@ -1589,6 +2339,7 @@ enum image_entity_type {
   part
   comment
   service_item
+  cash_book_entry
 
   @@schema("public")
 }

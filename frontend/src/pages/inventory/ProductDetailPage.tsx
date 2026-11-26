@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
+import { ProductCodesCard } from '@/components/stock/ProductCodesCard';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { ArrowLeft, Edit, Package, DollarSign, Info, Tag, Link2, Layers } from 'lucide-react';
 import { productsApi } from '@/lib/api/products';
@@ -128,6 +129,8 @@ export function ProductDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          <ProductCodesCard productId={product.id} name={product.name} sku={product.sku} price={Number(product.retail_price)} barcode={product.barcode} />
 
           {/* Product Attributes */}
           {product.attributes && Object.keys(product.attributes).length > 0 && (

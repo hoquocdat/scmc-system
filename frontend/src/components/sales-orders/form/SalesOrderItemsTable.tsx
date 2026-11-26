@@ -1,3 +1,6 @@
+import { LineUnitSelect } from '@/components/stock/LineUnitSelect';
+import type { ProductUnit } from '@/lib/api/stock-operations';
+import { Badge } from '@/components/ui/badge';
 import { Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,20 +24,24 @@ export interface SalesOrderItem {
   quantity: number;
   unit_price: number;
   notes?: string;
+  /** Price book that priced the line (server quote); null = base price. */
+  price_book_name?: string | null;
+  /** Selling unit (product_units); absent = base unit. */
+  unit_id?: string | null;
 }
 
 interface SalesOrderItemsTableProps {
   items: SalesOrderItem[];
   onRemoveItem: (tempId: string) => void;
   onUpdateQuantity: (tempId: string, quantity: number) => void;
-  onUpdateUnitPrice: (tempId: string, price: number) => void;
+  onUnit?: (tempId: string, unit: ProductUnit | null) => void;
 }
 
 export function SalesOrderItemsTable({
   items,
   onRemoveItem,
   onUpdateQuantity,
-  onUpdateUnitPrice,
+  onUnit,
 }: SalesOrderItemsTableProps) {
   return (
     <Card className="p-6">
@@ -72,6 +79,9 @@ export function SalesOrderItemsTable({
                           {item.variant_name}
                         </div>
                       )}
+                      {onUnit && !item.product_variant_id && (
+                        <div className="mt-1"><LineUnitSelect productId={item.product_id} value={item.unit_id} onChange={(u) => onUnit(item.tempId, u)} /></div>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
@@ -86,15 +96,10 @@ export function SalesOrderItemsTable({
                     />
                   </TableCell>
                   <TableCell className="text-right">
-                    <Input
-                      type="number"
-                      value={item.unit_price}
-                      onChange={(e) =>
-                        onUpdateUnitPrice(item.tempId, parseFloat(e.target.value) || 0)
-                      }
-                      className="w-28 text-right"
-                      min="0"
-                    />
+                    <div className="tabular-nums">{item.unit_price.toLocaleString('vi-VN')}</div>
+                    {item.price_book_name && (
+                      <Badge variant="secondary" className="mt-1 px-1.5 text-[11px]">{item.price_book_name}</Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-right font-medium">
                     {total.toLocaleString('vi-VN')}

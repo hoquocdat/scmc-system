@@ -1,6 +1,7 @@
 import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY, UserRole } from '../decorators/roles.decorator';
+import { roleMatches } from '../../auth/role-match';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -22,6 +23,6 @@ export class RolesGuard implements CanActivate {
       return false;
     }
 
-    return requiredRoles.some((role) => user.role === role);
+    return roleMatches(user.role, requiredRoles);
   }
 }

@@ -37,11 +37,13 @@ export class CustomersController {
   @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page number (default: 1)' })
   @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (default: 10)' })
   @ApiResponse({ status: 200, description: 'Returns paginated list of customers' })
+  @ApiQuery({ name: 'groupId', required: false, description: 'Only customers in this customer group' })
   async findAll(
     @Query('page') page?: number,
     @Query('limit') limit?: number,
+    @Query('groupId') groupId?: string,
   ) {
-    return this.customersService.findAll(page || 1, limit || 10);
+    return this.customersService.findAll(page || 1, limit || 10, groupId || undefined);
   }
 
   @Get('check-phone/:phone')

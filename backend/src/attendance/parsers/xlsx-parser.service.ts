@@ -1,5 +1,5 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import * as XLSX from 'xlsx';
+import * as ExcelJS from 'exceljs';
 
 export interface ParsedAttendanceRow {
   rowNumber: number;
@@ -45,6 +45,11 @@ export interface ParseResult {
   }>;
 }
 
+/** Legacy binary Excel (.xls) files start with the OLE compound-document signature. */
+const OLE_SIGNATURE = Buffer.from([
+  0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1,
+]);
+
 @Injectable()
 export class XlsxParserService {
   // Attendance marks mapping
@@ -57,22 +62,18 @@ export class XlsxParserService {
     '-': 'no_data', // No data
   };
 
-  parseAttendanceFile(fileBuffer: Buffer): ParseResult {
-    try {
-      const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-      const sheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[sheetName];
+  async parseAttendanceFile(fileBuffer: Buffer): Promise<ParseResult> {
+    if (fileBuffer.subarray(0, 8).equals(OLE_SIGNATURE)) {
+      throw new BadRequestException(
+        'Định dạng .xls (Excel 97-2003) không được hỗ trợ. Vui lòng lưu file dưới dạng .xlsx và thử lại.',
+      );
+    }
 
-      // Convert to JSON with headers
-      const rawData = XLSX.utils.sheet_to_json(worksheet, {
-        header: 1,
-        defval: '',
-      }) as unknown[][];
+    try {
+      const rawData = await this.readFirstSheet(fileBuffer);
 
       if (rawData.length < 4) {
-        throw new BadRequestException(
-          'File does not contain enough data rows',
-        );
+        throw new BadRequestException('File does not contain enough data rows');
       }
 
       // Parse header info (row 0)
@@ -126,7 +127,10 @@ export class XlsxParserService {
         } catch (error) {
           errors.push({
             row: i + 1,
-            message: error.message || 'Failed to parse row',
+            message:
+              error instanceof Error && error.message
+                ? error.message
+                : 'Failed to parse row',
           });
         }
       }
@@ -153,9 +157,52 @@ export class XlsxParserService {
         throw error;
       }
       throw new BadRequestException(
-        `Failed to parse Excel file: ${error.message}`,
+        `Failed to parse Excel file: ${error instanceof Error ? error.message : String(error)}`,
       );
     }
+  }
+
+  /**
+   * Reads the first worksheet into a dense array of rows (0-based), with
+   * every cell reduced to a plain string/number, like the previous
+   * sheet_to_json(header: 1, defval: '') output.
+   */
+  private async readFirstSheet(fileBuffer: Buffer): Promise<unknown[][]> {
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(fileBuffer as unknown as ExcelJS.Buffer);
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) {
+      throw new BadRequestException('Workbook has no worksheets');
+    }
+
+    const rows: unknown[][] = [];
+    const lastRow = worksheet.actualRowCount || worksheet.rowCount;
+    const lastCol = worksheet.actualColumnCount || worksheet.columnCount;
+    for (let r = 1; r <= lastRow; r++) {
+      const row = worksheet.getRow(r);
+      const values: unknown[] = [];
+      for (let c = 1; c <= lastCol; c++) {
+        values.push(this.cellToPlain(row.getCell(c).value));
+      }
+      rows.push(values);
+    }
+    return rows;
+  }
+
+  private cellToPlain(value: ExcelJS.CellValue): unknown {
+    if (value === null || value === undefined) return '';
+    if (value instanceof Date) return value.toISOString();
+    if (typeof value === 'object') {
+      const v = value as unknown as Record<string, unknown>;
+      if (Array.isArray(v.richText)) {
+        return (v.richText as { text: string }[]).map((t) => t.text).join('');
+      }
+      if ('result' in v) return this.cellToPlain(v.result as ExcelJS.CellValue);
+      if ('text' in v) return typeof v.text === 'string' ? v.text : '';
+      if ('error' in v) return '';
+      return JSON.stringify(value);
+    }
+    return value;
   }
 
   private parsePeriodInfo(headerRow: string[]): ParseResult['periodInfo'] {
@@ -232,7 +279,9 @@ export class XlsxParserService {
     const fixedColumnsEnd = 6;
 
     for (const [colIndex, dateInfo] of headerMap.entries()) {
-      const mark = String(row[colIndex] || '').trim().toUpperCase();
+      const mark = String(row[colIndex] || '')
+        .trim()
+        .toUpperCase();
       if (mark && mark !== '-') {
         dailyAttendance.set(dateInfo.date, mark);
       }

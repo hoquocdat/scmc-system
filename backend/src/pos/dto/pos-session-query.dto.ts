@@ -1,4 +1,12 @@
-import { IsOptional, IsString, IsUUID, IsEnum, IsNumber, Min, IsDateString } from 'class-validator';
+import {
+  IsOptional,
+  IsString,
+  IsUUID,
+  IsEnum,
+  IsNumber,
+  Min,
+  IsDateString,
+} from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
@@ -18,7 +26,15 @@ export class PosSessionQueryDto {
   @IsOptional()
   user_id?: string;
 
-  @ApiPropertyOptional({ description: 'Filter by status', enum: PosSessionStatus })
+  @ApiPropertyOptional({ description: 'Filter by branch (store) ID' })
+  @IsUUID()
+  @IsOptional()
+  store_id?: string;
+
+  @ApiPropertyOptional({
+    description: 'Filter by status',
+    enum: PosSessionStatus,
+  })
   @IsEnum(PosSessionStatus)
   @IsOptional()
   status?: PosSessionStatus;
@@ -40,7 +56,11 @@ export class PosSessionQueryDto {
   @Min(1)
   page?: number = 1;
 
-  @ApiPropertyOptional({ description: 'Items per page', default: 20, minimum: 1 })
+  @ApiPropertyOptional({
+    description: 'Items per page',
+    default: 20,
+    minimum: 1,
+  })
   @IsNumber()
   @IsOptional()
   @Type(() => Number)
@@ -52,7 +72,11 @@ export class PosSessionQueryDto {
   @IsOptional()
   sort_by?: string = 'opened_at';
 
-  @ApiPropertyOptional({ description: 'Sort order', enum: ['asc', 'desc'], default: 'desc' })
+  @ApiPropertyOptional({
+    description: 'Sort order',
+    enum: ['asc', 'desc'],
+    default: 'desc',
+  })
   @IsEnum(['asc', 'desc'])
   @IsOptional()
   sort_order?: 'asc' | 'desc' = 'desc';

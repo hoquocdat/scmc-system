@@ -1,11 +1,19 @@
-import { Injectable, NotFoundException, ConflictException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { CashBookAccountsService } from '../cash-book/cash-book-accounts.service';
 import { CreateStoreDto } from './dto/create-store.dto';
 import { UpdateStoreDto } from './dto/update-store.dto';
 
 @Injectable()
 export class StoresService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cashAccounts: CashBookAccountsService,
+  ) {}
 
   async findAll() {
     return this.prisma.stores.findMany({
@@ -61,27 +69,32 @@ export class StoresService {
       });
     }
 
-    return this.prisma.stores.create({
-      data: {
-        name: dto.name,
-        code: dto.code,
-        address: dto.address,
-        city: dto.city,
-        phone: dto.phone,
-        email: dto.email,
-        is_active: dto.is_active ?? true,
-        is_default: dto.is_default ?? false,
-        default_warehouse_id: dto.default_warehouse_id,
-      },
-      include: {
-        stock_locations: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
+    return this.prisma.$transaction(async (tx) => {
+      const store = await tx.stores.create({
+        data: {
+          name: dto.name,
+          code: dto.code,
+          address: dto.address,
+          city: dto.city,
+          phone: dto.phone,
+          email: dto.email,
+          is_active: dto.is_active ?? true,
+          is_default: dto.is_default ?? false,
+          default_warehouse_id: dto.default_warehouse_id,
+        },
+        include: {
+          stock_locations: {
+            select: {
+              id: true,
+              name: true,
+              code: true,
+            },
           },
         },
-      },
+      });
+      // Every branch can take payments immediately: POS drawer + bank account, all methods mapped
+      await this.cashAccounts.createDefaultsFor(tx, store);
+      return store;
     });
   }
 
@@ -96,7 +109,9 @@ export class StoresService {
       });
 
       if (existingCode) {
-        throw new ConflictException(`Store with code ${dto.code} already exists`);
+        throw new ConflictException(
+          `Store with code ${dto.code} already exists`,
+        );
       }
     }
 

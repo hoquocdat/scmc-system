@@ -24,7 +24,25 @@ export enum Action {
   Transfer = 'transfer',
   Grant = 'grant',
   Revoke = 'revoke',
+  // POS-specific actions
+  Credit = 'credit',
+  Reprint = 'reprint',
+  Supervise = 'supervise',
+  // Cash book actions
+  Receive = 'receive',
+  Pay = 'pay',
+  Cancel = 'cancel',
+  Configure = 'configure',
   Export = 'export',
+  // Price books
+  Apply = 'apply',
+  // Inventory operations
+  WriteOff = 'write_off',
+  Count = 'count',
+  ApproveCount = 'approve_count',
+  Labels = 'labels',
+  // QR payments
+  Confirm = 'confirm',
   // Report-specific actions
   Sales = 'sales',
   Inventory = 'inventory',
@@ -53,6 +71,13 @@ export type Subjects =
   | 'permissions'
   | 'roles'
   | 'settings'
+  | 'cash_book'
+  | 'price_books'
+  | 'customer_groups'
+  | 'sales_returns'
+  | 'promotions'
+  | 'vouchers'
+  | 'qr_payments'
   | 'all'; // Special subject that represents "any subject"
 
 export type AppAbility = Ability<[Action, Subjects]>;
@@ -187,7 +212,20 @@ export class CaslAbilityFactory {
       transfer: Action.Transfer,
       grant: Action.Grant,
       revoke: Action.Revoke,
+      credit: Action.Credit,
+      reprint: Action.Reprint,
+      supervise: Action.Supervise,
+      receive: Action.Receive,
+      pay: Action.Pay,
+      cancel: Action.Cancel,
+      configure: Action.Configure,
       export: Action.Export,
+      apply: Action.Apply,
+      write_off: Action.WriteOff,
+      count: Action.Count,
+      approve_count: Action.ApproveCount,
+      labels: Action.Labels,
+      confirm: Action.Confirm,
       sales: Action.Sales,
       inventory: Action.Inventory,
       financial: Action.Financial,

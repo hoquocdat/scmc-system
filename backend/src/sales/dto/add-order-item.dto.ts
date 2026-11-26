@@ -22,10 +22,14 @@ export class AddOrderItemDto {
   @Min(1)
   quantity: number;
 
-  @ApiProperty({ description: 'Unit price at time of sale' })
+  @ApiPropertyOptional({
+    description:
+      'Ignored: the server prices the line from the base price and price books (kept for older clients)',
+  })
+  @IsOptional()
   @IsNumber()
   @Min(0)
-  unit_price: number;
+  unit_price?: number;
 
   @ApiPropertyOptional({ description: 'Discount amount per item' })
   @IsNumber()

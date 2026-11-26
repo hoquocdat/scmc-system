@@ -72,6 +72,11 @@ export class CreateSupplierPaymentDto {
   @MaxLength(100)
   reference_number?: string;
 
+  @ApiPropertyOptional({ description: 'Cash book account paid from; defaults to the default branch account mapped to the payment method' })
+  @IsUUID()
+  @IsOptional()
+  cash_account_id?: string;
+
   @ApiPropertyOptional({ description: 'Payment notes' })
   @IsString()
   @IsOptional()

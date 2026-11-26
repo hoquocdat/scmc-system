@@ -24,7 +24,13 @@ import { ProductsModule } from './products/products.module';
 import { InventoryModule } from './inventory/inventory.module';
 import { SalesModule } from './sales/sales.module';
 import { PosModule } from './pos/pos.module';
-// import { ReportsModule } from './reports/reports.module'; // TODO: Fix reports module - uses outdated table names
+import { ReportsModule } from './reports/reports.module';
+import { CashBookModule } from './cash-book/cash-book.module';
+import { PriceBooksModule } from './price-books/price-books.module';
+import { SalesReturnsModule } from './sales-returns/sales-returns.module';
+import { PromotionsModule } from './promotions/promotions.module';
+import { StockOperationsModule } from './stock-operations/stock-operations.module';
+import { QrPaymentsModule } from './qr-payments/qr-payments.module';
 import { ProductCategoriesModule } from './product-categories/product-categories.module';
 import { AttributeDefinitionsModule } from './attribute-definitions/attribute-definitions.module';
 import { PermissionsModule } from './permissions/permissions.module';
@@ -72,7 +78,13 @@ import { PayrollModule } from './payroll/payroll.module';
     InventoryModule,
     SalesModule,
     PosModule,
-    // ReportsModule, // TODO: Fix reports module - uses outdated table names
+    ReportsModule,
+    CashBookModule,
+    PriceBooksModule,
+    SalesReturnsModule,
+    PromotionsModule,
+    StockOperationsModule,
+    QrPaymentsModule,
     ProductCategoriesModule,
     AttributeDefinitionsModule,
     PermissionsModule,

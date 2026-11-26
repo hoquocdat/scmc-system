@@ -57,6 +57,17 @@ export class CreatePurchaseOrderItemDto {
   @IsString()
   @IsOptional()
   notes?: string;
+
+  @ApiPropertyOptional({ description: 'Purchase unit name (e.g. hộp); quantity and cost are per this unit' })
+  @IsString()
+  @IsOptional()
+  unit_name?: string;
+
+  @ApiPropertyOptional({ description: 'Base units per purchase unit (stock rises by quantity × factor)', minimum: 1 })
+  @IsNumber()
+  @IsOptional()
+  @Min(1)
+  unit_factor?: number;
 }
 
 export class CreatePurchaseOrderDto {

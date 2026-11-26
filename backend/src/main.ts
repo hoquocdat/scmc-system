@@ -4,7 +4,8 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  // rawBody: signature checks of provider callbacks need the exact bytes (ewallet-qr-payments D2)
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   // Enable CORS for all hosts
   app.enableCors({

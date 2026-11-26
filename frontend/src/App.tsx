@@ -14,7 +14,7 @@ import { ServiceBoardPage } from './pages/ServiceBoardPage';
 import { PartsPage } from './pages/PartsPage';
 import { SuppliersPage } from './pages/SuppliersPage';
 import { PaymentsPage } from './pages/PaymentsPage';
-import { ReportsPage } from './pages/ReportsPage';
+import { ReportsLayout } from './pages/reports/ReportsLayout';
 import { ProductsPage } from './pages/inventory/ProductsPage';
 import { ProductDetailPage } from './pages/inventory/ProductDetailPage';
 import { ProductFormPage } from './pages/inventory/ProductFormPage';
@@ -37,6 +37,22 @@ import { RolesPage } from './pages/settings/RolesPage';
 import { RoleDetailPage } from './pages/settings/RoleDetailPage';
 import { PermissionAuditPage } from './pages/settings/PermissionAuditPage';
 import { LoyaltySettingsPage } from './pages/settings/LoyaltySettingsPage';
+import { QrPaymentsSettingsPage } from './pages/settings/QrPaymentsSettingsPage';
+import { CashBookPage } from './pages/finance/CashBookPage';
+import { PriceBooksPage } from './pages/inventory/PriceBooksPage';
+import { PriceBookDetailPage } from './pages/inventory/PriceBookDetailPage';
+import { CustomerGroupsPage } from './pages/CustomerGroupsPage';
+import { SalesReturnsPage } from './pages/sales/SalesReturnsPage';
+import { PromotionsPage } from './pages/inventory/PromotionsPage';
+import { TransfersPage } from './pages/inventory/TransfersPage';
+import { TransferDetailPage } from './pages/inventory/TransferDetailPage';
+import { CountsPage } from './pages/inventory/CountsPage';
+import { CountDetailPage } from './pages/inventory/CountDetailPage';
+import { WriteOffsPage } from './pages/inventory/WriteOffsPage';
+import { ReorderAlertsPage } from './pages/inventory/ReorderAlertsPage';
+import { VouchersPage } from './pages/inventory/VouchersPage';
+import { VoucherCampaignPage } from './pages/inventory/VoucherCampaignPage';
+import { CashBookSettingsPage } from './pages/finance/CashBookSettingsPage';
 import { EmployeeEditPage } from './pages/EmployeeEditPage';
 import { SalaryConfigsPage } from './pages/hrm/SalaryConfigsPage';
 import { PayrollPeriodsPage } from './pages/hrm/PayrollPeriodsPage';
@@ -55,7 +71,8 @@ function AppRoutes() {
   return (
     <>
       <title>{getPageTitle(location.pathname)}</title>
-      <Toaster />
+      {/* top-center: bottom-right toasts covered the POS pay button and sheet footers */}
+      <Toaster position="top-center" />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route
@@ -74,6 +91,16 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <CustomersPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/customers/groups"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <CustomerGroupsPage />
               </AppLayout>
             </ProtectedRoute>
           }
@@ -279,11 +306,11 @@ function AppRoutes() {
           }
         />
         <Route
-          path="/reports"
+          path="/reports/*"
           element={
             <ProtectedRoute>
               <AppLayout>
-                <ReportsPage />
+                <ReportsLayout />
               </AppLayout>
             </ProtectedRoute>
           }
@@ -304,6 +331,116 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <EmployeeDetailPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/transfers"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <TransfersPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/transfers/:id"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <TransferDetailPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/counts"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <CountsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/counts/:id"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <CountDetailPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/write-offs"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <WriteOffsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/reorder-alerts"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <ReorderAlertsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/promotions"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <PromotionsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/vouchers"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <VouchersPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/vouchers/:id"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <VoucherCampaignPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/price-books"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <PriceBooksPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/inventory/price-books/:id"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <PriceBookDetailPage />
               </AppLayout>
             </ProtectedRoute>
           }
@@ -364,6 +501,16 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <StockAdjustmentsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/sales/returns"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <SalesReturnsPage />
               </AppLayout>
             </ProtectedRoute>
           }
@@ -454,6 +601,36 @@ function AppRoutes() {
             <ProtectedRoute>
               <AppLayout>
                 <PermissionAuditPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/cash-book"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <CashBookPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings/cash-book"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <CashBookSettingsPage />
+              </AppLayout>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/settings/qr-payments"
+          element={
+            <ProtectedRoute>
+              <AppLayout>
+                <QrPaymentsSettingsPage />
               </AppLayout>
             </ProtectedRoute>
           }

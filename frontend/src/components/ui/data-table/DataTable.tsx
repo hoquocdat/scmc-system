@@ -32,6 +32,10 @@ interface DataTableProps<TData, TValue> {
     label: string;
     onClick: () => void;
   };
+  /** Rows per page (default 10). */
+  pageSize?: number;
+  /** Show the "n / m hàng được chọn" count (default true); when false the pager shows only if there is more than one page. */
+  selectable?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -41,6 +45,8 @@ export function DataTable<TData, TValue>({
   searchColumn,
   searchPlaceholder = 'Tìm kiếm...',
   addButton,
+  pageSize = 10,
+  selectable = true,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
@@ -58,6 +64,7 @@ export function DataTable<TData, TValue>({
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
     onRowSelectionChange: setRowSelection,
+    initialState: { pagination: { pageIndex: 0, pageSize } },
     state: {
       sorting,
       columnFilters,
@@ -142,10 +149,12 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Pagination */}
+      {(selectable || table.getPageCount() > 1) && (
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
         <div className="text-xs sm:text-sm text-muted-foreground">
-          {table.getFilteredSelectedRowModel().rows.length} /{' '}
-          {table.getFilteredRowModel().rows.length} hàng được chọn.
+          {selectable
+            ? `${table.getFilteredSelectedRowModel().rows.length} / ${table.getFilteredRowModel().rows.length} hàng được chọn.`
+            : `Trang ${table.getState().pagination.pageIndex + 1} / ${table.getPageCount()}`}
         </div>
         <div className="flex gap-2">
           <Button
@@ -166,6 +175,7 @@ export function DataTable<TData, TValue>({
           </Button>
         </div>
       </div>
+      )}
     </div>
   );
 }

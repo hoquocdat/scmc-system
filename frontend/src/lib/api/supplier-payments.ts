@@ -49,6 +49,8 @@ export interface CreateSupplierPaymentDto {
   reference_number?: string;
   notes?: string;
   allocations?: PaymentAllocationDto[];
+  /** Cash book account paid from; defaults to the account mapped to the method. */
+  cash_account_id?: string;
 }
 
 export interface SupplierPaymentQueryParams {

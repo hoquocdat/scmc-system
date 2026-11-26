@@ -2,7 +2,7 @@ import { apiClient } from './client';
 
 export type OrderStatus = 'draft' | 'pending' | 'confirmed' | 'processing' | 'ready' | 'completed' | 'cancelled';
 export type PaymentStatus = 'unpaid' | 'partial' | 'paid' | 'refunded';
-export type SalesChannel = 'retail_store' | 'workshop' | 'online' | 'phone';
+export type SalesChannel = 'retail_store' | 'workshop' | 'online' | 'phone' | 'pos';
 export type DiscountType = 'fixed' | 'percent';
 export type PaymentMethod = 'cash' | 'card' | 'bank_transfer' | 'ewallet_momo' | 'ewallet_zalopay' | 'ewallet_vnpay';
 
@@ -153,6 +153,10 @@ export interface CreateSalesOrderItemDto {
 
 export interface CreateSalesOrderDto {
   customer_id?: string;
+  /** Manually chosen price book (needs price_books:apply). */
+  price_book_id?: string;
+  voucher_code?: string;
+  expected_total?: number;
   customer_name: string;
   customer_phone?: string;
   customer_email?: string;
@@ -342,6 +346,7 @@ export const SALES_CHANNEL_LABELS: Record<SalesChannel, string> = {
   workshop: 'Xưởng',
   online: 'Trực tuyến',
   phone: 'Điện thoại',
+  pos: 'POS',
 };
 
 export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {

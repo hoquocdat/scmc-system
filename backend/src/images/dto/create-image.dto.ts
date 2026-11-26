@@ -8,6 +8,8 @@ export enum ImageEntityType {
   customer = 'customer',
   part = 'part',
   comment = 'comment',
+  service_item = 'service_item',
+  cash_book_entry = 'cash_book_entry',
 }
 
 export class CreateImageDto {

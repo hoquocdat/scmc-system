@@ -84,6 +84,10 @@ export class ProductsService {
         { name: { contains: search, mode: 'insensitive' } },
         { sku: { contains: search, mode: 'insensitive' } },
         { description: { contains: search, mode: 'insensitive' } },
+        // Scanned barcodes (inventory-operations D5)
+        { barcode: search.trim() },
+        { product_variants: { some: { OR: [{ barcode: search.trim() }, { sku: { equals: search.trim(), mode: 'insensitive' } }] } } },
+        { product_units: { some: { barcode: search.trim(), is_active: true } } },
       ];
     }
 

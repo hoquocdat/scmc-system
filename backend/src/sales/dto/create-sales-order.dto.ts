@@ -53,6 +53,11 @@ export class SalesOrderItemDto {
   @IsOptional()
   product_variant_id?: string;
 
+  @ApiPropertyOptional({ description: 'Selling unit (product_units id); absent = base unit' })
+  @IsUUID()
+  @IsOptional()
+  unit_id?: string;
+
   @ApiProperty({ description: 'Quantity' })
   @IsNumber()
   @Min(1)
@@ -199,6 +204,25 @@ export class CreateSalesOrderDto {
   @IsOptional()
   @Min(0)
   points_to_redeem?: number;
+
+  @ApiPropertyOptional({
+    description:
+      'Price book chosen manually for the whole sale (needs price_books:apply); absent = automatic',
+  })
+  @IsOptional()
+  @IsUUID()
+  price_book_id?: string;
+
+  @ApiPropertyOptional({ description: 'Voucher code (one per order)' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  voucher_code?: string;
+
+  @ApiPropertyOptional({ description: 'Total the screen showed; refused with TOTAL_CHANGED when the server total differs' })
+  @IsOptional()
+  @IsNumber()
+  expected_total?: number;
 
   @ApiPropertyOptional({ description: 'Loyalty discount amount (calculated from points)' })
   @IsNumber()

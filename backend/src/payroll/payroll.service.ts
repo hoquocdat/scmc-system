@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { AttendanceService } from '../attendance/attendance.service';
+import { CashBookPostingService } from '../cash-book/cash-book-posting.service';
 import {
   CreatePayrollPeriodDto,
   UpdatePayrollPeriodDto,
@@ -24,6 +25,7 @@ import { Prisma } from '@prisma/client';
 export class PayrollService {
   constructor(
     private prisma: PrismaService,
+    private cashBook: CashBookPostingService,
     private attendanceService: AttendanceService,
   ) {}
 
@@ -80,7 +82,8 @@ export class PayrollService {
       where.period_year = query.year;
     }
     if (query.status) {
-      where.status = query.status as Prisma.Enumpayroll_period_statusFilter['equals'];
+      where.status =
+        query.status as Prisma.Enumpayroll_period_statusFilter['equals'];
     }
 
     const [data, count] = await Promise.all([
@@ -257,7 +260,8 @@ export class PayrollService {
       attendance.paidLeaveDays +
       (attendance.checkInOnlyDays + attendance.checkOutOnlyDays) * 0.5;
 
-    const totalLeaveDays = attendance.paidLeaveDays + attendance.unpaidLeaveDays;
+    const totalLeaveDays =
+      attendance.paidLeaveDays + attendance.unpaidLeaveDays;
     const totalAbsentDays = attendance.absentDays + attendance.unpaidLeaveDays;
 
     // Calculate earnings
@@ -287,7 +291,8 @@ export class PayrollService {
     const lunchAllowance = Number(config.lunch_allowance) || 0;
     const transportAllowance = Number(config.transport_allowance) || 0;
     const phoneAllowance = Number(config.phone_allowance) || 0;
-    const allowancesAmount = lunchAllowance + transportAllowance + phoneAllowance;
+    const allowancesAmount =
+      lunchAllowance + transportAllowance + phoneAllowance;
 
     // Calculate gross pay
     const grossPay = baseSalaryAmount + overtimeEarnings + allowancesAmount;
@@ -300,7 +305,8 @@ export class PayrollService {
 
     const socialInsuranceDeduction = baseSalary * socialInsuranceRate;
     const healthInsuranceDeduction = baseSalary * healthInsuranceRate;
-    const unemploymentInsuranceDeduction = baseSalary * unemploymentInsuranceRate;
+    const unemploymentInsuranceDeduction =
+      baseSalary * unemploymentInsuranceRate;
 
     // Absence deduction (for unpaid leave)
     const absenceDeduction =
@@ -385,7 +391,9 @@ export class PayrollService {
         },
       },
       orderBy: {
-        user_profiles_payroll_slips_employee_idTouser_profiles: { full_name: 'asc' },
+        user_profiles_payroll_slips_employee_idTouser_profiles: {
+          full_name: 'asc',
+        },
       },
     });
   }
@@ -567,35 +575,76 @@ export class PayrollService {
         payroll_period_id: id,
         status: { in: ['published', 'confirmed'] },
       },
-      data: { status: 'finalized', finalized_at: new Date(), finalized_by: userId },
+      data: {
+        status: 'finalized',
+        finalized_at: new Date(),
+        finalized_by: userId,
+      },
     });
 
     return this.getPeriod(id);
   }
 
+  /**
+   * Marks a finalized period paid. Period, slips and one cash book payment entry
+   * per paid slip (net pay, employee as counterparty) are written in one transaction.
+   */
   async markPaid(id: string, dto: MarkPaidDto, userId: string) {
     const period = await this.getPeriod(id);
 
     if (period.status !== 'finalized') {
-      throw new BadRequestException('Only finalized periods can be marked as paid');
+      throw new BadRequestException(
+        'Only finalized periods can be marked as paid',
+      );
     }
 
-    // Update period status
-    await this.prisma.payroll_periods.update({
-      where: { id },
-      data: {
-        status: 'paid',
-        paid_at: new Date(),
-        paid_by: userId,
-        payment_method: dto.payment_method,
-        payment_reference: dto.payment_reference,
-      },
-    });
+    await this.prisma.$transaction(async (tx) => {
+      const slips = await tx.payroll_slips.findMany({
+        where: { payroll_period_id: id, status: 'finalized' },
+      });
+      const employees = await tx.user_profiles.findMany({
+        where: { id: { in: slips.map((s) => s.employee_id) } },
+        select: { id: true, full_name: true },
+      });
+      const nameOf = new Map(employees.map((e) => [e.id, e.full_name]));
+      const paidAt = new Date();
 
-    // Update all slips to paid
-    await this.prisma.payroll_slips.updateMany({
-      where: { payroll_period_id: id, status: 'finalized' },
-      data: { status: 'paid', paid_at: new Date(), paid_by: userId },
+      await tx.payroll_periods.update({
+        where: { id },
+        data: {
+          status: 'paid',
+          paid_at: paidAt,
+          paid_by: userId,
+          payment_method: dto.payment_method,
+          payment_reference: dto.payment_reference,
+        },
+      });
+      await tx.payroll_slips.updateMany({
+        where: { payroll_period_id: id, status: 'finalized' },
+        data: { status: 'paid', paid_at: paidAt, paid_by: userId },
+      });
+
+      for (const slip of slips) {
+        const net = Number(slip.net_pay ?? 0);
+        if (net <= 0) continue;
+        await this.cashBook.post(tx, {
+          accountId: dto.cash_account_id,
+          method: dto.payment_method,
+          direction: 'out',
+          amount: net,
+          categoryCode: 'payroll',
+          counterparty: {
+            type: 'employee',
+            id: slip.employee_id,
+            name: nameOf.get(slip.employee_id) ?? null,
+          },
+          source: { type: 'payroll_slip', id: slip.id },
+          isAutomatic: true,
+          note: `Lương ${period.period_name}${dto.payment_reference ? ` (${dto.payment_reference})` : ''}`,
+          createdBy: userId,
+          at: paidAt,
+        });
+      }
     });
 
     return this.getPeriod(id);
@@ -613,13 +662,14 @@ export class PayrollService {
 
     if (query.year) {
       where.payroll_periods = {
-        ...where.payroll_periods as object,
+        ...(where.payroll_periods as object),
         period_year: query.year,
       };
     }
 
     if (query.status) {
-      where.status = query.status as Prisma.Enumpayroll_slip_statusFilter['equals'];
+      where.status =
+        query.status as Prisma.Enumpayroll_slip_statusFilter['equals'];
     }
 
     return this.prisma.payroll_slips.findMany({

@@ -1,203 +1,231 @@
 import { apiClient } from './client';
 
-// ==================== TYPES ====================
+// ==================== SHARED TYPES ====================
 
-export interface DateRange {
-  start: Date;
-  end: Date;
+export type ReportColumnType = 'text' | 'integer' | 'number' | 'money' | 'percent' | 'date' | 'datetime';
+
+export interface ReportColumn {
+  key: string;
+  header: { vi: string; en: string };
+  type: ReportColumnType;
 }
 
-export interface SalesSummary {
-  period: DateRange;
-  summary: {
-    totalRevenue: number;
-    netRevenue: number;
-    totalOrders: number;
-    totalItemsSold: number;
-    totalDiscounts: number;
-    averageOrderValue: number;
-    vatCollected: number;
-  };
+export interface ReportScopeInfo {
+  from: string;
+  to: string;
+  storeId: string | null;
+  interval: ReportInterval;
+  timeZone: string;
 }
 
-export interface SalesByCategory {
-  category: string;
-  order_count: number;
-  quantity_sold: number;
-  revenue: number;
+export type ReportInterval = 'daily' | 'weekly' | 'monthly';
+export type ReportFormat = 'xlsx' | 'csv';
+
+/** Envelope returned by every report endpoint. */
+export interface ReportResult<Row extends Record<string, unknown> = Record<string, unknown>> {
+  report: string;
+  title: { vi: string; en: string };
+  scope: ReportScopeInfo;
+  columns: ReportColumn[];
+  rows: Row[];
+  totals?: Partial<Row>;
+  meta?: Record<string, unknown>;
 }
 
-export interface SalesByPaymentMethod {
-  paymentMethod: string;
-  totalAmount: number;
-  transactionCount: number;
+export interface PagedMeta {
+  page: number;
+  pageSize: number;
+  total: number;
 }
 
-export interface TopProduct {
-  id: string;
-  sku: string;
-  name: string;
-  quantity_sold: number;
-  revenue: number;
-}
-
-export interface SalesTrend {
-  period: string;
-  order_count: number;
-  revenue: number;
-  avg_order_value: number;
-}
-
-export interface InventoryValuation {
-  totalCostValue: number;
-  totalRetailValue: number;
-  potentialProfit: number;
-  itemCount: number;
-  totalUnits: number;
-  byLocation: Array<{
-    locationId: string;
-    locationName: string;
-    totalValue: number;
-    totalUnits: number;
-  }>;
-}
-
-export interface LowStockProduct {
-  product_id: string;
-  sku: string;
-  name: string;
-  quantity_on_hand: number;
-  reorder_point: number;
-  reorder_quantity: number;
-  location_name: string;
-}
-
-export interface RevenueReport {
-  period: DateRange;
-  grossRevenue: number;
-  totalDiscounts: number;
-  netRevenue: number;
-  vatCollected: number;
-  byPaymentMethod: SalesByPaymentMethod[];
-}
-
-export interface ProfitReport {
-  period: DateRange;
-  totalRevenue: number;
-  totalCOGS: number;
-  grossProfit: number;
-  grossMargin: string;
-}
-
-export interface VATReport {
-  period: DateRange;
-  subtotal: number;
-  vatRate: string;
-  vatCollected: number;
-  transactionCount: number;
-  byDate: Array<{
-    date: string;
-    subtotal: number;
-    vat_collected: number;
-  }>;
-}
-
-export interface DashboardKPIs {
-  today: {
-    revenue: number;
-    orders: number;
-    averageOrderValue: number;
-  };
-  monthToDate: {
-    revenue: number;
-    orders: number;
-    averageOrderValue: number;
-  };
-  inventory: {
-    totalValue: number;
-    lowStockCount: number;
-  };
-  pendingOrders: number;
-}
-
-export interface ReportsQueryParams {
-  startDate?: string;
-  endDate?: string;
-  location?: string;
-  productId?: string;
+/** Query parameters shared by every report. Dates are YYYY-MM-DD in Vietnam time, end inclusive. */
+export interface ReportQuery {
+  from?: string;
+  to?: string;
+  storeId?: string;
+  interval?: ReportInterval;
+  page?: number;
+  pageSize?: number;
   limit?: number;
-  interval?: 'daily' | 'weekly' | 'monthly';
+  sortBy?: string;
+  productId?: string;
+  locationId?: string;
+  type?: string;
+  lang?: 'vi' | 'en';
 }
 
-// ==================== API CLIENT ====================
+// ==================== ROW TYPES ====================
+
+export interface SalesSummaryRow extends Record<string, unknown> {
+  orders: number;
+  grossSales: number;
+  lineDiscounts: number;
+  orderDiscounts: number;
+  loyaltyDiscounts: number;
+  discounts: number;
+  netSales: number;
+  tax: number;
+  shipping: number;
+  total: number;
+  itemsSold: number;
+  averageOrderValue: number;
+}
+
+export interface PaymentMethodRow extends Record<string, unknown> {
+  method: string;
+  label: string;
+  amount: number;
+  payments: number;
+}
+
+export interface RevenueLineRow extends Record<string, unknown> {
+  line: 'retail' | 'workshop';
+  label: string;
+  revenue: number;
+  orders: number;
+  received: number;
+}
+
+export interface RevenueMeta {
+  retail: SalesSummaryRow;
+  workshop: { orders: number; revenue: number; averageOrderValue: number };
+  combined: { revenue: number; orders: number; received: number };
+  received: { retail: PaymentMethodRow[]; workshop: PaymentMethodRow[]; combined: PaymentMethodRow[] };
+}
+
+export interface ProfitMeta {
+  orders: number;
+  cogsRecorded: number;
+  cogsEstimated: number;
+  cogsEstimatedShare: number;
+  estimated: boolean;
+}
+
+export interface DashboardKpis {
+  scope: { today: string; monthStart: string; storeId: string | null };
+  today: KpiBlock;
+  monthToDate: KpiBlock;
+  inventory: { stockValue: number; lowStockCount: number };
+  workshop: { bikesInService: number };
+}
+
+export interface KpiBlock {
+  retail: { netSales: number; orders: number; averageOrderValue: number };
+  workshop: { revenue: number; orders: number };
+  combinedRevenue: number;
+}
+
+// ==================== ENDPOINTS ====================
+
+export const REPORT_ENDPOINTS = {
+  'sales.summary': '/reports/sales/summary',
+  'sales.by-category': '/reports/sales/by-category',
+  'sales.by-payment-method': '/reports/sales/by-payment-method',
+  'sales.top-products': '/reports/sales/top-products',
+  'sales.trends': '/reports/sales/trends',
+  'inventory.valuation': '/reports/inventory/valuation',
+  'inventory.movement': '/reports/inventory/movement',
+  'inventory.low-stock': '/reports/inventory/low-stock',
+  'inventory.turnover': '/reports/inventory/turnover',
+  'financial.revenue': '/reports/financial/revenue',
+  'financial.profit': '/reports/financial/profit',
+  'financial.vat': '/reports/financial/vat',
+  'workshop.revenue': '/reports/workshop/revenue',
+  'workshop.technicians': '/reports/workshop/technicians',
+  'workshop.parts': '/reports/workshop/parts',
+  'workshop.in-service': '/reports/workshop/in-service',
+  'workshop.turnaround': '/reports/workshop/turnaround',
+  'eod.daily': '/reports/eod/daily',
+  'eod.shifts': '/reports/eod/shifts',
+  'sales.by-hour': '/reports/sales/by-hour',
+  'sales.by-staff': '/reports/sales/by-staff',
+  'sales.by-branch': '/reports/sales/by-branch',
+  'sales.by-brand': '/reports/sales/by-brand',
+  'sales.slow-movers': '/reports/sales/slow-movers',
+  'sales.discounts': '/reports/sales/discounts',
+  'returns.by-product': '/reports/returns/by-product',
+  'returns.reasons': '/reports/returns/reasons',
+  'inventory.stock-card': '/reports/inventory/stock-card',
+  'inventory.in-transit': '/reports/inventory/in-transit',
+  'inventory.count-variances': '/reports/inventory/count-variances',
+  'inventory.days-of-stock': '/reports/inventory/days-of-stock',
+  'customers.top': '/reports/customers/top',
+  'customers.receivables-aging': '/reports/customers/receivables-aging',
+  'customers.loyalty': '/reports/customers/loyalty',
+  'suppliers.purchases': '/reports/suppliers/purchases',
+  'suppliers.payables-aging': '/reports/suppliers/payables-aging',
+  'promotions.performance': '/reports/promotions/performance',
+  'financial.cash-balances': '/reports/financial/cash-balances',
+  'financial.pnl': '/reports/financial/pnl',
+  'finance.cash-book': '/cash-book/entries',
+  'sales.returns': '/sales-returns',
+  'inventory.write-offs': '/stock-write-offs',
+} as const;
+
+export type ReportKey = keyof typeof REPORT_ENDPOINTS;
+
+/** Removes empty values so they are not sent as "undefined" strings. */
+function clean(params: ReportQuery | Record<string, unknown> = {}): Record<string, string | number> {
+  const out: Record<string, string | number> = {};
+  for (const [k, v] of Object.entries(params)) {
+    if (v !== undefined && v !== null && v !== '') out[k] = v as string | number;
+  }
+  return out;
+}
 
 export const reportsApi = {
-  // Sales Reports
-  getSalesSummary: async (params?: ReportsQueryParams): Promise<SalesSummary> => {
-    const response = await apiClient.get('/reports/sales/summary', { params });
+  /** Fetches any report by key with the shared query parameters. */
+  get: async <Row extends Record<string, unknown> = Record<string, unknown>>(
+    key: ReportKey,
+    params: ReportQuery = {},
+  ): Promise<ReportResult<Row>> => {
+    const response = await apiClient.get(REPORT_ENDPOINTS[key], { params: clean(params) });
     return response.data;
   },
 
-  getSalesByCategory: async (params?: ReportsQueryParams): Promise<SalesByCategory[]> => {
-    const response = await apiClient.get('/reports/sales/by-category', { params });
+  getDashboardKpis: async (storeId?: string): Promise<DashboardKpis> => {
+    const response = await apiClient.get('/reports/dashboard/kpis', { params: clean({ storeId }) });
     return response.data;
   },
 
-  getSalesByPaymentMethod: async (params?: ReportsQueryParams): Promise<SalesByPaymentMethod[]> => {
-    const response = await apiClient.get('/reports/sales/by-payment-method', { params });
-    return response.data;
-  },
-
-  getTopProducts: async (params?: ReportsQueryParams): Promise<TopProduct[]> => {
-    const response = await apiClient.get('/reports/sales/top-products', { params });
-    return response.data;
-  },
-
-  getSalesTrends: async (params?: ReportsQueryParams): Promise<SalesTrend[]> => {
-    const response = await apiClient.get('/reports/sales/trends', { params });
-    return response.data;
-  },
-
-  // Inventory Reports
-  getInventoryValuation: async (params?: ReportsQueryParams): Promise<InventoryValuation> => {
-    const response = await apiClient.get('/reports/inventory/valuation', { params });
-    return response.data;
-  },
-
-  getInventoryMovement: async (params?: ReportsQueryParams) => {
-    const response = await apiClient.get('/reports/inventory/movement', { params });
-    return response.data;
-  },
-
-  getLowStockProducts: async (params?: ReportsQueryParams): Promise<LowStockProduct[]> => {
-    const response = await apiClient.get('/reports/inventory/low-stock', { params });
-    return response.data;
-  },
-
-  getInventoryTurnover: async (params?: ReportsQueryParams) => {
-    const response = await apiClient.get('/reports/inventory/turnover', { params });
-    return response.data;
-  },
-
-  // Financial Reports
-  getRevenueReport: async (params?: ReportsQueryParams): Promise<RevenueReport> => {
-    const response = await apiClient.get('/reports/financial/revenue', { params });
-    return response.data;
-  },
-
-  getProfitReport: async (params?: ReportsQueryParams): Promise<ProfitReport> => {
-    const response = await apiClient.get('/reports/financial/profit', { params });
-    return response.data;
-  },
-
-  getVATReport: async (params?: ReportsQueryParams): Promise<VATReport> => {
-    const response = await apiClient.get('/reports/financial/vat', { params });
-    return response.data;
-  },
-
-  // Dashboard
-  getDashboardKPIs: async (): Promise<DashboardKPIs> => {
-    const response = await apiClient.get('/reports/dashboard/kpis');
-    return response.data;
+  /**
+   * Downloads a report as a file with the same filters as the screen.
+   * The server decides the file name (Content-Disposition).
+   */
+  download: async (key: ReportKey, params: ReportQuery | Record<string, unknown>, format: ReportFormat): Promise<{ blob: Blob; fileName: string }> => {
+    const response = await apiClient.get(REPORT_ENDPOINTS[key], {
+      params: { ...clean(params), format },
+      responseType: 'blob',
+    });
+    const disposition: string = response.headers['content-disposition'] ?? '';
+    const match = disposition.match(/filename="?([^";]+)"?/);
+    const fileName = match?.[1] ?? `${key}.${format}`;
+    return { blob: response.data as Blob, fileName };
   },
 };
+
+/** Triggers a browser download of a blob. */
+export function saveBlob(blob: Blob, fileName: string): void {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = fileName;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+/** Reads the error message from a blob error response (exports return JSON errors as blobs). */
+export async function readBlobError(error: unknown): Promise<string> {
+  const data = (error as { response?: { data?: unknown; status?: number } })?.response?.data;
+  if (data instanceof Blob) {
+    try {
+      const json = JSON.parse(await data.text());
+      return json.message ?? 'Xuất báo cáo thất bại';
+    } catch {
+      return 'Xuất báo cáo thất bại';
+    }
+  }
+  return (data as { message?: string })?.message ?? 'Xuất báo cáo thất bại';
+}

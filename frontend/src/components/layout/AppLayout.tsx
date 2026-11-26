@@ -23,8 +23,19 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '../ui/breadcrumb';
+import { findReport, REPORT_GROUPS } from '@/components/reports/report-registry';
 import {
   LayoutDashboard,
+  BookOpen,
+  QrCode,
+  ArrowLeftRight,
+  ScanLine,
+  PackageMinus,
+  PackageX,
+  Percent,
+  Ticket,
+  Undo2,
+  UsersRound,
   Wrench,
   Users,
   Bike,
@@ -142,10 +153,25 @@ export function AppLayout({ children }: AppLayoutProps) {
       roles: ['employee', 'technician'],
     },
     {
+      id: 'customers',
       name: t('navigation.customers'),
-      href: '/customers',
       icon: Users,
       roles: ['sales', 'manager'],
+      children: [
+        {
+          name: 'Danh Sách',
+          href: '/customers',
+          icon: Users,
+          roles: ['sales', 'manager'],
+        },
+        {
+          name: 'Nhóm Khách Hàng',
+          href: '/customers/groups',
+          icon: UsersRound,
+          roles: ['sales', 'manager'],
+          permission: { resource: 'customer_groups', action: 'read' },
+        },
+      ],
     },
     {
       name: t('navigation.bikes'),
@@ -187,6 +213,27 @@ export function AppLayout({ children }: AppLayoutProps) {
           href: '/inventory/products',
           icon: Package,
           roles: ['sales', 'manager'],
+        },
+        {
+          name: 'Bảng Giá',
+          href: '/inventory/price-books',
+          icon: BookOpen,
+          roles: ['sales', 'manager'],
+          permission: { resource: 'price_books', action: 'read' },
+        },
+        {
+          name: 'Khuyến Mãi',
+          href: '/inventory/promotions',
+          icon: Percent,
+          roles: ['sales', 'manager'],
+          permission: { resource: 'promotions', action: 'read' },
+        },
+        {
+          name: 'Voucher',
+          href: '/inventory/vouchers',
+          icon: Ticket,
+          roles: ['sales', 'manager'],
+          permission: { resource: 'vouchers', action: 'read' },
         },
         {
           name: 'Đơn Đặt Hàng',
@@ -238,6 +285,34 @@ export function AppLayout({ children }: AppLayoutProps) {
           icon: ClipboardList,
           roles: ['manager'],
         },
+        {
+          name: 'Chuyển Kho',
+          href: '/inventory/transfers',
+          icon: ArrowLeftRight,
+          roles: ['sales', 'manager'],
+          permission: { resource: 'inventory', action: 'read' },
+        },
+        {
+          name: 'Kiểm Kho',
+          href: '/inventory/counts',
+          icon: ScanLine,
+          roles: ['sales', 'manager'],
+          permission: { resource: 'inventory', action: 'count' },
+        },
+        {
+          name: 'Xuất Hủy',
+          href: '/inventory/write-offs',
+          icon: PackageMinus,
+          roles: ['sales', 'manager'],
+          permission: { resource: 'inventory', action: 'read' },
+        },
+        {
+          name: 'Sắp Hết Hàng',
+          href: '/inventory/reorder-alerts',
+          icon: PackageX,
+          roles: ['sales', 'manager'],
+          permission: { resource: 'inventory', action: 'read' },
+        },
       ],
     },
     {
@@ -259,6 +334,13 @@ export function AppLayout({ children }: AppLayoutProps) {
           roles: ['sales', 'manager'],
         },
         {
+          name: 'Trả Hàng',
+          href: '/sales/returns',
+          icon: Undo2,
+          roles: ['sales', 'manager'],
+          permission: { resource: 'sales_returns', action: 'read' },
+        },
+        {
           name: 'Báo Cáo',
           href: '/sales/reports',
           icon: BarChart,
@@ -273,10 +355,49 @@ export function AppLayout({ children }: AppLayoutProps) {
       roles: ['finance', 'manager'],
     },
     {
+      name: 'Sổ Quỹ',
+      href: '/cash-book',
+      icon: Wallet,
+      roles: ['finance', 'manager', 'store_manager', 'superadmin'],
+      permission: { resource: 'cash_book', action: 'read' },
+    },
+    {
+      id: 'reports',
       name: t('navigation.reports'),
-      href: '/reports',
       icon: BarChart3,
-      roles: ['manager', 'finance'],
+      roles: ['manager', 'finance', 'store_manager', 'warehouse_staff'],
+      children: [
+        {
+          name: 'Tổng Quan',
+          href: '/reports',
+          icon: BarChart3,
+          roles: ['manager', 'finance', 'store_manager', 'warehouse_staff'],
+        },
+        {
+          name: 'Bán Hàng',
+          href: '/reports/sales/summary',
+          icon: ShoppingCart,
+          roles: ['manager', 'finance', 'store_manager'],
+        },
+        {
+          name: 'Tồn Kho',
+          href: '/reports/inventory/valuation',
+          icon: ClipboardList,
+          roles: ['manager', 'finance', 'store_manager', 'warehouse_staff'],
+        },
+        {
+          name: 'Tài Chính',
+          href: '/reports/finance/revenue',
+          icon: CreditCard,
+          roles: ['manager', 'finance'],
+        },
+        {
+          name: 'Xưởng Dịch Vụ',
+          href: '/reports/workshop/revenue',
+          icon: FileText,
+          roles: ['manager', 'finance', 'store_manager'],
+        },
+      ],
     },
     {
       name: t('navigation.employees'),
@@ -323,10 +444,25 @@ export function AppLayout({ children }: AppLayoutProps) {
           roles: ['superadmin', 'manager'],
         },
         {
+          name: 'Thanh Toán QR',
+          href: '/settings/qr-payments',
+          icon: QrCode,
+          roles: ['superadmin', 'manager'],
+          permission: { resource: 'qr_payments', action: 'configure' },
+        },
+        {
+          name: 'Sổ Quỹ',
+          href: '/settings/cash-book',
+          icon: Wallet,
+          roles: ['superadmin', 'manager'],
+          permission: { resource: 'cash_book', action: 'configure' },
+        },
+        {
           name: 'Vai Trò',
           href: '/settings/roles',
           icon: Shield,
-          roles: ['superadmin', 'manager'],
+          // roles:read is granted to superadmin only (managers got a 403 page)
+          roles: ['superadmin'],
         },
         {
           name: 'Nhật Ký Quyền Hạn',
@@ -372,7 +508,18 @@ export function AppLayout({ children }: AppLayoutProps) {
     return false;
   };
 
-  const filteredNavigation = navigation.filter((item: any) => {
+  const filteredNavigation = navigation
+    .map((item: any) =>
+      item.children
+        ? {
+            ...item,
+            children: item.children.filter(
+              (child: any) => !child.permission || hasPermission(child.permission.resource, child.permission.action),
+            ),
+          }
+        : item,
+    )
+    .filter((item: any) => {
     // Check role-based access
     const hasRoleAccess = user?.role && item.roles.includes(user.role);
 
@@ -435,6 +582,22 @@ export function AppLayout({ children }: AppLayoutProps) {
         'salary-configs': 'Cấu Hình Lương',
         'attendance': 'Chấm Công',
         'my-payroll': 'Phiếu Lương',
+        'transfers': 'Chuyển Kho',
+        'counts': 'Kiểm Kho',
+        'write-offs': 'Xuất Huỷ',
+        'reorder-alerts': 'Cảnh Báo Đặt Hàng',
+        'price-books': 'Bảng Giá',
+        'promotions': 'Khuyến Mãi',
+        'vouchers': 'Voucher',
+        'returns': 'Trả Hàng',
+        'groups': 'Nhóm Khách Hàng',
+        'cash-book': 'Sổ Quỹ',
+        'settings': 'Cài Đặt',
+        'qr-payments': 'Thanh Toán QR',
+        'loyalty': 'Tích Điểm',
+        'roles': 'Phân Quyền',
+        'audit': 'Nhật Ký',
+        'new': 'Tạo Mới',
       };
 
       if (segmentLabels[firstSegment]) {
@@ -444,8 +607,13 @@ export function AppLayout({ children }: AppLayoutProps) {
           isLast: pathSegments.length === 1,
         });
 
+        // Reports: /reports/<group>/<slug> → group and report title from the registry
+        const report = firstSegment === 'reports' && pathSegments.length >= 3 ? findReport(pathSegments[1], pathSegments[2]) : undefined;
+        if (report) {
+          breadcrumbs.push({ label: REPORT_GROUPS.find((g) => g.id === report.group)?.label ?? pathSegments[1], path: `/reports/${report.group}`, isLast: false });
+          breadcrumbs.push({ label: report.title, path: location.pathname, isLast: true });
+        } else if (pathSegments.length >= 2) {
         // Handle nested paths (e.g., /inventory/products, /sales/orders)
-        if (pathSegments.length >= 2) {
           const secondSegment = pathSegments[1];
 
           // Check if second segment is a label (not an ID)
@@ -457,10 +625,10 @@ export function AppLayout({ children }: AppLayoutProps) {
             });
           } else {
             // It's a detail page (has an ID)
-            let detailLabel = t('serviceOrders.orderDetails');
+            let detailLabel = 'Chi tiết';
 
             // Customize labels for detail pages
-            if (firstSegment === 'service-orders') {
+            if (firstSegment === 'service-orders' || firstSegment === 'sales') {
               detailLabel = t('serviceOrders.orderDetails');
             } else if (firstSegment === 'customers') {
               detailLabel = t('customers.customerDetails');
@@ -508,7 +676,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         {/* Sidebar Header */}
         <div className="h-14 px-3 py-2 border-b flex items-center justify-between">
           {sidebarOpen && (
-            <img className='w-20 h-auto' src="https://saigonclassic.com/wp-content/uploads/2024/08/Logo-SMCC.svg" alt="SCMC Workshop" />
+            <img className='w-20 h-auto' src="/logo.svg" alt="SCMC Workshop" />
           )}
           <Button
             variant="ghost"

@@ -322,6 +322,8 @@ export class PurchaseOrdersService {
         quantity_ordered: dto.quantity_ordered,
         unit_cost: new Prisma.Decimal(dto.unit_cost),
         total_cost: totalCost,
+        unit_name: dto.unit_name ?? null,
+        unit_factor: dto.unit_factor ?? 1,
         notes: dto.notes,
       },
       include: {
@@ -478,7 +480,7 @@ export class PurchaseOrdersService {
               location_id: await this.getDefaultLocationId(tx),
               product_id: item.product_id,
               transaction_type: 'purchase',
-              quantity: item.quantity_ordered,
+              quantity: item.quantity_ordered * (item.unit_factor ?? 1),
               unit_cost: item.unit_cost,
               total_cost: item.total_cost,
               reference_type: 'purchase_order',
@@ -501,7 +503,7 @@ export class PurchaseOrdersService {
               where: { id: existingInventory.id },
               data: {
                 quantity_on_hand: {
-                  increment: item.quantity_ordered,
+                  increment: item.quantity_ordered * (item.unit_factor ?? 1),
                 },
               },
             });
@@ -510,7 +512,7 @@ export class PurchaseOrdersService {
               data: {
                 location_id: defaultLocationId,
                 product_id: item.product_id,
-                quantity_on_hand: item.quantity_ordered,
+                quantity_on_hand: item.quantity_ordered * (item.unit_factor ?? 1),
               },
             });
           }
@@ -521,7 +523,7 @@ export class PurchaseOrdersService {
               location_id: await this.getDefaultLocationId(tx),
               product_variant_id: item.product_variant_id,
               transaction_type: 'purchase',
-              quantity: item.quantity_ordered,
+              quantity: item.quantity_ordered * (item.unit_factor ?? 1),
               unit_cost: item.unit_cost,
               total_cost: item.total_cost,
               reference_type: 'purchase_order',
@@ -543,7 +545,7 @@ export class PurchaseOrdersService {
               where: { id: existingInventory.id },
               data: {
                 quantity_on_hand: {
-                  increment: item.quantity_ordered,
+                  increment: item.quantity_ordered * (item.unit_factor ?? 1),
                 },
               },
             });
@@ -552,7 +554,7 @@ export class PurchaseOrdersService {
               data: {
                 location_id: defaultLocationId,
                 product_variant_id: item.product_variant_id,
-                quantity_on_hand: item.quantity_ordered,
+                quantity_on_hand: item.quantity_ordered * (item.unit_factor ?? 1),
               },
             });
           }

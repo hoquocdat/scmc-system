@@ -41,8 +41,8 @@ class APIClient {
 
   // Customers
   customers = {
-    getAll: (page = 1, limit = 10) =>
-      this.request(`/customers?page=${page}&limit=${limit}`),
+    getAll: (page = 1, limit = 10, groupId?: string) =>
+      this.request(`/customers?page=${page}&limit=${limit}${groupId ? `&groupId=${encodeURIComponent(groupId)}` : ''}`),
     getOne: (id: string) =>
       this.request(`/customers/${id}`),
     checkPhone: (phone: string) =>
@@ -289,7 +289,7 @@ class APIClient {
   // Images
   images = {
     upload: async (
-      entityType: 'bike' | 'service_order' | 'customer' | 'part' | 'comment' | 'service_item',
+      entityType: 'bike' | 'service_order' | 'customer' | 'part' | 'comment' | 'service_item' | 'cash_book_entry',
       entityId: string,
       files: File[]
     ) => {
@@ -319,7 +319,7 @@ class APIClient {
     },
 
     getByEntity: async (
-      entityType: 'bike' | 'service_order' | 'customer' | 'part' | 'comment' | 'service_item',
+      entityType: 'bike' | 'service_order' | 'customer' | 'part' | 'comment' | 'service_item' | 'cash_book_entry',
       entityId: string
     ) => {
       return this.request(`/images/entity/${entityType}/${entityId}`);

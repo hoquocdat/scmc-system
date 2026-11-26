@@ -22,13 +22,19 @@ import {
 } from '@/components/sales-orders/form';
 import { PointRedemptionInput } from '@/components/loyalty/PointRedemptionInput';
 import { useStoreStore } from '@/store/storeStore';
+import { useQuotedItems } from '@/hooks/useQuotedItems';
+import { PriceBookPicker } from '@/components/price-books/PriceBookPicker';
+import { OrderPricingCard } from '@/components/promotions/OrderPricingCard';
+import { useCartBreakdown } from '@/hooks/useCartBreakdown';
 
 export function SalesOrderFormPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { selectedStoreId } = useStoreStore();
 
-  const [items, setItems] = useState<SalesOrderItem[]>([]);
+  const [rawItems, setItems] = useState<SalesOrderItem[]>([]);
+  const [priceBookId, setPriceBookId] = useState<string | null>(null);
+  const [voucherCode, setVoucherCode] = useState<string | null>(null);
   const [notes, setNotes] = useState('');
   const [selectedCustomerId, setSelectedCustomerId] = useState('');
   const [customerName, setCustomerName] = useState('');
@@ -52,6 +58,29 @@ export function SalesOrderFormPage() {
   });
 
   const customers = customersData?.data || [];
+  // Lines shown at server prices (base price + price books); the server prices the order again on save
+  const { items: quotedItems } = useQuotedItems(selectedStoreId, selectedCustomerId || null, priceBookId, rawItems);
+  // Server breakdown: promotions, voucher and points in the fixed discount order
+  const breakdown = useCartBreakdown(
+    selectedStoreId && rawItems.length
+      ? {
+          store_id: selectedStoreId,
+          customer_id: selectedCustomerId || null,
+          price_book_id: priceBookId,
+          channel: 'retail_store',
+          discount_type: discountType,
+          discount_value: discountType === 'percent' ? discountPercent : discountAmount,
+          voucher_code: voucherCode,
+          points_to_redeem: pointsToRedeem,
+          lines: rawItems.map((i) => ({ product_id: i.product_id, product_variant_id: i.product_variant_id, unit_id: i.unit_id ?? null, quantity: i.quantity })),
+        }
+      : null,
+  );
+  // Unit lines take the server's unit price (base price × factor or the unit's own price)
+  const items = quotedItems.map((it, i) => {
+    const line = breakdown.data?.lines[i];
+    return it.unit_id && line && line.product_id === it.product_id ? { ...it, unit_price: line.unit_price } : it;
+  });
 
   // Handle customer selection - auto-fill customer info
   useEffect(() => {
@@ -146,14 +175,6 @@ export function SalesOrderFormPage() {
     );
   };
 
-  // Update item unit price
-  const handleUpdateUnitPrice = (tempId: string, unit_price: number) => {
-    if (unit_price < 0) return;
-    setItems(
-      items.map((item) => (item.tempId === tempId ? { ...item, unit_price } : item))
-    );
-  };
-
   // Calculate totals
   const subtotal = items.reduce(
     (sum, item) => sum + item.quantity * item.unit_price,
@@ -163,6 +184,8 @@ export function SalesOrderFormPage() {
   const calculatedDiscount = discountType === 'percent'
     ? (subtotal * discountPercent) / 100
     : discountAmount;
+
+
 
   // Handler for loyalty redemption changes
   const handleRedemptionChange = (points: number, discount: number) => {
@@ -201,9 +224,13 @@ export function SalesOrderFormPage() {
       // Loyalty redemption fields
       points_to_redeem: pointsToRedeem > 0 ? pointsToRedeem : undefined,
       loyalty_discount_amount: loyaltyDiscountAmount > 0 ? loyaltyDiscountAmount : undefined,
+      price_book_id: priceBookId ?? undefined,
+      voucher_code: voucherCode ?? undefined,
+      expected_total: breakdown.data?.total,
       items: items.map(({ tempId, product_name, product_sku, variant_name, ...item }) => ({
         product_id: item.product_id,
         product_variant_id: item.product_variant_id,
+        unit_id: item.unit_id ?? undefined,
         quantity: item.quantity,
         unit_price: item.unit_price,
         notes: item.notes,
@@ -216,6 +243,17 @@ export function SalesOrderFormPage() {
     const createDto = buildCreateDto();
     if (!createDto) return;
     createMutation.mutate(createDto);
+  };
+
+  // Customer order that holds stock until confirmed (inventory-operations D7)
+  const handleSubmitPending = () => {
+    const createDto = buildCreateDto();
+    if (!createDto) return;
+    if (!createDto.customer_id) {
+      toast.error('Đặt hàng giữ hàng cần chọn khách hàng');
+      return;
+    }
+    createMutation.mutate({ ...createDto, status: 'pending' as CreateSalesOrderDto['status'] });
   };
 
   // Submit form with payment
@@ -265,6 +303,9 @@ export function SalesOrderFormPage() {
             <Button variant="outline" onClick={handleSubmit} disabled={isLoading}>
               {createMutation.isPending ? 'Đang lưu...' : 'Lưu nháp'}
             </Button>
+            <Button variant="outline" onClick={handleSubmitPending} disabled={isLoading} title="Giữ hàng cho khách đến khi xác nhận">
+              Đặt hàng (giữ hàng)
+            </Button>
             <Button onClick={handleSubmitWithPayment} disabled={isLoading}>
               {isCreatingWithPayment ? (
                 <>
@@ -291,11 +332,13 @@ export function SalesOrderFormPage() {
             placeholder="Tìm sản phẩm theo tên hoặc mã SKU..."
           />
 
+          <PriceBookPicker storeId={selectedStoreId} customerId={selectedCustomerId || null} value={priceBookId} onChange={setPriceBookId} className="w-full sm:w-80" />
+
           <SalesOrderItemsTable
             items={items}
             onRemoveItem={handleRemoveItem}
             onUpdateQuantity={handleUpdateQuantity}
-            onUpdateUnitPrice={handleUpdateUnitPrice}
+            onUnit={(tempId, unit) => setItems(rawItems.map((it) => (it.tempId === tempId ? { ...it, unit_id: unit?.id ?? null } : it)))}
           />
         </div>
 
@@ -331,6 +374,8 @@ export function SalesOrderFormPage() {
             loyaltyDiscount={loyaltyDiscountAmount}
             loyaltyPointsUsed={pointsToRedeem}
           />
+
+          <OrderPricingCard breakdown={breakdown.data} loading={breakdown.isFetching} error={breakdown.error} voucherCode={voucherCode} onVoucher={setVoucherCode} />
 
           <SalesOrderNotesCard
             notes={notes}

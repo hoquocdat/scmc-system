@@ -9,9 +9,10 @@ import {
   IsDateString,
   Min,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, ApiSchema } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 
+@ApiSchema({ name: 'SupplierReturnItemDto' })
 export class ReturnItemDto {
   @ApiProperty({ description: 'Purchase order item UUID' })
   @IsUUID()
