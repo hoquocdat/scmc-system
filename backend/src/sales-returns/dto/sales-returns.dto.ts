@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, ApiSchema } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -38,6 +38,7 @@ export const REFUND_METHODS = [
 ] as const;
 export type RefundMethod = (typeof REFUND_METHODS)[number];
 
+@ApiSchema({ name: 'SalesReturnItemDto' })
 export class ReturnItemDto {
   @ApiProperty() @IsUUID() sales_order_item_id: string;
 

@@ -37,17 +37,16 @@ axiosInstance.interceptors.request.use(
 axiosInstance.interceptors.response.use(
   (response: AxiosResponse) => response,
   (error: AxiosError) => {
+    // Keep the AxiosError (status, response.data.code, …) so screens can react to
+    // specific refusals; only the message is replaced with the server's message.
     if (error.response) {
-      // Server responded with error status
-      const message = (error.response.data as any)?.message || error.message;
-      throw new Error(message);
+      const message = (error.response.data as { message?: unknown } | undefined)?.message;
+      if (typeof message === 'string' && message) error.message = message;
+      else if (Array.isArray(message) && message.length) error.message = message.join(', ');
     } else if (error.request) {
-      // Request made but no response
-      throw new Error('Network error - no response from server');
-    } else {
-      // Something else happened
-      throw new Error(error.message || 'Request failed');
+      error.message = 'Network error - no response from server';
     }
+    return Promise.reject(error);
   }
 );
 

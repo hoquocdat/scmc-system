@@ -8,7 +8,7 @@ import {
   Min,
   MaxLength,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, ApiSchema } from '@nestjs/swagger';
 
 export enum PaymentMethod {
   CASH = 'cash',
@@ -21,6 +21,7 @@ export enum PaymentMethod {
   STORE_CREDIT = 'store_credit',
 }
 
+@ApiSchema({ name: 'CreateSalesOrderPaymentDto' })
 export class CreatePaymentDto {
   @ApiProperty({ description: 'Sales Order UUID' })
   @IsUUID()

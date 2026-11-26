@@ -11,14 +11,20 @@ import {
   storeLocations,
 } from './retail-net';
 
-/** Signed stock effect of a movement, matching update_inventory_from_transaction. */
+/**
+ * Signed stock effect of a movement: the types update_inventory_from_transaction
+ * applies, plus purchase-order receipts ('purchase') and supplier returns
+ * ('return', stored negative), whose services update stock themselves.
+ */
 const DELTA = Prisma.raw(`CASE
-  WHEN it.transaction_type IN ('RECEIVE', 'ADJUST', 'RETURN', 'TRANSFER_IN') THEN it.quantity
+  WHEN it.transaction_type IN ('RECEIVE', 'ADJUST', 'RETURN', 'TRANSFER_IN', 'purchase', 'return') THEN it.quantity
   WHEN it.transaction_type IN ('SALE', 'TRANSFER_OUT', 'WRITE_OFF') THEN -ABS(it.quantity)
   ELSE 0 END`);
 
 const TYPE_LABELS: Record<string, string> = {
   RECEIVE: 'Nhập hàng',
+  purchase: 'Nhập hàng (đơn mua)',
+  return: 'Trả hàng nhà cung cấp',
   SALE: 'Bán hàng',
   RETURN: 'Khách trả',
   RETURN_DAMAGED: 'Khách trả (lỗi)',

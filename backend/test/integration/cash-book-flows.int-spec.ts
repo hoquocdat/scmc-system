@@ -122,6 +122,33 @@ describe('cash book entries from money flows', () => {
     expect(entry.entry_number).toMatch(/^PT-/);
   });
 
+  it('a manager paying from the drawer during a cashier shift is counted in that shift', async () => {
+    const shift =
+      (await testDb.pos_sessions.findFirst({
+        where: { store_id: fx.store.id, status: 'open' },
+      })) ??
+      (await shifts.openShift(
+        { id: fx.users.sales_associate },
+        { store_id: fx.store.id, opening_cash: 0 },
+      ));
+    const post = (accountId: string) =>
+      testDb.$transaction((tx) =>
+        cashBook.post(tx as never, {
+          accountId,
+          direction: 'out',
+          amount: 70_000,
+          categoryCode: 'shipping',
+          linkOpenShiftOf: fx.users.manager,
+          isAutomatic: false,
+        }),
+      );
+    const atCounter = await post(fx.accounts.hcmDrawer);
+    expect(atCounter.pos_session_id).toBe(shift.id);
+    // no open shift at the other branch: nothing to link
+    const elsewhere = await post(fx.accounts.hnDrawer);
+    expect(elsewhere.pos_session_id).toBeNull();
+  });
+
   it('a split POS payment posts each method to its mapped account', async () => {
     const order = await checkout.checkout(
       { id: fx.users.sales_associate },

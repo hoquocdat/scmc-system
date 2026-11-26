@@ -71,7 +71,8 @@ function AppRoutes() {
   return (
     <>
       <title>{getPageTitle(location.pathname)}</title>
-      <Toaster />
+      {/* top-center: bottom-right toasts covered the POS pay button and sheet footers */}
+      <Toaster position="top-center" />
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route

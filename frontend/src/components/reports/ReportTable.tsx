@@ -34,7 +34,7 @@ export function ReportTable<Row extends Record<string, unknown>>({ result, isLoa
   if (!paging) {
     return (
       <div className="space-y-2">
-        <DataTable columns={columnsFromReport(result, { hidden })} data={result.rows} isLoading={isLoading} />
+        <DataTable columns={columnsFromReport(result, { hidden })} data={result.rows} isLoading={isLoading} pageSize={100} selectable={false} />
         {result.totals && <TotalsTable result={result} hidden={hidden} />}
       </div>
     );

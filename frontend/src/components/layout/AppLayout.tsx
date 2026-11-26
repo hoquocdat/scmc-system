@@ -23,6 +23,7 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '../ui/breadcrumb';
+import { findReport, REPORT_GROUPS } from '@/components/reports/report-registry';
 import {
   LayoutDashboard,
   BookOpen,
@@ -460,7 +461,8 @@ export function AppLayout({ children }: AppLayoutProps) {
           name: 'Vai Trò',
           href: '/settings/roles',
           icon: Shield,
-          roles: ['superadmin', 'manager'],
+          // roles:read is granted to superadmin only (managers got a 403 page)
+          roles: ['superadmin'],
         },
         {
           name: 'Nhật Ký Quyền Hạn',
@@ -580,6 +582,22 @@ export function AppLayout({ children }: AppLayoutProps) {
         'salary-configs': 'Cấu Hình Lương',
         'attendance': 'Chấm Công',
         'my-payroll': 'Phiếu Lương',
+        'transfers': 'Chuyển Kho',
+        'counts': 'Kiểm Kho',
+        'write-offs': 'Xuất Huỷ',
+        'reorder-alerts': 'Cảnh Báo Đặt Hàng',
+        'price-books': 'Bảng Giá',
+        'promotions': 'Khuyến Mãi',
+        'vouchers': 'Voucher',
+        'returns': 'Trả Hàng',
+        'groups': 'Nhóm Khách Hàng',
+        'cash-book': 'Sổ Quỹ',
+        'settings': 'Cài Đặt',
+        'qr-payments': 'Thanh Toán QR',
+        'loyalty': 'Tích Điểm',
+        'roles': 'Phân Quyền',
+        'audit': 'Nhật Ký',
+        'new': 'Tạo Mới',
       };
 
       if (segmentLabels[firstSegment]) {
@@ -589,8 +607,13 @@ export function AppLayout({ children }: AppLayoutProps) {
           isLast: pathSegments.length === 1,
         });
 
+        // Reports: /reports/<group>/<slug> → group and report title from the registry
+        const report = firstSegment === 'reports' && pathSegments.length >= 3 ? findReport(pathSegments[1], pathSegments[2]) : undefined;
+        if (report) {
+          breadcrumbs.push({ label: REPORT_GROUPS.find((g) => g.id === report.group)?.label ?? pathSegments[1], path: `/reports/${report.group}`, isLast: false });
+          breadcrumbs.push({ label: report.title, path: location.pathname, isLast: true });
+        } else if (pathSegments.length >= 2) {
         // Handle nested paths (e.g., /inventory/products, /sales/orders)
-        if (pathSegments.length >= 2) {
           const secondSegment = pathSegments[1];
 
           // Check if second segment is a label (not an ID)
@@ -602,10 +625,10 @@ export function AppLayout({ children }: AppLayoutProps) {
             });
           } else {
             // It's a detail page (has an ID)
-            let detailLabel = t('serviceOrders.orderDetails');
+            let detailLabel = 'Chi tiết';
 
             // Customize labels for detail pages
-            if (firstSegment === 'service-orders') {
+            if (firstSegment === 'service-orders' || firstSegment === 'sales') {
               detailLabel = t('serviceOrders.orderDetails');
             } else if (firstSegment === 'customers') {
               detailLabel = t('customers.customerDetails');
@@ -653,7 +676,7 @@ export function AppLayout({ children }: AppLayoutProps) {
         {/* Sidebar Header */}
         <div className="h-14 px-3 py-2 border-b flex items-center justify-between">
           {sidebarOpen && (
-            <img className='w-20 h-auto' src="https://saigonclassic.com/wp-content/uploads/2024/08/Logo-SMCC.svg" alt="SCMC Workshop" />
+            <img className='w-20 h-auto' src="/logo.svg" alt="SCMC Workshop" />
           )}
           <Button
             variant="ghost"

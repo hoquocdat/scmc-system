@@ -336,6 +336,8 @@ export class CashBookService {
           : null,
         source: null,
         isAutomatic: false,
+        // a drawer voucher recorded now belongs to the open shift (not a back-dated one)
+        linkOpenShiftOf: dto.entry_date ? null : actor.id,
         note: dto.note,
         createdBy: actor.id,
         at: dto.entry_date ? new Date(dto.entry_date) : undefined,
@@ -363,6 +365,7 @@ export class CashBookService {
         amount: dto.amount,
         note: dto.note,
         createdBy: actor.id,
+        linkOpenShiftOf: dto.entry_date ? null : actor.id,
         at: dto.entry_date ? new Date(dto.entry_date) : undefined,
       }),
     );

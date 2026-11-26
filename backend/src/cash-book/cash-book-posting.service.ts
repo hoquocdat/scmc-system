@@ -53,7 +53,10 @@ export interface PostInput {
   } | null;
   source?: { type: string; id: string } | null;
   posSessionId?: string | null;
-  /** Link the entry to this user's open shift at the branch when it lands on the POS drawer. */
+  /**
+   * Link the entry to this user's open shift at the branch when it lands on the
+   * POS drawer, or to the branch's open shift when the user has none.
+   */
   linkOpenShiftOf?: string | null;
   transferGroupId?: string | null;
   reversesEntryId?: string | null;
@@ -184,14 +187,23 @@ export class CashBookPostingService {
 
     let posSessionId = input.posSessionId ?? null;
     if (!posSessionId && input.linkOpenShiftOf && account.is_pos_drawer) {
-      const shift = await tx.pos_sessions.findFirst({
-        where: {
-          user_id: input.linkOpenShiftOf,
-          store_id: account.store_id,
-          status: 'open',
-        },
-        select: { id: true },
-      });
+      // the user's own open shift at the branch; otherwise (a manager refunding
+      // or paying from the drawer at the counter) the branch's open shift, so the
+      // cash that left the drawer is in that shift's expected cash
+      const shift =
+        (await tx.pos_sessions.findFirst({
+          where: {
+            user_id: input.linkOpenShiftOf,
+            store_id: account.store_id,
+            status: 'open',
+          },
+          select: { id: true },
+        })) ??
+        (await tx.pos_sessions.findFirst({
+          where: { store_id: account.store_id, status: 'open' },
+          orderBy: { opened_at: 'desc' },
+          select: { id: true },
+        }));
       posSessionId = shift?.id ?? null;
     }
 
@@ -352,6 +364,8 @@ export class CashBookPostingService {
       /** Shift to link on the drawer side (POS cash drop / float). */
       posSessionId?: string | null;
       sessionSide?: 'from' | 'to';
+      /** Otherwise link each drawer side to the open shift (see post()). */
+      linkOpenShiftOf?: string | null;
       isAutomatic?: boolean;
     },
   ) {
@@ -366,6 +380,7 @@ export class CashBookPostingService {
       categoryCode: 'transfer_out',
       transferGroupId: groupId,
       posSessionId: input.sessionSide === 'from' ? input.posSessionId : null,
+      linkOpenShiftOf: input.linkOpenShiftOf,
       isAutomatic: input.isAutomatic ?? false,
       note: input.note,
       createdBy: input.createdBy,
@@ -378,6 +393,7 @@ export class CashBookPostingService {
       categoryCode: 'transfer_in',
       transferGroupId: groupId,
       posSessionId: input.sessionSide === 'to' ? input.posSessionId : null,
+      linkOpenShiftOf: input.linkOpenShiftOf,
       isAutomatic: input.isAutomatic ?? false,
       note: input.note,
       createdBy: input.createdBy,

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { isUuid, uuid } from '@/lib/uuid';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { Product, ProductVariant } from '@/lib/api/products';
 import { promotionsApi, type CartBreakdown } from '@/lib/api/promotions';
@@ -62,7 +63,7 @@ interface CartsState {
   activeId: string;
 }
 
-const uuid = () => (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`);
+
 
 const newCart = (n: number): Cart => ({
   id: uuid(),
@@ -83,7 +84,8 @@ function load(key: string): CartsState | null {
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CartsState;
     if (!Array.isArray(parsed.carts) || parsed.carts.length === 0) return null;
-    return parsed;
+    // carts saved before ids were always UUIDs would be refused at checkout
+    return { ...parsed, carts: parsed.carts.map((c) => (isUuid(c.client_request_id) ? c : { ...c, client_request_id: uuid(), approval_token: undefined })) };
   } catch {
     return null;
   }

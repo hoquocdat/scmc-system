@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, ApiSchema } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
@@ -25,6 +25,7 @@ export class StockLineDto {
   @ApiProperty() @IsInt() @Min(1) @Max(1_000_000) quantity: number;
 }
 
+@ApiSchema({ name: 'CreateStockTransferDto' })
 export class CreateTransferDto {
   @ApiProperty() @IsUUID() from_location_id: string;
   @ApiProperty() @IsUUID() to_location_id: string;

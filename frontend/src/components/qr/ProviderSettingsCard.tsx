@@ -55,10 +55,19 @@ export function ProviderSettingsCard({ storeId, value }: { storeId: string; valu
         <div className="space-y-1"><Label>Tài khoản sổ quỹ nhận tiền</Label><AccountSelect storeId={storeId} value={account} onChange={setAccount} allowDefault defaultLabel="Theo ánh xạ phương thức của chi nhánh" /></div>
         <div className="space-y-1">
           <Label>{value.provider === 'vietqr' ? 'Webhook ngân hàng' : 'Callback / IPN URL'}</Label>
-          <div className="flex gap-2"><Input readOnly value={value.callback_url} className="font-mono text-xs" /><Button variant="outline" size="icon" aria-label="Sao chép" onClick={() => void navigator.clipboard.writeText(value.callback_url).then(() => toast.success('Đã sao chép'))}><Copy className="h-4 w-4" /></Button></div>
+          <div className="flex gap-2"><Input readOnly value={value.callback_url} className="font-mono text-xs" onFocus={(e) => e.currentTarget.select()} /><Button variant="outline" size="icon" aria-label="Sao chép" onClick={() => copyText(value.callback_url)}><Copy className="h-4 w-4" /></Button></div>
         </div>
         <Button disabled={save.isPending} onClick={() => save.mutate()}>Lưu</Button>
       </CardContent>
     </Card>
   );
+}
+
+/** The clipboard API exists only over HTTPS or localhost; otherwise ask the user to copy. */
+function copyText(text: string) {
+  if (navigator.clipboard?.writeText) {
+    navigator.clipboard.writeText(text).then(() => toast.success('Đã sao chép'), () => toast.info('Chọn đường dẫn và nhấn Ctrl+C để sao chép'));
+  } else {
+    toast.info('Chọn đường dẫn và nhấn Ctrl+C để sao chép');
+  }
 }

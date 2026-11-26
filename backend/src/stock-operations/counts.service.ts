@@ -327,8 +327,9 @@ export class CountsService {
         : s.type === 'brand'
           ? { brand_id: s.brand_id }
           : { id: { in: s.product_ids ?? [] } };
+    // a product with size/colour products under it holds no stock itself
     const products = await this.prisma.products.findMany({
-      where: { ...where, is_active: true },
+      where: { ...where, is_active: true, other_products: { none: {} } },
       select: {
         id: true,
         product_variants: { where: { is_active: true }, select: { id: true } },

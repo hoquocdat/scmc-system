@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, ApiSchema } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
@@ -66,6 +66,7 @@ export class CreateVoucherDto {
   note?: string;
 }
 
+@ApiSchema({ name: 'CreateCashTransferDto' })
 export class CreateTransferDto {
   @ApiProperty() @IsUUID() from_account_id: string;
 

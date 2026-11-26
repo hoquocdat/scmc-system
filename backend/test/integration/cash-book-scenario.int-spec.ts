@@ -38,7 +38,10 @@ const vnDate = (offsetDays = 0) =>
  *   − 1,000,000 transfer to bank − 50,000 count shortfall = 1,300,000
  * Bank: 50,000,000 opening + 300,000 + 2,000,000 receivable − 5,000,000 supplier
  *   − 17,000,000 payroll − 3,000,000 rent + 1,000,000 = 28,300,000
- * Shift expected cash: 2,000,000 + 450,000 − 300,000 = 2,150,000
+ * Shift expected cash: every drawer movement during the shift counts, including
+ *   finance's 200,000 receipt and 1,000,000 transfer to the bank (the cash really
+ *   entered and left the drawer): 2,000,000 + 450,000 − 300,000 + 200,000
+ *   − 1,000,000 = 1,350,000; counted 1,300,000 → short 50,000
  */
 describe('cash book: a full day at one branch', () => {
   let fx: SalesFixtures;
@@ -270,10 +273,10 @@ describe('cash book: a full day at one branch', () => {
       amount: 1_000_000,
     });
 
-    // 10. Shift close: expected 2,150,000, counted 2,100,000
+    // 10. Shift close: expected 1,350,000, counted 1,300,000
     const summary = await shifts.getSummary(shift.id, cashier);
-    expect(summary.expected_cash).toBe(2_150_000);
-    await shifts.closeShift(shift.id, cashier, { closing_cash: 2_100_000 });
+    expect(summary.expected_cash).toBe(1_350_000);
+    await shifts.closeShift(shift.id, cashier, { closing_cash: 1_300_000 });
     const difference = await testDb.cash_book_entries.findFirstOrThrow({
       where: {
         pos_session_id: shift.id,
